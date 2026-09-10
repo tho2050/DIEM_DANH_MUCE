@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Danh Sách Hoạt Động Điểm Danh - Hệ Thống Điểm Danh GPS</title>
     <meta name="description" content="Hệ thống điểm danh sự kiện & hoạt động bằng xác thực vị trí GPS vệ tinh" />
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#0f0f1a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Điểm Danh GPS" />
+    <link rel="apple-touch-icon" href="icon-192.png" />
+    <link rel="icon" type="image/png" href="icon-192.png" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <link rel="stylesheet" href="https://unpkg.com/bootstrap@5.3.2/dist/css/bootstrap.min.css" />
@@ -60,6 +67,58 @@
         .navbar-custom .nav-link.active {
             color: #e2e8f0 !important;
             background: rgba(99, 102, 241, 0.12);
+        }
+
+        .btn-install-header {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: #ffffff !important;
+            border: none;
+            font-weight: 600;
+            font-size: 0.88rem;
+            padding: 0.45rem 1rem;
+            border-radius: 9px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.45);
+            text-decoration: none;
+        }
+        .btn-install-header:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.65);
+            color: #ffffff !important;
+        }
+        .btn-install-header:active {
+            transform: translateY(0);
+        }
+
+        .btn-hero-install {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            color: #e2e8f0;
+            font-weight: 600;
+            font-size: 0.95rem;
+            padding: 12px 24px;
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(8px);
+        }
+        .btn-hero-install i {
+            color: #34d399;
+            font-size: 1.1rem;
+        }
+        .btn-hero-install:hover {
+            background: rgba(16, 185, 129, 0.15);
+            border-color: #34d399;
+            color: #ffffff;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.25);
         }
 
         /* ===== HERO SECTION ===== */
@@ -267,7 +326,11 @@
                 <a class="navbar-brand d-flex align-items-center" href="index.html" style="max-width: 75%;">
                     <img src="logo.png" alt="MUCE Logo" class="logo-responsive">
                 </a>
-                <div class="d-flex gap-1 gap-sm-2">
+                <div class="d-flex align-items-center gap-1 gap-sm-2">
+                    <button id="btnInstallHeader" class="btn-install-header" onclick="installPWA()" title="Cài đặt App trên điện thoại và máy tính">
+                        <i class="fa-solid fa-cloud-arrow-down"></i>
+                        <span>Cài App</span>
+                    </button>
                     <a href="index.html" class="nav-link active" title="Danh Sách Hoạt Động"><i class="fa-solid fa-calendar-days"></i><span class="d-none d-sm-inline ms-1"> Sự kiện</span></a>
                     <a href="admin.html" class="nav-link text-warning" title="Trang Quản Trị"><i class="fa-solid fa-gears"></i><span class="d-none d-sm-inline ms-1"> Quản trị</span></a>
                 </div>
@@ -288,6 +351,10 @@
                         <button class="btn btn-hero-primary" onclick="requestUserLocation()">
                             <i class="fa-solid fa-location-crosshairs me-2"></i>
                             <span id="gpsStatusText">Kiểm tra định vị GPS</span>
+                        </button>
+                        <button id="btnInstallHero" class="btn btn-hero-install" onclick="installPWA()">
+                            <i class="fa-solid fa-mobile-screen"></i>
+                            <span>Cài App (PC & ĐT)</span>
                         </button>
                     </div>
                 </div>
@@ -430,6 +497,96 @@
                 err => { statusEl.textContent = 'Lỗi định vị'; }
             );
         }
+
+        // ===== PWA INSTALLATION & SERVICE WORKER =====
+        let deferredPrompt = null;
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('Service Worker đã đăng ký thành công:', reg.scope))
+                    .catch(err => console.log('Service Worker lỗi:', err));
+            });
+        }
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            console.log('Đã nhận sự kiện beforeinstallprompt PWA');
+        });
+
+        window.addEventListener('appinstalled', () => {
+            deferredPrompt = null;
+            console.log('Ứng dụng Điểm Danh GPS đã được cài đặt thành công!');
+        });
+
+        async function installPWA() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const choiceResult = await deferredPrompt.userChoice;
+                if (choiceResult.outcome === 'accepted') {
+                    console.log('Người dùng đã đồng ý cài App');
+                    deferredPrompt = null;
+                } else {
+                    console.log('Người dùng từ chối cài App');
+                }
+            } else {
+                const modalEl = document.getElementById('pwaInstallModal');
+                if (modalEl && typeof bootstrap !== 'undefined') {
+                    const modal = new bootstrap.Modal(modalEl);
+                    modal.show();
+                } else if (modalEl) {
+                    modalEl.classList.add('show');
+                    modalEl.style.display = 'block';
+                }
+            }
+        }
     </script>
+
+    <!-- Modal Hướng Dẫn Cài Đặt PWA -->
+    <div class="modal fade" id="pwaInstallModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="background: #16162a; border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 18px; color: #e2e8f0; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold text-white d-flex align-items-center gap-2">
+                        <img src="icon-192.png" width="32" height="32" class="rounded-3" alt="App Icon">
+                        Cài đặt Điểm Danh GPS MUCE
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body pt-3">
+                    <p class="text-secondary small mb-3">Cài đặt ứng dụng trực tiếp lên Màn hình chính máy tính hoặc điện thoại để mở nhanh không cần gõ link:</p>
+                    
+                    <div class="p-3 rounded-3 mb-3" style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(255,255,255,0.06);">
+                        <div class="fw-bold text-success mb-2"><i class="fa-brands fa-apple me-2"></i>Dành cho iPhone / iPad (Safari):</div>
+                        <ol class="small text-light ps-3 mb-0">
+                            <li class="mb-1">Bấm vào biểu tượng <strong>Chia sẻ (Share <i class="fa-solid fa-arrow-up-from-bracket mx-1"></i>)</strong> ở thanh công cụ dưới Safari.</li>
+                            <li>Kéo xuống và chọn <strong>"Thêm vào Màn hình chính" (Add to Home Screen)</strong> <i class="fa-regular fa-square-plus ms-1"></i>.</li>
+                        </ol>
+                    </div>
+
+                    <div class="p-3 rounded-3 mb-3" style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(255,255,255,0.06);">
+                        <div class="fw-bold text-info mb-2"><i class="fa-brands fa-android me-2"></i>Dành cho Android (Chrome / Cốc Cốc):</div>
+                        <ol class="small text-light ps-3 mb-0">
+                            <li class="mb-1">Bấm vào menu <strong>3 dấu chấm (⋮)</strong> ở góc trên bên phải.</li>
+                            <li>Chọn <strong>"Cài đặt ứng dụng"</strong> hoặc <strong>"Thêm vào Màn hình chính"</strong>.</li>
+                        </ol>
+                    </div>
+
+                    <div class="p-3 rounded-3" style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(255,255,255,0.06);">
+                        <div class="fw-bold text-warning mb-2"><i class="fa-solid fa-desktop me-2"></i>Dành cho Máy tính PC / Laptop (Chrome / Edge):</div>
+                        <ol class="small text-light ps-3 mb-0">
+                            <li class="mb-1">Nhìn lên góc phải thanh địa chỉ trình duyệt, bấm biểu tượng <strong>Cài đặt (<i class="fa-solid fa-circle-down mx-1"></i>)</strong>.</li>
+                            <li>Bấm <strong>"Cài đặt" (Install)</strong> để tạo ứng dụng trên Desktop.</li>
+                        </ol>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-secondary w-100 rounded-pill" data-bs-dismiss="modal">Đã hiểu</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
