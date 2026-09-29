@@ -28,24 +28,50 @@
         }
 
         .logo-responsive {
-            height: 38px;
-            background: white;
+            height: auto;
+            max-height: 48px;
+            width: auto;
+            max-width: 100%;
+            object-fit: contain;
+            background: #ffffff;
             padding: 3px 8px;
-            border-radius: 6px;
-            transition: all 0.2s ease;
+            border-radius: 8px;
+            border: 1px solid #bae6fd;
+            box-shadow: 0 2px 8px rgba(2, 132, 199, 0.12);
+            transition: all 0.25s ease;
+            display: block;
+        }
+
+        @media (min-width: 576px) {
+            .logo-responsive {
+                max-height: 58px;
+                padding: 4px 10px;
+                border-radius: 10px;
+            }
         }
 
         @media (min-width: 768px) {
             .logo-responsive {
-                height: 55px;
-                padding: 4px 12px;
+                max-height: 72px;
+                padding: 5px 14px;
+                border-radius: 12px;
+                box-shadow: 0 4px 14px rgba(2, 132, 199, 0.15);
+            }
+        }
+
+        @media (min-width: 1200px) {
+            .logo-responsive {
+                max-height: 80px;
+                padding: 6px 16px;
             }
         }
 
         .navbar-custom {
-            background: #0f172a;
-            padding: 0.8rem 0;
-            color: white;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 0.6rem 0;
+            border-bottom: 1.5px solid #bae6fd;
+            box-shadow: 0 2px 12px rgba(2, 132, 199, 0.08);
+            color: #0f172a;
         }
 
         .navbar-custom .navbar-brand {
@@ -168,13 +194,13 @@
     <!-- NAV BAR -->
     <nav class="navbar navbar-custom">
         <div class="container d-flex justify-content-between align-items-center">
-            <a class="navbar-brand d-flex align-items-center" href="index.html" style="max-width: 75%;">
+            <a class="navbar-brand d-flex align-items-center me-2" href="index.html" style="max-width: 68%;">
                 <img src="logo.png" alt="MUCE Logo" class="logo-responsive me-2">
-                <span class="small fw-bold text-warning d-none d-sm-inline"
+                <span class="small fw-bold text-primary d-none d-sm-inline"
                     style="font-size: 0.8rem; margin-left: 8px;">[ADMIN]</span>
             </a>
-            <div class="d-flex gap-1 gap-sm-2">
-                <a href="index.html" class="btn btn-sm btn-outline-light"><i class="fa-solid fa-house"></i><span
+            <div class="d-flex gap-1 gap-sm-2 flex-shrink-0">
+                <a href="index.html" class="btn btn-sm btn-outline-primary"><i class="fa-solid fa-house"></i><span
                         class="d-none d-sm-inline ms-1">Trang Chủ</span></a>
                 <button class="btn btn-sm btn-danger d-none" id="btnLogout" onclick="logout()"><i
                         class="fa-solid fa-sign-out"></i><span class="d-none d-sm-inline ms-1">Thoát</span></button>

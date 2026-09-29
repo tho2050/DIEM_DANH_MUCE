@@ -6,9 +6,9 @@
     <title>Danh Sách Hoạt Động Điểm Danh - Hệ Thống Điểm Danh GPS</title>
     <meta name="description" content="Hệ thống điểm danh sự kiện & hoạt động bằng xác thực vị trí GPS vệ tinh" />
     <link rel="manifest" href="manifest.json" />
-    <meta name="theme-color" content="#0f0f1a" />
+    <meta name="theme-color" content="#e0f2fe" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Điểm Danh GPS" />
     <link rel="apple-touch-icon" href="icon-192.png" />
     <link rel="icon" type="image/png" href="icon-192.png" />
@@ -19,58 +19,82 @@
         *, *::before, *::after { box-sizing: border-box; }
         body {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background: #0f0f1a;
-            color: #e2e8f0;
+            background: linear-gradient(180deg, #f0f9ff 0%, #e0f2fe 220px, #f8fafc 100%);
+            color: #1e293b;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
         }
         .logo-responsive {
-            height: 38px;
-            background: white;
+            height: auto;
+            max-height: 48px;
+            width: auto;
+            max-width: 100%;
+            object-fit: contain;
+            background: #ffffff;
             padding: 3px 8px;
-            border-radius: 6px;
-            transition: all 0.2s ease;
+            border-radius: 8px;
+            border: 1px solid #bae6fd;
+            box-shadow: 0 2px 8px rgba(2, 132, 199, 0.12);
+            transition: all 0.25s ease;
+            display: block;
+        }
+        @media (min-width: 576px) {
+            .logo-responsive {
+                max-height: 58px;
+                padding: 4px 10px;
+                border-radius: 10px;
+            }
         }
         @media (min-width: 768px) {
             .logo-responsive {
-                height: 55px;
-                padding: 4px 12px;
+                max-height: 72px;
+                padding: 5px 14px;
+                border-radius: 12px;
+                box-shadow: 0 4px 14px rgba(2, 132, 199, 0.15);
+            }
+        }
+        @media (min-width: 1200px) {
+            .logo-responsive {
+                max-height: 80px;
+                padding: 6px 16px;
             }
         }
         .navbar-custom {
-            background: rgba(15, 15, 26, 0.85) !important;
-            backdrop-filter: blur(20px) saturate(180%);
-            border-bottom: 1px solid rgba(99, 102, 241, 0.15);
-            padding: 0.8rem 0;
+            background: rgba(255, 255, 255, 0.94) !important;
+            backdrop-filter: blur(16px);
+            border-bottom: 1.5px solid #bae6fd;
+            box-shadow: 0 4px 16px rgba(2, 132, 199, 0.08);
+            padding: 0.6rem 0;
         }
         .navbar-custom .navbar-brand {
             font-weight: 800;
             font-size: 1.15rem;
-            background: linear-gradient(135deg, #818cf8, #c084fc);
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            letter-spacing: -0.3px;
             text-decoration: none;
         }
         .navbar-custom .nav-link {
-            color: #94a3b8 !important;
-            font-weight: 500;
+            color: #0369a1 !important;
+            font-weight: 600;
             font-size: 0.9rem;
-            padding: 0.5rem 1rem !important;
+            padding: 0.5rem 0.9rem !important;
             border-radius: 8px;
             transition: all 0.2s;
             text-decoration: none;
         }
         .navbar-custom .nav-link:hover,
         .navbar-custom .nav-link.active {
-            color: #e2e8f0 !important;
-            background: rgba(99, 102, 241, 0.12);
+            color: #0284c7 !important;
+            background: #e0f2fe;
+        }
+        .navbar-custom .nav-link.text-warning {
+            color: #d97706 !important;
+        }
+        .navbar-custom .nav-link.text-warning:hover {
+            background: #fef3c7;
         }
 
         .btn-install-header {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
             color: #ffffff !important;
             border: none;
             font-weight: 600;
@@ -82,12 +106,12 @@
             gap: 6px;
             cursor: pointer;
             transition: all 0.25s ease;
-            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.45);
+            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
             text-decoration: none;
         }
         .btn-install-header:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.65);
+            box-shadow: 0 6px 20px rgba(2, 132, 199, 0.5);
             color: #ffffff !important;
         }
         .btn-install-header:active {
@@ -95,9 +119,9 @@
         }
 
         .btn-hero-install {
-            background: rgba(15, 23, 42, 0.7);
-            border: 1px solid rgba(16, 185, 129, 0.4);
-            color: #e2e8f0;
+            background: #ffffff;
+            border: 1.5px solid #0284c7;
+            color: #0284c7;
             font-weight: 600;
             font-size: 0.95rem;
             padding: 12px 24px;
@@ -107,32 +131,32 @@
             gap: 8px;
             cursor: pointer;
             transition: all 0.3s ease;
-            backdrop-filter: blur(8px);
+            box-shadow: 0 2px 8px rgba(2, 132, 199, 0.1);
         }
         .btn-hero-install i {
-            color: #34d399;
+            color: #0284c7;
             font-size: 1.1rem;
         }
         .btn-hero-install:hover {
-            background: rgba(16, 185, 129, 0.15);
-            border-color: #34d399;
-            color: #ffffff;
+            background: #f0f9ff;
+            border-color: #0369a1;
+            color: #0369a1;
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.25);
+            box-shadow: 0 6px 18px rgba(2, 132, 199, 0.2);
         }
 
         /* ===== HERO SECTION ===== */
         .hero-section {
             position: relative;
-            padding: 3rem 0 2.5rem;
+            padding: 2.5rem 0 2rem;
             overflow: hidden;
         }
         .hero-section::before {
             content: '';
             position: absolute;
-            top: -120px; right: -80px;
-            width: 400px; height: 400px;
-            background: radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%);
+            top: -100px; right: -60px;
+            width: 380px; height: 380px;
+            background: radial-gradient(circle, rgba(14, 165, 233, 0.18) 0%, transparent 70%);
             border-radius: 50%;
             pointer-events: none;
         }
@@ -140,20 +164,20 @@
             font-size: 2.2rem;
             font-weight: 800;
             letter-spacing: -0.5px;
-            background: linear-gradient(135deg, #e2e8f0 0%, #a5b4fc 50%, #c084fc 100%);
+            background: linear-gradient(135deg, #0c4a6e 0%, #0284c7 60%, #0369a1 100%);
             background-clip: text;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            line-height: 1.2;
+            line-height: 1.25;
         }
         .hero-subtitle {
-            color: #94a3b8;
-            font-size: 1rem;
+            color: #475569;
+            font-size: 1.02rem;
             max-width: 560px;
             line-height: 1.6;
         }
         .btn-hero-primary {
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
             color: #fff;
             border: none;
             font-weight: 600;
@@ -161,19 +185,19 @@
             padding: 12px 28px;
             border-radius: 12px;
             transition: all 0.3s;
-            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.35);
+            box-shadow: 0 4px 18px rgba(2, 132, 199, 0.35);
             text-decoration: none;
             display: inline-block;
         }
         .btn-hero-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 30px rgba(99, 102, 241, 0.5);
+            box-shadow: 0 8px 26px rgba(2, 132, 199, 0.45);
             color: #fff;
         }
         .btn-hero-outline {
             background: transparent;
-            color: #a5b4fc;
-            border: 1px solid rgba(99, 102, 241, 0.35);
+            color: #0284c7;
+            border: 1px solid rgba(2, 132, 199, 0.35);
             font-weight: 600;
             font-size: 0.95rem;
             padding: 12px 24px;
@@ -182,9 +206,9 @@
             cursor: pointer;
         }
         .btn-hero-outline:hover {
-            background: rgba(99, 102, 241, 0.1);
-            border-color: rgba(99, 102, 241, 0.6);
-            color: #c4b5fd;
+            background: #e0f2fe;
+            border-color: #0284c7;
+            color: #0369a1;
         }
 
         /* ===== TOOLBAR ===== */
@@ -195,48 +219,49 @@
             position: relative;
         }
         .search-box input {
-            background: rgba(30, 30, 56, 0.6);
-            border: 1px solid rgba(99, 102, 241, 0.15);
+            background: #ffffff;
+            border: 1.5px solid #bae6fd;
             border-radius: 12px;
             padding: 12px 16px 12px 44px;
-            color: #e2e8f0;
+            color: #0f172a;
             font-size: 0.92rem;
             width: 100%;
             transition: all 0.3s;
+            box-shadow: 0 2px 8px rgba(2, 132, 199, 0.05);
         }
         .search-box input:focus {
             outline: none;
-            border-color: rgba(99, 102, 241, 0.5);
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+            border-color: #0284c7;
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2);
         }
         .search-box .search-icon {
             position: absolute;
             left: 16px;
             top: 50%;
             transform: translateY(-50%);
-            color: #64748b;
+            color: #0284c7;
         }
 
         /* ===== ACTIVITY CARDS ===== */
         .activity-card {
-            background: rgba(22, 22, 42, 0.7);
-            border: 1px solid rgba(99, 102, 241, 0.1);
+            background: #ffffff;
+            border: 1px solid #e0f2fe;
             border-radius: 18px;
             overflow: hidden;
             transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
             height: 100%;
             display: flex;
             flex-direction: column;
-            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 16px rgba(2, 132, 199, 0.06);
         }
         .activity-card:hover {
-            transform: translateY(-6px);
-            border-color: rgba(99, 102, 241, 0.35);
-            box-shadow: 0 20px 40px rgba(99, 102, 241, 0.12);
+            transform: translateY(-5px);
+            border-color: #7dd3fc;
+            box-shadow: 0 16px 32px rgba(2, 132, 199, 0.14);
         }
         .card-header-strip {
-            height: 4px;
-            background: linear-gradient(90deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+            height: 5px;
+            background: linear-gradient(90deg, #38bdf8 0%, #0284c7 50%, #0369a1 100%);
         }
         .card-body-content {
             padding: 1.4rem 1.5rem;
@@ -251,21 +276,21 @@
             font-family: monospace;
             font-weight: 700;
             font-size: 0.78rem;
-            color: #a5b4fc;
-            background: rgba(99, 102, 241, 0.1);
-            border: 1px dashed rgba(99, 102, 241, 0.3);
+            color: #0369a1;
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
             padding: 4px 12px;
             border-radius: 8px;
         }
         .card-title {
             font-size: 1.05rem;
             font-weight: 700;
-            color: #f1f5f9;
+            color: #0f172a;
             margin: 0.8rem 0 0.3rem;
             line-height: 1.35;
         }
         .card-desc {
-            font-size: 0.82rem;
+            font-size: 0.85rem;
             color: #64748b;
             line-height: 1.5;
             margin-bottom: 1rem;
@@ -275,10 +300,10 @@
             align-items: flex-start;
             gap: 10px;
             font-size: 0.84rem;
-            color: #94a3b8;
+            color: #475569;
             margin-bottom: 0.6rem;
         }
-        .info-row i { color: #6366f1; width: 16px; margin-top: 2px; }
+        .info-row i { color: #0284c7; width: 16px; margin-top: 2px; }
         .card-actions {
             display: flex;
             gap: 8px;
@@ -287,7 +312,7 @@
         }
         .btn-checkin-card {
             flex: 1;
-            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
             color: #fff;
             border: none;
             font-weight: 600;
@@ -296,12 +321,19 @@
             border-radius: 10px;
             text-align: center;
             text-decoration: none;
+            box-shadow: 0 3px 10px rgba(2, 132, 199, 0.25);
+            transition: all 0.2s;
         }
-        .btn-checkin-card:hover { color: #fff; opacity: 0.9; }
+        .btn-checkin-card:hover { 
+            color: #fff; 
+            background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
+            box-shadow: 0 5px 16px rgba(2, 132, 199, 0.4);
+            transform: translateY(-1px);
+        }
 
         .site-footer {
-            background: rgba(15, 15, 26, 0.9);
-            border-top: 1px solid rgba(99, 102, 241, 0.1);
+            background: #ffffff;
+            border-top: 1px solid #e0f2fe;
             padding: 1.2rem 0;
             color: #64748b;
             font-size: 0.82rem;
@@ -321,12 +353,12 @@
 <body>
 
     <header>
-        <nav class="navbar navbar-expand-lg navbar-dark navbar-custom sticky-top">
+        <nav class="navbar navbar-expand-lg navbar-light navbar-custom sticky-top">
             <div class="container d-flex justify-content-between align-items-center">
-                <a class="navbar-brand d-flex align-items-center" href="index.html" style="max-width: 75%;">
+                <a class="navbar-brand d-flex align-items-center me-2" href="index.html" style="max-width: 68%;">
                     <img src="logo.png" alt="MUCE Logo" class="logo-responsive">
                 </a>
-                <div class="d-flex align-items-center gap-1 gap-sm-2">
+                <div class="d-flex align-items-center gap-1 gap-sm-2 flex-shrink-0">
                     <button id="btnInstallHeader" class="btn-install-header" onclick="installPWA()" title="Cài đặt App trên điện thoại và máy tính">
                         <i class="fa-solid fa-cloud-arrow-down"></i>
                         <span>Cài App</span>
@@ -413,7 +445,7 @@
                                 </div>
                                 <h5 class="card-title">${item.title}</h5>
                                 <p class="card-desc">${item.description || 'Không có mô tả.'}</p>
-                                <hr style="border-top:1px solid rgba(99,102,241,0.1); margin: 0.5rem 0;" />
+                                <hr style="border-top:1px solid #e0f2fe; margin: 0.5rem 0;" />
                                 <div class="my-2 flex-grow-1">
                                     <div class="info-row">
                                         <i class="fa-solid fa-location-dot"></i>
@@ -428,8 +460,8 @@
                                         <span>Thời gian: ${item.startTime}</span>
                                     </div>
                                     <div class="info-row distance-row d-none">
-                                        <i class="fa-solid fa-route" style="color: #c084fc;"></i>
-                                        <span style="color: #c084fc;">Cách bạn: <strong class="distance-value">--</strong></span>
+                                        <i class="fa-solid fa-route" style="color: #0284c7;"></i>
+                                        <span style="color: #0284c7;">Cách bạn: <strong class="distance-value">--</strong></span>
                                     </div>
                                 </div>
                                 <div class="card-actions">
