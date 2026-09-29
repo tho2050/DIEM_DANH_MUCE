@@ -95,49 +95,62 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
         }
 
-        .sidebar-menu {
+        .admin-top-nav {
             background: #fff;
             border-radius: 14px;
-            border: 1px solid #e2e8f0;
-            padding: 1rem;
-        }
-
-        .sidebar-menu a {
+            border: 1.5px solid #bae6fd;
+            padding: 0.5rem 0.75rem;
+            box-shadow: 0 4px 15px rgba(2, 132, 199, 0.08);
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 10px 14px;
-            color: #475569;
-            text-decoration: none;
-            border-radius: 8px;
-            font-weight: 500;
-            font-size: 0.9rem;
-            margin-bottom: 4px;
+            flex-wrap: wrap;
+            gap: 8px;
         }
 
-        .sidebar-menu a:hover,
+        .admin-nav-btn,
+        .sidebar-menu a {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            color: #334155;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.93rem;
+            transition: all 0.25s ease;
+            background: transparent;
+        }
+
+        .admin-nav-btn:hover,
+        .sidebar-menu a:hover {
+            background: #f0f9ff;
+            color: #0284c7;
+            transform: translateY(-1px);
+        }
+
+        .admin-nav-btn.active,
         .sidebar-menu a.active {
-            background: #f1f5f9;
-            color: #1a4b8c;
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            color: #ffffff !important;
+            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
         }
 
         @media (max-width: 767.98px) {
-            .sidebar-menu {
-                display: flex;
+            .admin-top-nav {
+                flex-wrap: nowrap;
                 overflow-x: auto;
                 white-space: nowrap;
-                gap: 8px;
-                padding: 0.5rem;
-                margin-bottom: 1rem;
-                border-radius: 10px;
+                gap: 6px;
+                padding: 0.4rem;
                 -webkit-overflow-scrolling: touch;
             }
 
+            .admin-nav-btn,
             .sidebar-menu a {
-                margin-bottom: 0;
                 flex: 0 0 auto;
-                padding: 8px 12px;
-                font-size: 0.82rem;
+                padding: 8px 14px;
+                font-size: 0.85rem;
             }
         }
 
@@ -332,7 +345,7 @@
     </div>
 
     <!-- MAIN ADMIN PANEL -->
-    <div class="container py-4 d-none" id="adminDashboard">
+    <div class="container-fluid px-3 px-md-4 py-3 d-none" id="adminDashboard" style="max-width: 1750px;">
         <!-- Localhost Warning Banner -->
         <div class="alert alert-warning shadow-sm border-start border-warning border-4 mb-4" id="localhostWarning"
             style="display:none;">
@@ -355,26 +368,27 @@
             </div>
         </div>
 
-        <div class="row g-4">
-            <!-- Sidebar -->
-            <div class="col-md-3">
-                <div class="sidebar-menu shadow-sm">
-                    <a href="#" class="active" onclick="switchTab('manage-activities')" id="menu-manage"><i
-                            class="fa-solid fa-calendar-days"></i> Quản lý sự kiện</a>
-                    <a href="#" onclick="switchTab('add-activity')" id="menu-add"><i
-                            class="fa-solid fa-plus-circle"></i> Thêm sự kiện mới</a>
-                    <a href="#" onclick="switchTab('attendance-list')" id="menu-attendance"><i
-                            class="fa-solid fa-users-viewfinder"></i> Danh sách điểm danh</a>
-                    <a href="#" class="d-none" onclick="switchTab('approve-accounts')" id="menu-approve"><i
-                            class="fa-solid fa-user-check"></i> Duyệt tài khoản <span
-                            class="badge bg-danger rounded-pill ms-1 d-none" id="pendingBadge">0</span></a>
-                </div>
-            </div>
+        <!-- Top Navigation Bar (Chuyển lên trên cho giao diện rộng rãi) -->
+        <div class="admin-top-nav shadow-sm mb-4">
+            <a href="#" class="admin-nav-btn active" onclick="switchTab('manage-activities', event)" id="menu-manage">
+                <i class="fa-solid fa-calendar-days me-1"></i> Quản lý sự kiện
+            </a>
+            <a href="#" class="admin-nav-btn" onclick="switchTab('add-activity', event)" id="menu-add">
+                <i class="fa-solid fa-plus-circle me-1"></i> Thêm sự kiện mới
+            </a>
+            <a href="#" class="admin-nav-btn" onclick="switchTab('attendance-list', event)" id="menu-attendance">
+                <i class="fa-solid fa-users-viewfinder me-1"></i> Danh sách điểm danh
+            </a>
+            <a href="#" class="admin-nav-btn d-none" onclick="switchTab('approve-accounts', event)" id="menu-approve">
+                <i class="fa-solid fa-user-check me-1"></i> Duyệt tài khoản 
+                <span class="badge bg-danger rounded-pill ms-1 d-none" id="pendingBadge">0</span>
+            </a>
+        </div>
 
-            <!-- Content Area -->
-            <div class="col-md-9">
-                <!-- Tab: Manage Activities -->
-                <div class="card card-custom p-4" id="tab-manage-activities">
+        <!-- Content Area: FULL 100% WIDTH -->
+        <div class="w-100">
+            <!-- Tab: Manage Activities -->
+            <div class="card card-custom p-4" id="tab-manage-activities">
                     <h5 class="fw-bold mb-3"><i class="fa-solid fa-list me-2 text-primary"></i>Danh sách sự kiện đang mở
                     </h5>
                     <div id="activitiesListContainer">
@@ -618,7 +632,6 @@
                 </div>
             </div>
         </div>
-    </div>
 
     <!-- PRINT SECTION -->
     <div class="print-area" id="printArea">
@@ -1602,7 +1615,7 @@
         let attendanceData = []; // Lưu trữ dữ liệu điểm danh toàn cục
 
         function switchTab(tabId, isProgrammatic = false) {
-            document.querySelectorAll('.sidebar-menu a').forEach(a => a.classList.remove('active'));
+            document.querySelectorAll('.admin-nav-btn, .sidebar-menu a').forEach(a => a.classList.remove('active'));
 
             // Highlight menu tương ứng
             if (tabId === 'manage-activities') document.getElementById('menu-manage').classList.add('active');
