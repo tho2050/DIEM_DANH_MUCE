@@ -396,29 +396,32 @@
                                 onclick="openImportExcelModal()"><i class="fa-solid fa-file-import me-1"></i> Nhập Từ
                                 File Excel</button>
                             <div class="btn-group" id="btnExportExcelGroup">
-                                <button type="button" class="btn btn-sm btn-success fw-bold"
-                                    onclick="exportMultiSheetExcel()"><i class="fa-solid fa-file-excel me-1"></i> Xuất
-                                    File Excel (4 Khoa)</button>
+                                <button type="button" class="btn btn-sm btn-success fw-bold" id="btnExportMain"
+                                    onclick="handleMainExportClick()">
+                                    <span id="btnExportMainText"><i class="fa-solid fa-file-excel me-1"></i> Xuất File Excel (4 Khoa)</span>
+                                </button>
                                 <button type="button"
                                     class="btn btn-sm btn-success dropdown-toggle dropdown-toggle-split"
-                                    data-bs-toggle="dropdown" aria-expanded="false">
+                                    data-bs-toggle="dropdown" aria-expanded="false" title="Tùy chọn tải file Excel">
                                     <span class="visually-hidden">Toggle Dropdown</span>
                                 </button>
-                                <ul class="dropdown-menu dropdown-menu-end shadow">
-                                    <li><a class="dropdown-item fw-bold text-success" href="#"
-                                            onclick="exportMultiSheetExcel(event)"><i
-                                                class="fa-solid fa-table-cells me-2"></i>Xuất 1 File Excel (Gồm 4 Sheet
-                                            4 Khoa + Tổng hợp)</a></li>
-                                    <li><a class="dropdown-item fw-bold text-dark" href="#"
+                                <ul class="dropdown-menu dropdown-menu-end shadow" style="min-width: 330px;">
+                                    <li><a class="dropdown-item py-2 fw-bold text-success" href="#" id="menuExportSelectedAct"
+                                            onclick="handleSelectedActExport(event)"><i
+                                                class="fa-solid fa-file-excel me-2"></i>Xuất 1 File Excel Sự Kiện Này (4 Khoa + Tổng hợp)</a></li>
+                                    <li><a class="dropdown-item py-2 fw-semibold text-dark" href="#" id="menuExportSeparateAct"
                                             onclick="export4SeparateFiles(event)"><i
-                                                class="fa-solid fa-copy me-2"></i>Xuất 4 File Riêng Biệt Cho Từng
-                                            Khoa</a></li>
+                                                class="fa-solid fa-copy me-2"></i>Xuất 4 File Riêng Biệt Cho Từng Khoa</a></li>
                                     <li>
-                                        <hr class="dropdown-divider">
+                                        <hr class="dropdown-divider my-1">
                                     </li>
-                                    <li><a class="dropdown-item text-secondary" href="#"
-                                            onclick="exportToExcel(event)"><i class="fa-solid fa-filter me-2"></i>Xuất
-                                            Theo Bộ Lọc Đang Chọn</a></li>
+                                    <li><a class="dropdown-item py-2 text-primary fw-semibold" href="#"
+                                            onclick="exportToExcel(event)"><i class="fa-solid fa-filter me-2"></i>Xuất Theo Bảng Đang Lọc Trên Màn Hình</a></li>
+                                    <li>
+                                        <hr class="dropdown-divider my-1">
+                                    </li>
+                                    <li><a class="dropdown-item py-2 text-secondary small" href="#"
+                                            onclick="exportAllEventsExcel(event)"><i class="fa-solid fa-database me-2"></i>Xuất Toàn Bộ Lịch Sử (Tất Cả Mọi Sự Kiện)</a></li>
                                 </ul>
                             </div>
                             <button class="btn btn-sm btn-outline-secondary" onclick="fetchAttendanceData()"><i
@@ -1351,6 +1354,7 @@
                     </div>
                     <div class="d-flex gap-2">
                         <button class="btn btn-sm btn-outline-primary" onclick="printQr('${item.code}', '${item.title}', ${item.radiusMeters})"><i class="fa-solid fa-print me-1"></i>In QR Điểm Danh</button>
+                        <button class="btn btn-sm btn-outline-success fw-semibold" onclick="exportSingleActivityExcel('${item.code}', '${(item.title || item.code).replace(/'/g, "\\'")}')" title="Tải file Excel danh sách sinh viên sự kiện này"><i class="fa-solid fa-file-excel me-1"></i>Tải DS Excel</button>
                         <button class="btn btn-sm btn-outline-info" onclick="editActivity(${idx})"><i class="fa-solid fa-pencil"></i> Sửa</button>
                         <button class="btn btn-sm btn-danger" onclick="deleteActivity(${idx})"><i class="fa-solid fa-trash"></i></button>
                     </div>
@@ -2021,6 +2025,8 @@
                     ` : ''}
                 </tr>
             `).join('');
+
+            updateExportButtonLabel();
         }
 
         let manualCheckinModalInstance = null;
@@ -2480,6 +2486,7 @@
             });
 
             renderAttendanceTable(filtered);
+            updateExportButtonLabel();
         }
 
         // TIỀN XỬ LÝ MẢNG DỮ LIỆU SANG MA TRẬN SHEETJS (XLSX)
@@ -2531,8 +2538,144 @@
             return ws;
         }
 
+        // LẤY MÃ SỰ KIỆN ĐANG ĐƯỢC CHỌN Ở BỘ LỌC
+        function getSelectedActivityFilter() {
+            const el = document.getElementById('attendanceActivityFilter');
+            return el ? el.value.trim() : '';
+        }
+
+        // CẬP NHẬT NHÃN NÚT XUẤT EXCEL KHI NGƯỜI DÙNG CHỌN SỰ KIỆN
+        function updateExportButtonLabel() {
+            const actCode = getSelectedActivityFilter();
+            const btnMainText = document.getElementById('btnExportMainText');
+            const itemSelectedAct = document.getElementById('menuExportSelectedAct');
+            const itemSeparateAct = document.getElementById('menuExportSeparateAct');
+
+            if (actCode) {
+                const acts = getActivities();
+                const currentAct = acts.find(a => String(a.code).toLowerCase() === actCode.toLowerCase());
+                const actName = currentAct ? (currentAct.title || actCode) : actCode;
+                const shortName = actName.length > 22 ? actName.substring(0, 20) + '...' : actName;
+
+                if (btnMainText) {
+                    btnMainText.innerHTML = `<i class="fa-solid fa-file-excel me-1"></i> Xuất Excel: ${shortName}`;
+                    btnMainText.title = `Tải file Excel danh sách sinh viên sự kiện: ${actName} (4 Khoa + Tổng hợp)`;
+                }
+                if (itemSelectedAct) {
+                    itemSelectedAct.innerHTML = `<i class="fa-solid fa-file-excel text-success me-2"></i>Xuất 1 File Excel: <strong>${shortName}</strong> (4 Khoa + Tổng hợp)`;
+                }
+                if (itemSeparateAct) {
+                    itemSeparateAct.innerHTML = `<i class="fa-solid fa-copy text-dark me-2"></i>Xuất 4 File Riêng Từng Khoa (Của sự kiện: ${shortName})`;
+                }
+            } else {
+                if (btnMainText) {
+                    btnMainText.innerHTML = `<i class="fa-solid fa-file-excel me-1"></i> Xuất File Excel (Tất Cả Sự Kiện)`;
+                    btnMainText.title = `Tải file Excel tất cả sự kiện`;
+                }
+                if (itemSelectedAct) {
+                    itemSelectedAct.innerHTML = `<i class="fa-solid fa-table-cells text-success me-2"></i>Xuất 1 File Excel (Tất Cả Sự Kiện - 4 Khoa)`;
+                }
+                if (itemSeparateAct) {
+                    itemSeparateAct.innerHTML = `<i class="fa-solid fa-copy text-dark me-2"></i>Xuất 4 File Riêng Biệt Cho Từng Khoa (Tất Cả)`;
+                }
+            }
+        }
+
+        // HÀM XỬ LÝ KHI BẤM NÚT XUẤT EXCEL CHÍNH
+        function handleMainExportClick() {
+            const actCode = getSelectedActivityFilter();
+            if (actCode) {
+                exportSingleActivityExcel(actCode);
+            } else {
+                exportMultiSheetExcel();
+            }
+        }
+
+        // HÀM XỬ LÝ KHI BẤM TÙY CHỌN 1 TRONG MENU DROPDOWN
+        function handleSelectedActExport(e) {
+            if (e) e.preventDefault();
+            const actCode = getSelectedActivityFilter();
+            if (actCode) {
+                exportSingleActivityExcel(actCode);
+            } else {
+                exportMultiSheetExcel();
+            }
+        }
+
+        // XUẤT 1 FILE EXCEL CHO 1 SỰ KIỆN CỤ THỂ (GỒM TỔNG HỢP + 4 KHOA CỦA SỰ KIỆN ĐÓ)
+        function exportSingleActivityExcel(actCode, actTitle) {
+            const role = sessionStorage.getItem("admin_role");
+            if (role === "staff") {
+                alert("Tài khoản của bạn không có quyền tải xuống danh sách điểm danh!");
+                return;
+            }
+
+            if (!attendanceData || attendanceData.length === 0) {
+                alert("Chưa có dữ liệu điểm danh nào trong hệ thống!");
+                return;
+            }
+
+            if (typeof XLSX === 'undefined') {
+                alert("Đang nạp thư viện Excel... Vui lòng thử lại sau vài giây!");
+                return;
+            }
+
+            // Lọc ra các bản ghi của đúng sự kiện này
+            const actData = attendanceData.filter(i => String(i.code || '').toLowerCase() === String(actCode || '').toLowerCase());
+
+            if (!actData || actData.length === 0) {
+                alert(`Sự kiện "${actTitle || actCode}" hiện chưa có sinh viên nào điểm danh!`);
+                return;
+            }
+
+            const wb = XLSX.utils.book_new();
+
+            // Sheet 1: Tổng Hợp Sự Kiện
+            const ws1 = createFormattedWorksheet(actData);
+            XLSX.utils.book_append_sheet(wb, ws1, "Tổng Hợp Tất Cả");
+
+            // Sheet 2: Khoa KT - Công Nghệ
+            const listKT = actData.filter(i => {
+                const f = String(i.faculty || '').toLowerCase();
+                return f.includes("kỹ thuật") || f.includes("công nghệ");
+            });
+            const ws2 = createFormattedWorksheet(listKT);
+            XLSX.utils.book_append_sheet(wb, ws2, "Khoa KT - Công Nghệ");
+
+            // Sheet 3: Khoa Kinh Tế
+            const listEcon = actData.filter(i => String(i.faculty || '').toLowerCase().includes("kinh tế"));
+            const ws3 = createFormattedWorksheet(listEcon);
+            XLSX.utils.book_append_sheet(wb, ws3, "Khoa Kinh Tế");
+
+            // Sheet 4: Khoa Xây Dựng
+            const listBuild = actData.filter(i => String(i.faculty || '').toLowerCase().includes("xây dựng"));
+            const ws4 = createFormattedWorksheet(listBuild);
+            XLSX.utils.book_append_sheet(wb, ws4, "Khoa Xây Dựng");
+
+            // Sheet 5: Khoa Kiến Trúc
+            const listArch = actData.filter(i => String(i.faculty || '').toLowerCase().includes("kiến trúc"));
+            const ws5 = createFormattedWorksheet(listArch);
+            XLSX.utils.book_append_sheet(wb, ws5, "Khoa Kiến Trúc");
+
+            const cleanCode = String(actCode).replace(/[\/\\:*?"<>|]/g, '-');
+            const fileName = `Diem_Danh_${cleanCode}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+        }
+
         // XUẤT 1 FILE EXCEL GỒM 5 SHEETS (Tất Cả 4 Khoa + 4 Sheet Riêng Từng Khoa)
         function exportMultiSheetExcel(e) {
+            if (e) e.preventDefault();
+            const actCode = getSelectedActivityFilter();
+            if (actCode) {
+                exportSingleActivityExcel(actCode);
+                return;
+            }
+
+            exportAllEventsExcel(e);
+        }
+
+        // XUẤT TOÀN BỘ LỊCH SỬ TẤT CẢ MỌI SỰ KIỆN
+        function exportAllEventsExcel(e) {
             if (e) e.preventDefault();
             const role = sessionStorage.getItem("admin_role");
             if (role === "staff") {
@@ -2579,7 +2722,7 @@
             const ws5 = createFormattedWorksheet(listArch);
             XLSX.utils.book_append_sheet(wb, ws5, "Khoa Kiến Trúc");
 
-            const fileName = `Danh_Sach_Diem_Danh_Dap_Ung_4_Khoa_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            const fileName = `Danh_Sach_Diem_Danh_Tat_Ca_Su_Kien_${new Date().toISOString().slice(0, 10)}.xlsx`;
             XLSX.writeFile(wb, fileName);
         }
 
@@ -2602,6 +2745,18 @@
                 return;
             }
 
+            const actCode = getSelectedActivityFilter();
+            let baseData = attendanceData;
+            let actPrefix = 'Tat_Ca';
+            if (actCode) {
+                baseData = attendanceData.filter(i => String(i.code || '').toLowerCase() === actCode.toLowerCase());
+                if (baseData.length === 0) {
+                    alert(`Sự kiện này chưa có dữ liệu điểm danh nào để xuất!`);
+                    return;
+                }
+                actPrefix = String(actCode).replace(/[\/\\:*?"<>|]/g, '-');
+            }
+
             const faculties = [
                 { name: "Khoa_KT_Cong_Nghe", title: "Khoa KT - Công Nghệ", key: "kỹ thuật" },
                 { name: "Khoa_Kinh_Te", title: "Khoa Kinh Tế", key: "kinh tế" },
@@ -2611,11 +2766,11 @@
 
             faculties.forEach((f, idx) => {
                 setTimeout(() => {
-                    const filtered = attendanceData.filter(i => String(i.faculty || '').toLowerCase().includes(f.key));
+                    const filtered = baseData.filter(i => String(i.faculty || '').toLowerCase().includes(f.key));
                     const wb = XLSX.utils.book_new();
                     const ws = createFormattedWorksheet(filtered);
                     XLSX.utils.book_append_sheet(wb, ws, f.title);
-                    XLSX.writeFile(wb, `Danh_Sach_Diem_Danh_${f.name}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+                    XLSX.writeFile(wb, `Danh_Sach_Diem_Danh_${f.name}_${actPrefix}_${new Date().toISOString().slice(0, 10)}.xlsx`);
                 }, idx * 400);
             });
         }
@@ -2653,7 +2808,7 @@
             });
 
             if (filtered.length === 0) {
-                alert('Không có dữ liệu nào phù hợp để xuất file Excel!');
+                alert('Không có dữ liệu nào phù hợp với bộ lọc để xuất file Excel!');
                 return;
             }
 
@@ -2667,7 +2822,7 @@
             XLSX.utils.book_append_sheet(wb, ws, "Danh Sách Lọc");
 
             let facTag = facultyFilter ? facultyFilter.replace(/\s+/g, '_') : 'Tat_Ca_Khoa';
-            let actTag = actFilter ? actFilter.toUpperCase() : 'Tat_Ca_Su_Kien';
+            let actTag = actFilter ? actFilter.replace(/[\/\\:*?"<>|]/g, '-').toUpperCase() : 'Tat_Ca_Su_Kien';
             const filename = `Danh_Sach_Diem_Danh_${facTag}_${actTag}_${new Date().toISOString().slice(0, 10)}.xlsx`;
             XLSX.writeFile(wb, filename);
         }
