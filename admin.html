@@ -199,6 +199,101 @@
                 margin: 2rem 0;
             }
         }
+
+        /* THANH CUỘN NGANG PHÍA TRÊN & KHUNG KIỂM TRA THÔNG TIN SINH VIÊN */
+        .sticky-table-header-controls {
+            position: sticky;
+            top: 0;
+            z-index: 1020;
+            background: #ffffff;
+            padding: 8px 4px 6px 4px;
+            margin-bottom: 8px;
+            border-bottom: 1.5px solid #e0f2fe;
+            box-shadow: 0 4px 10px rgba(2, 132, 199, 0.06);
+            border-radius: 10px;
+        }
+
+        .top-scrollbar-wrapper {
+            overflow-x: auto;
+            overflow-y: hidden;
+            height: 18px;
+            background: #e0f2fe;
+            border-radius: 9px;
+            border: 1.5px solid #0284c7;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Tùy chỉnh thanh cuộn Webkit (Chrome, Edge, Cốc Cốc) */
+        .top-scrollbar-wrapper::-webkit-scrollbar,
+        .table-responsive::-webkit-scrollbar {
+            height: 14px;
+        }
+
+        .top-scrollbar-wrapper::-webkit-scrollbar-track,
+        .table-responsive::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 8px;
+        }
+
+        .top-scrollbar-wrapper::-webkit-scrollbar-thumb,
+        .table-responsive::-webkit-scrollbar-thumb {
+            background: #0284c7;
+            border-radius: 8px;
+            border: 2px solid #f1f5f9;
+        }
+
+        .top-scrollbar-wrapper::-webkit-scrollbar-thumb:hover,
+        .table-responsive::-webkit-scrollbar-thumb:hover {
+            background: #0369a1;
+        }
+
+        /* Firefox */
+        .top-scrollbar-wrapper,
+        .table-responsive {
+            scrollbar-color: #0284c7 #f1f5f9;
+            scrollbar-width: thin;
+        }
+
+        /* DÒNG SINH VIÊN: Hiệu ứng khi rê chuột và khi chọn */
+        tr.attendance-row-item {
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+        }
+
+        tr.attendance-row-item:hover td {
+            background-color: #f0f9ff !important;
+        }
+
+        /* VIỀN XANH NỔI BẬT KHI CLICK CHỌN 1 HÀNG SINH VIÊN */
+        tr.attendance-row-item.row-selected {
+            position: relative;
+        }
+
+        tr.attendance-row-item.row-selected td {
+            background-color: #dbeafe !important; /* Xanh da trời nhạt dễ nhìn */
+            border-top: 3px solid #0284c7 !important; /* Viền xanh trên */
+            border-bottom: 3px solid #0284c7 !important; /* Viền xanh dưới */
+            color: #0369a1 !important;
+            font-weight: 600;
+        }
+
+        tr.attendance-row-item.row-selected td:first-child {
+            border-left: 6px solid #0284c7 !important; /* Viền xanh dày góc trái */
+            border-top-left-radius: 6px;
+            border-bottom-left-radius: 6px;
+        }
+
+        tr.attendance-row-item.row-selected td:last-child {
+            border-right: 6px solid #0284c7 !important; /* Viền xanh dày góc phải */
+            border-top-right-radius: 6px;
+            border-bottom-right-radius: 6px;
+        }
+
+        tr.attendance-row-item.row-selected td:first-child::before {
+            content: "👉 ";
+            font-weight: bold;
+            color: #0284c7;
+        }
     </style>
 </head>
 
@@ -467,8 +562,44 @@
                         </div>
                     </div>
 
+                    <!-- KHUNG ĐIỀU KHIỂN & THANH KÉO CUỘN TRÊN (LUÔN THẤY KHI CUỘN) -->
+                    <div class="sticky-table-header-controls" id="stickyTableControls">
+                        <!-- Thông báo ghim sinh viên đang chọn để kiểm tra -->
+                        <div id="selectedStudentBar" class="alert alert-info py-2 px-3 mb-2 d-none align-items-center justify-content-between flex-wrap gap-2 shadow-sm"
+                            style="background: #e0f2fe; border: 2px solid #0284c7; border-radius: 8px;">
+                            <div class="d-flex align-items-center flex-wrap gap-2 text-dark" style="font-size: 0.88rem;">
+                                <span class="badge bg-primary px-2 py-1"><i class="fa-solid fa-user-check me-1"></i>Đang kiểm tra SV:</span>
+                                <span class="fw-bold text-primary fs-6" id="selStudentName">--</span>
+                                <span class="text-secondary">|</span>
+                                <span>MSSV: <strong class="text-dark font-monospace" id="selStudentCode">--</strong></span>
+                                <span class="text-secondary">|</span>
+                                <span>Lớp: <strong class="text-dark" id="selStudentClass">--</strong></span>
+                                <span class="text-secondary">|</span>
+                                <span>Khoa: <strong class="text-dark" id="selStudentFaculty">--</strong></span>
+                                <span class="text-secondary">|</span>
+                                <span>Thời gian: <span class="text-muted font-monospace" id="selStudentTime">--</span></span>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-danger fw-bold px-2 py-0" onclick="clearSelectedStudentRow()" title="Bỏ chọn">
+                                <i class="fa-solid fa-xmark me-1"></i> Bỏ chọn
+                            </button>
+                        </div>
+
+                        <!-- Thanh kéo cuộn ngang phía trên (Top Scrollbar) -->
+                        <div class="d-flex align-items-center justify-content-between mb-1 px-1">
+                            <span class="small fw-bold text-primary">
+                                <i class="fa-solid fa-arrows-left-right me-1"></i> THANH KÉO CUỘN NGANG (Kéo sang phải để xem Thiết bị, Tọa độ, IP...)
+                            </span>
+                            <span class="small text-muted">
+                                <i class="fa-regular fa-hand-pointer text-primary me-1"></i> Bấm vào dòng SV để hiện <strong>viền xanh</strong> kiểm tra
+                            </span>
+                        </div>
+                        <div id="topScrollWrapper" class="top-scrollbar-wrapper" title="Kéo thanh này để cuộn ngang bảng">
+                            <div id="topScrollDummy" style="height: 1px; width: 100%;"></div>
+                        </div>
+                    </div>
+
                     <!-- Table -->
-                    <div class="table-responsive">
+                    <div class="table-responsive" id="attendanceTableContainer">
                         <table class="table table-striped table-hover align-middle" style="font-size: 0.82rem;"
                             id="attendanceTable">
                             <thead class="table-dark text-nowrap">
@@ -1655,6 +1786,9 @@
                 }, 250);
             } else if (tabId === 'attendance-list') {
                 fetchAttendanceData();
+                setTimeout(() => {
+                    if (typeof initTopScrollbarSync === 'function') initTopScrollbarSync();
+                }, 250);
             } else if (tabId === 'approve-accounts') {
                 fetchAccountsList();
             }
@@ -1992,8 +2126,154 @@
             return result;
         }
 
+        let currentRenderedAttendanceData = [];
+        let currentSelectedStudentIdx = null;
+
+        // BỘ LỌC DỮ LIỆU ĐIỂM DANH (TÌM KIẾM THEO TÊN, MSSV, LỚP, KHOA, SỰ KIỆN)
+        function filterAttendanceTable() {
+            const searchInput = document.getElementById('attendanceSearch');
+            const facultySelect = document.getElementById('attendanceFacultyFilter');
+            const actSelect = document.getElementById('attendanceActivityFilter');
+
+            const searchQuery = searchInput ? searchInput.value.toLowerCase().trim() : '';
+            const facultyFilter = facultySelect ? facultySelect.value.toLowerCase().trim() : '';
+            const actFilter = actSelect ? actSelect.value.toLowerCase().trim() : '';
+
+            if (!attendanceData || attendanceData.length === 0) {
+                renderAttendanceTable([]);
+                return;
+            }
+
+            const filtered = attendanceData.filter(item => {
+                const nameStr = String(item.name || '').toLowerCase();
+                const codeStr = String(item.studentCode || '').toLowerCase();
+                const classStr = String(item.className || '').toLowerCase();
+                const facultyStr = String(item.faculty || '').toLowerCase();
+                const phoneStr = String(item.phoneNumber || '').toLowerCase();
+                const emailStr = String(item.email || '').toLowerCase();
+                const actCodeStr = String(item.code || '').toLowerCase();
+
+                const matchesSearch = !searchQuery ||
+                    nameStr.includes(searchQuery) ||
+                    codeStr.includes(searchQuery) ||
+                    classStr.includes(searchQuery) ||
+                    facultyStr.includes(searchQuery) ||
+                    phoneStr.includes(searchQuery) ||
+                    emailStr.includes(searchQuery);
+
+                const matchesFaculty = !facultyFilter || facultyStr.includes(facultyFilter);
+                const matchesActivity = !actFilter || actCodeStr === actFilter;
+
+                return matchesSearch && matchesFaculty && matchesActivity;
+            });
+
+            renderAttendanceTable(filtered);
+        }
+
+        // CHỌN 1 HÀNG SINH VIÊN: HIỆN VIỀN XANH VÀ GHIM THÔNG TIN LÊN ĐỈNH
+        function selectStudentRow(rowEl, idx) {
+            // Nếu click vào nút bấm con (Sửa/Xóa) thì không chọn dòng
+            if (window.event && window.event.target && window.event.target.closest('button')) {
+                return;
+            }
+
+            const allRows = document.querySelectorAll('tr.attendance-row-item');
+
+            // Bấm lại chính dòng đang chọn -> bỏ chọn
+            if (rowEl.classList.contains('row-selected')) {
+                rowEl.classList.remove('row-selected');
+                currentSelectedStudentIdx = null;
+                const bar = document.getElementById('selectedStudentBar');
+                if (bar) {
+                    bar.classList.add('d-none');
+                    bar.classList.remove('d-flex');
+                }
+                return;
+            }
+
+            // Bỏ chọn tất cả các dòng khác
+            allRows.forEach(r => r.classList.remove('row-selected'));
+
+            // Đánh dấu dòng mới
+            rowEl.classList.add('row-selected');
+            currentSelectedStudentIdx = idx;
+
+            // Hiển thị thông tin sinh viên lên thanh ghim phía trên
+            const student = currentRenderedAttendanceData[idx];
+            if (student) {
+                document.getElementById('selStudentName').textContent = student.name || 'Chưa rõ họ tên';
+                document.getElementById('selStudentCode').textContent = student.studentCode || '--';
+                document.getElementById('selStudentClass').textContent = student.className || '--';
+                document.getElementById('selStudentFaculty').textContent = student.faculty || '--';
+                document.getElementById('selStudentTime').textContent = student.timestamp || '--';
+
+                const bar = document.getElementById('selectedStudentBar');
+                if (bar) {
+                    bar.classList.remove('d-none');
+                    bar.classList.add('d-flex');
+                }
+            }
+        }
+
+        // BỎ CHỌN DÒNG SINH VIÊN
+        function clearSelectedStudentRow() {
+            currentSelectedStudentIdx = null;
+            document.querySelectorAll('tr.attendance-row-item').forEach(r => r.classList.remove('row-selected'));
+            const bar = document.getElementById('selectedStudentBar');
+            if (bar) {
+                bar.classList.add('d-none');
+                bar.classList.remove('d-flex');
+            }
+        }
+
+        // ĐỒNG BỘ HAI CHIỀU THANH CUỘN TRÊN VÀ BẢNG DỮ LIỆU
+        let isSyncingTop = false;
+        let isSyncingBottom = false;
+
+        function initTopScrollbarSync() {
+            const topWrapper = document.getElementById('topScrollWrapper');
+            const dummy = document.getElementById('topScrollDummy');
+            const tableContainer = document.getElementById('attendanceTableContainer');
+            const table = document.getElementById('attendanceTable');
+
+            if (!topWrapper || !dummy || !tableContainer || !table) return;
+
+            // Đồng bộ độ rộng dummy bằng độ rộng thực tế của bảng
+            setTimeout(() => {
+                const fullWidth = Math.max(table.scrollWidth, table.offsetWidth, 1600);
+                dummy.style.width = fullWidth + 'px';
+            }, 80);
+
+            if (!topWrapper.dataset.listenerAttached) {
+                topWrapper.addEventListener('scroll', () => {
+                    if (!isSyncingTop) {
+                        isSyncingBottom = true;
+                        tableContainer.scrollLeft = topWrapper.scrollLeft;
+                    }
+                    isSyncingTop = false;
+                });
+
+                tableContainer.addEventListener('scroll', () => {
+                    if (!isSyncingBottom) {
+                        isSyncingTop = true;
+                        topWrapper.scrollLeft = tableContainer.scrollLeft;
+                    }
+                    isSyncingBottom = false;
+                });
+
+                window.addEventListener('resize', () => {
+                    if (dummy && table) {
+                        dummy.style.width = Math.max(table.scrollWidth, table.offsetWidth, 1600) + 'px';
+                    }
+                });
+
+                topWrapper.dataset.listenerAttached = 'true';
+            }
+        }
+
         // HIỂN THỊ DỮ LIỆU LÊN BẢNG
         function renderAttendanceTable(data) {
+            currentRenderedAttendanceData = data;
             const tbody = document.getElementById('attendanceTableBody');
             const isSpecial = isSpecialAdmin();
             const thActions = document.getElementById('thAttendanceActions');
@@ -2005,40 +2285,48 @@
 
             const colSpanVal = isSpecial ? 15 : 14;
 
-            if (data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="${colSpanVal}" class="text-center py-4 text-muted">Chưa có ai điểm danh.</td></tr>`;
+            if (!data || data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="${colSpanVal}" class="text-center py-4 text-muted">Chưa có ai điểm danh hoặc không tìm thấy kết quả.</td></tr>`;
+                clearSelectedStudentRow();
+                initTopScrollbarSync();
                 return;
             }
 
-            tbody.innerHTML = data.map((item, idx) => `
-                <tr class="text-nowrap">
-                    <td>${idx + 1}</td>
+            tbody.innerHTML = data.map((item, idx) => {
+                const actualIdx = attendanceData ? attendanceData.indexOf(item) : idx;
+                const editIdx = actualIdx >= 0 ? actualIdx : idx;
+                const isSelected = (currentSelectedStudentIdx === idx);
+
+                return `
+                <tr class="text-nowrap attendance-row-item ${isSelected ? 'row-selected' : ''}" onclick="selectStudentRow(this, ${idx})" title="Click để hiện viền xanh kiểm tra sinh viên này">
+                    <td class="text-center">${idx + 1}</td>
                     <td class="small text-muted">${item.timestamp}</td>
                     <td><span class="badge bg-secondary">${item.code}</span></td>
                     <td>${item.title || '--'}</td>
                     <td style="min-width: 130px;"><span class="badge bg-light text-primary font-monospace border border-primary px-2 py-1 fs-6">${item.studentCode || '--'}</span></td>
-                    <td class="fw-bold">${item.name}</td>
+                    <td class="fw-bold text-dark">${item.name}</td>
                     <td>${item.className || '--'}</td>
                     <td>${item.faculty || '--'}</td>
                     <td class="font-monospace">${item.phoneNumber || '--'}</td>
                     <td class="small">${item.email || '--'}</td>
                     <td><span class="text-success fw-bold">${item.distance}</span></td>
-                    <td class="small text-truncate" style="max-width: 120px;" title="${item.device}">${item.device}</td>
+                    <td class="small text-truncate" style="max-width: 140px;" title="${item.device}">${item.device}</td>
                     <td class="small font-monospace">${item.coords || '--'}</td>
                     <td class="small font-monospace">${item.ip || '--'}</td>
                     ${isSpecial ? `
                     <td class="text-center">
-                        <button class="btn btn-sm btn-outline-warning text-dark fw-bold me-1" onclick="openEditAttendanceModal(${idx})" title="Sửa thông tin sinh viên điểm danh">
+                        <button class="btn btn-sm btn-outline-warning text-dark fw-bold me-1" onclick="openEditAttendanceModal(${editIdx})" title="Sửa thông tin sinh viên điểm danh">
                             <i class="fa-solid fa-pen-to-square me-1"></i> Sửa
                         </button>
-                        <button class="btn btn-sm btn-danger fw-bold" onclick="deleteAttendanceRecord(${idx})" title="Xóa lượt điểm danh">
+                        <button class="btn btn-sm btn-danger fw-bold" onclick="deleteAttendanceRecord(${editIdx})" title="Xóa lượt điểm danh">
                             <i class="fa-solid fa-trash me-1"></i> Xóa
                         </button>
                     </td>
                     ` : ''}
                 </tr>
-            `).join('');
+            `}).join('');
 
+            initTopScrollbarSync();
             updateExportButtonLabel();
         }
 
