@@ -179,18 +179,116 @@ async function dbDeleteActivity(code) {
     return true;
 }
 
+function getFacultyPriority(facultyName) {
+    if (!facultyName) return 99;
+    const f = String(facultyName).toLowerCase().trim();
+    // 1. Khoa Kỹ thuật Công nghệ (hoặc Công nghệ thông tin / CNTT)
+    if (f.includes('kỹ thuật') || f.includes('công nghệ') || f.includes('cntt') || f.includes('tin học')) {
+        return 1;
+    }
+    // 2. Khoa Kinh tế
+    if (f.includes('kinh tế') || f.includes('kinh te') || f.includes('qtkd')) {
+        return 2;
+    }
+    // 3. Khoa Xây dựng
+    if (f.includes('xây dựng') || f.includes('xay dung')) {
+        return 3;
+    }
+    // 4. Khoa Kiến trúc
+    if (f.includes('kiến trúc') || f.includes('kien truc') || f.includes('quy hoạch')) {
+        return 4;
+    }
+    return 10;
+}
+
+function sortAttendanceRecords(records, activities = []) {
+    if (!Array.isArray(records) || records.length === 0) return records;
+
+    const eventOrderMap = {};
+    if (Array.isArray(activities)) {
+        activities.forEach((act, idx) => {
+            if (act && act.code) {
+                eventOrderMap[String(act.code).trim().toUpperCase()] = idx;
+            }
+        });
+    }
+
+    const eventMaxIdMap = {};
+    records.forEach(r => {
+        const code = String(r.code || '').trim().toUpperCase();
+        const id = parseInt(r.id) || 0;
+        if (!eventMaxIdMap[code] || id > eventMaxIdMap[code]) {
+            eventMaxIdMap[code] = id;
+        }
+    });
+
+    const unrankedEvents = Object.keys(eventMaxIdMap)
+        .filter(code => eventOrderMap[code] === undefined)
+        .sort((a, b) => eventMaxIdMap[b] - eventMaxIdMap[a]);
+
+    let startRank = Object.keys(eventOrderMap).length;
+    unrankedEvents.forEach(code => {
+        eventOrderMap[code] = startRank++;
+    });
+
+    return records.slice().sort((a, b) => {
+        const codeA = String(a.code || '').trim().toUpperCase();
+        const codeB = String(b.code || '').trim().toUpperCase();
+
+        // 1. Gom nhóm theo Sự kiện
+        if (codeA !== codeB) {
+            const rankA = eventOrderMap[codeA] !== undefined ? eventOrderMap[codeA] : 99999;
+            const rankB = eventOrderMap[codeB] !== undefined ? eventOrderMap[codeB] : 99999;
+            if (rankA !== rankB) return rankA - rankB;
+            return codeA.localeCompare(codeB);
+        }
+
+        // 2. Trong 1 sự kiện -> Cố định theo Khoa:
+        //    1. Khoa Kỹ thuật Công nghệ (CNTT)
+        //    2. Khoa Kinh tế
+        //    3. Khoa Xây dựng
+        //    4. Khoa Kiến trúc
+        const facA = getFacultyPriority(a.faculty);
+        const facB = getFacultyPriority(b.faculty);
+        if (facA !== facB) {
+            return facA - facB;
+        }
+
+        // 3. Trong 1 Khoa -> Lớp giống nhau xếp gần nhau (A-Z)
+        const classA = String(a.className || '').trim().toUpperCase();
+        const classB = String(b.className || '').trim().toUpperCase();
+        if (classA !== classB) {
+            if (!classA) return 1;
+            if (!classB) return -1;
+            return classA.localeCompare(classB, 'vi', { numeric: true, sensitivity: 'base' });
+        }
+
+        // 4. Trong cùng 1 Lớp -> ID lớn hơn hoặc mới nhất xếp lên trước
+        const idA = parseInt(a.id) || 0;
+        const idB = parseInt(b.id) || 0;
+        if (idA !== idB) return idB - idA;
+
+        const timeA = String(a.timestamp || '');
+        const timeB = String(b.timestamp || '');
+        if (timeA !== timeB) return timeB.localeCompare(timeA);
+
+        return String(a.studentCode || '').localeCompare(String(b.studentCode || ''));
+    });
+}
+
 // Helpers lấy/lưu điểm danh
 async function dbGetCheckins() {
+    let rows = [];
     if (pool) {
         try {
             const res = await pool.query('SELECT id, timestamp, code, title, student_code as "studentCode", name, class_name as "className", faculty, phone_number as "phoneNumber", email, coords, distance, device, ip, device_uuid as "deviceUuid" FROM checkins ORDER BY id DESC');
-            return res.rows;
+            rows = res.rows;
         } catch (e) { console.error('Lỗi đọc checkins từ SQL:', e); }
+    } else if (fs.existsSync(RECORDS_FILE)) {
+        try { rows = JSON.parse(fs.readFileSync(RECORDS_FILE, 'utf8')); } catch (e) {}
     }
-    if (fs.existsSync(RECORDS_FILE)) {
-        try { return JSON.parse(fs.readFileSync(RECORDS_FILE, 'utf8')); } catch (e) {}
-    }
-    return [];
+    const activities = await dbGetActivities();
+    return sortAttendanceRecords(rows, activities);
 }
 
 async function dbUpdateCheckin(record) {

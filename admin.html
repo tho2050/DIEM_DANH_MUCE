@@ -2071,23 +2071,32 @@
                         { timestamp: "27/08/2026 13:34:12", code: "SVTN2026", studentCode: "21000456", name: "Trần Thị Bình", className: "CNTT-K21A", faculty: "Công Nghệ Thông Tin", distance: "12.4m", device: "Samsung Galaxy S24" },
                         { timestamp: "27/08/2026 14:02:45", code: "WORKSHOP-AI", studentCode: "21000789", name: "Lê Văn Nam", className: "CNTT-K21B", faculty: "Điện - Điện tử", distance: "45.1m", device: "Xiaomi 14 Ultra" }
                     ];
-                    // Gộp LocalStorage lên đầu bảng
-                    attendanceData = [...localRecords, ...mockData];
-                    renderAttendanceTable(attendanceData);
+                    // Sắp xếp theo Sự kiện -> Khoa (CNTT -> Kinh tế -> Xây dựng -> Kiến trúc) -> Lớp
+                    attendanceData = sortAttendanceData([...localRecords, ...mockData]);
+                    if (document.getElementById('attendanceSearch')?.value || document.getElementById('attendanceFacultyFilter')?.value || document.getElementById('attendanceActivityFilter')?.value) {
+                        filterAttendanceTable();
+                    } else {
+                        renderAttendanceTable(attendanceData);
+                    }
                 }, 500);
                 return;
             }
 
-            // Nếu có link thật, fetch JSON trực tiếp từ Google Apps Script Web App
+            // Nếu có link thật, fetch JSON trực tiếp từ Google Apps Script Web App / API Server
             try {
                 const res = await fetch(scriptUrl);
                 const sheetData = await res.json();
-                attendanceData = [...localRecords, ...sheetData];
-                renderAttendanceTable(attendanceData);
+                // Sắp xếp theo Sự kiện -> Khoa (CNTT -> Kinh tế -> Xây dựng -> Kiến trúc) -> Lớp
+                attendanceData = sortAttendanceData([...localRecords, ...sheetData]);
+                if (document.getElementById('attendanceSearch')?.value || document.getElementById('attendanceFacultyFilter')?.value || document.getElementById('attendanceActivityFilter')?.value) {
+                    filterAttendanceTable();
+                } else {
+                    renderAttendanceTable(attendanceData);
+                }
             } catch (err) {
-                console.error("Lỗi khi fetch dữ liệu từ Google Apps Script", err);
+                console.error("Lỗi khi fetch dữ liệu từ Google Apps Script / API", err);
                 // Nếu lỗi, vẫn hiển thị các bản ghi cục bộ đã lưu
-                attendanceData = localRecords;
+                attendanceData = sortAttendanceData(localRecords);
                 renderAttendanceTable(attendanceData);
             }
         }
@@ -2134,6 +2143,106 @@
                 }
             }
             return result;
+        }
+
+        // XÁC ĐỊNH THỨ TỰ ƯU TIÊN CỐ ĐỊNH CỦA KHOA:
+        // 1. Khoa Kỹ thuật Công nghệ (CNTT)
+        // 2. Khoa Kinh tế
+        // 3. Khoa Xây dựng
+        // 4. Khoa Kiến trúc
+        function getFacultyPriority(facultyName) {
+            if (!facultyName) return 99;
+            const f = String(facultyName).toLowerCase().trim();
+            if (f.includes('kỹ thuật') || f.includes('công nghệ') || f.includes('cntt') || f.includes('tin học')) {
+                return 1;
+            }
+            if (f.includes('kinh tế') || f.includes('kinh te') || f.includes('qtkd')) {
+                return 2;
+            }
+            if (f.includes('xây dựng') || f.includes('xay dung')) {
+                return 3;
+            }
+            if (f.includes('kiến trúc') || f.includes('kien truc') || f.includes('quy hoạch')) {
+                return 4;
+            }
+            return 10;
+        }
+
+        // HÀM SẮP XẾP VÀ GOM NHÓM DỮ LIỆU ĐIỂM DANH:
+        // - Theo từng Sự Kiện (Sự kiện cũ giữ nguyên vị trí, thêm mới vào đúng sự kiện đó)
+        // - Trong 1 sự kiện: Cố định theo Khoa (Kỹ thuật CN -> Kinh tế -> Xây dựng -> Kiến trúc)
+        // - Trong 1 Khoa: Các lớp giống nhau xếp gần nhau (A-Z)
+        // - Trong 1 Lớp: Sinh viên mới thêm lên đầu của lớp đó
+        function sortAttendanceData(records) {
+            if (!Array.isArray(records) || records.length === 0) return records;
+
+            const acts = typeof getActivities === 'function' ? getActivities() : [];
+            const eventOrderMap = {};
+            if (Array.isArray(acts)) {
+                acts.forEach((act, idx) => {
+                    if (act && act.code) {
+                        eventOrderMap[String(act.code).trim().toUpperCase()] = idx;
+                    }
+                });
+            }
+
+            const eventMaxIdMap = {};
+            records.forEach(r => {
+                const code = String(r.code || '').trim().toUpperCase();
+                const id = parseInt(r.id) || 0;
+                if (!eventMaxIdMap[code] || id > eventMaxIdMap[code]) {
+                    eventMaxIdMap[code] = id;
+                }
+            });
+
+            const unrankedEvents = Object.keys(eventMaxIdMap)
+                .filter(code => eventOrderMap[code] === undefined)
+                .sort((a, b) => eventMaxIdMap[b] - eventMaxIdMap[a]);
+
+            let startRank = Object.keys(eventOrderMap).length;
+            unrankedEvents.forEach(code => {
+                eventOrderMap[code] = startRank++;
+            });
+
+            return records.slice().sort((a, b) => {
+                const codeA = String(a.code || '').trim().toUpperCase();
+                const codeB = String(b.code || '').trim().toUpperCase();
+
+                // 1. Gom nhóm theo Sự kiện
+                if (codeA !== codeB) {
+                    const rankA = eventOrderMap[codeA] !== undefined ? eventOrderMap[codeA] : 99999;
+                    const rankB = eventOrderMap[codeB] !== undefined ? eventOrderMap[codeB] : 99999;
+                    if (rankA !== rankB) return rankA - rankB;
+                    return codeA.localeCompare(codeB);
+                }
+
+                // 2. Trong 1 sự kiện -> Cố định theo Khoa
+                const facA = getFacultyPriority(a.faculty);
+                const facB = getFacultyPriority(b.faculty);
+                if (facA !== facB) {
+                    return facA - facB;
+                }
+
+                // 3. Trong 1 Khoa -> Lớp giống nhau xếp gần nhau (A-Z)
+                const classA = String(a.className || '').trim().toUpperCase();
+                const classB = String(b.className || '').trim().toUpperCase();
+                if (classA !== classB) {
+                    if (!classA) return 1;
+                    if (!classB) return -1;
+                    return classA.localeCompare(classB, 'vi', { numeric: true, sensitivity: 'base' });
+                }
+
+                // 4. Trong cùng 1 Lớp -> ID lớn hơn hoặc mới nhất xếp lên trước
+                const idA = parseInt(a.id) || 0;
+                const idB = parseInt(b.id) || 0;
+                if (idA !== idB) return idB - idA;
+
+                const timeA = String(a.timestamp || '');
+                const timeB = String(b.timestamp || '');
+                if (timeA !== timeB) return timeB.localeCompare(timeA);
+
+                return String(a.studentCode || '').localeCompare(String(b.studentCode || ''));
+            });
         }
 
         let currentRenderedAttendanceData = [];
@@ -2769,35 +2878,6 @@
                 btn.disabled = false;
                 btn.innerHTML = origHtml;
             }
-        }
-
-        // LỌC REALTIME TRÊN BẢNG (Theo tên, MSSV, Lớp, Khoa, Sự kiện)
-        function filterAttendanceTable() {
-            const searchQuery = document.getElementById('attendanceSearch').value.toLowerCase().trim();
-            const facultyFilter = document.getElementById('attendanceFacultyFilter') ? document.getElementById('attendanceFacultyFilter').value.toLowerCase().trim() : '';
-            const actFilter = document.getElementById('attendanceActivityFilter').value.toLowerCase();
-
-            const filtered = attendanceData.filter(item => {
-                const nameStr = String(item.name || '');
-                const codeStr = String(item.studentCode || '');
-                const classStr = String(item.className || '');
-                const facultyStr = String(item.faculty || '');
-                const phoneStr = String(item.phoneNumber || '');
-                const actCodeStr = String(item.code || '');
-
-                const matchesSearch = nameStr.toLowerCase().includes(searchQuery) ||
-                    codeStr.toLowerCase().includes(searchQuery) ||
-                    classStr.toLowerCase().includes(searchQuery) ||
-                    facultyStr.toLowerCase().includes(searchQuery) ||
-                    phoneStr.toLowerCase().includes(searchQuery);
-
-                const matchesFaculty = !facultyFilter || facultyStr.toLowerCase().includes(facultyFilter);
-                const matchesActivity = !actFilter || actCodeStr.toLowerCase() === actFilter;
-                return matchesSearch && matchesFaculty && matchesActivity;
-            });
-
-            renderAttendanceTable(filtered);
-            updateExportButtonLabel();
         }
 
         // TIỀN XỬ LÝ MẢNG DỮ LIỆU SANG MA TRẬN SHEETJS (XLSX)
