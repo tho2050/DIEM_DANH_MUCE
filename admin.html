@@ -579,43 +579,60 @@
 
             /* ===== TỐI ƯU TOÀN DIỆN CHO GIAO DIỆN ĐIỆN THOẠI (< 768px) ===== */
             .navbar-custom {
-                padding: 0.4rem 0;
+                padding: 0.35rem 0;
             }
             .logo-responsive {
-                max-height: 44px;
+                max-height: 38px;
                 padding: 2px 6px;
             }
+            .navbar-custom .btn {
+                font-size: 0.76rem;
+                padding: 4px 8px;
+            }
             .login-container {
-                margin: 1.5rem auto !important;
+                margin: 1.25rem auto !important;
                 padding: 0 10px;
                 max-width: 100%;
             }
             .login-container .card-custom {
-                padding: 1.25rem !important;
-                border-radius: 14px;
+                padding: 1.1rem 0.9rem !important;
+                border-radius: 12px;
+            }
+            .login-container h4 {
+                font-size: 1.15rem;
+            }
+            .login-container p {
+                font-size: 0.78rem;
             }
             .login-container input,
             .login-container select,
             .form-control,
             .form-select {
-                font-size: 1rem !important; /* 16px ngăn tự động phóng to trên iOS Safari */
+                font-size: 0.88rem !important;
+                padding: 7px 10px !important;
+                border-radius: 8px !important;
+            }
+            .form-label {
+                font-size: 0.8rem !important;
+                margin-bottom: 4px !important;
             }
             #adminDashboard {
                 padding-left: 8px !important;
                 padding-right: 8px !important;
+                padding-top: 0.5rem !important;
             }
             .card-custom {
-                padding: 1rem 0.85rem !important;
-                border-radius: 14px;
+                padding: 0.85rem 0.8rem !important;
+                border-radius: 12px;
             }
             .admin-top-nav {
                 background: #f1f5f9 !important;
                 border: 1px solid #e2e8f0 !important;
-                border-radius: 12px !important;
-                padding: 4px !important;
+                border-radius: 10px !important;
+                padding: 3px !important;
                 gap: 4px !important;
                 box-shadow: none !important;
-                margin-bottom: 0.85rem !important;
+                margin-bottom: 0.75rem !important;
                 display: flex !important;
                 flex-wrap: nowrap !important;
                 overflow-x: auto !important;
@@ -627,9 +644,9 @@
             }
             .admin-nav-btn {
                 flex: 0 0 auto !important;
-                padding: 7px 12px !important;
-                font-size: 0.8rem !important;
-                border-radius: 8px !important;
+                padding: 6px 10px !important;
+                font-size: 0.76rem !important;
+                border-radius: 7px !important;
                 font-weight: 600 !important;
                 color: #475569 !important;
                 background: transparent !important;
@@ -639,60 +656,68 @@
             .admin-nav-btn.active {
                 background: #0284c7 !important;
                 color: #ffffff !important;
-                box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25) !important;
+                box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25) !important;
             }
             .activity-item-row {
-                padding: 12px 0;
+                padding: 10px 0;
+            }
+            .activity-item-row h6 {
+                font-size: 0.92rem;
+            }
+            .activity-item-row .badge {
+                font-size: 0.7rem;
+                padding: 3px 6px;
             }
             .activity-item-row .d-flex.gap-2 {
                 width: 100%;
                 display: grid !important;
                 grid-template-columns: 1fr 1fr;
-                gap: 6px !important;
-                margin-top: 10px;
+                gap: 5px !important;
+                margin-top: 8px;
             }
             .activity-item-row .btn {
-                font-size: 0.78rem;
-                padding: 8px 6px;
+                font-size: 0.74rem;
+                padding: 6px 4px;
                 text-align: center;
                 justify-content: center;
                 display: inline-flex;
                 align-items: center;
+                border-radius: 6px;
             }
 
             /* THANH NÚT BẤM DANH SÁCH ĐIỂM DANH: GỌN GÀNG, KHÔNG BỊ PHÌNH TO THÀNH HÌNH VUÔNG */
             .attendance-header-actions {
                 flex-direction: column !important;
                 align-items: stretch !important;
-                margin-bottom: 0.8rem !important;
-                gap: 8px !important;
+                margin-bottom: 0.65rem !important;
+                gap: 6px !important;
             }
             .attendance-tab-title {
-                font-size: 1.05rem !important;
+                font-size: 0.95rem !important;
                 margin-bottom: 2px !important;
             }
             .attendance-btn-toolbar {
                 width: 100% !important;
                 display: flex !important;
                 flex-wrap: nowrap !important;
-                gap: 8px !important;
+                gap: 6px !important;
                 align-items: center !important;
             }
             #btnExportExcelGroup {
                 flex: 1 1 auto !important;
                 display: flex !important;
                 min-width: 0 !important;
-                height: 38px !important;
+                height: 34px !important;
             }
             #btnExportMain {
                 flex: 1 1 auto !important;
-                font-size: 0.84rem !important;
-                padding: 8px 10px !important;
-                height: 38px !important;
+                font-size: 0.78rem !important;
+                padding: 6px 8px !important;
+                height: 34px !important;
                 white-space: nowrap !important;
                 overflow: hidden !important;
                 text-overflow: ellipsis !important;
-                border-radius: 8px 0 0 8px !important;
+                border-radius: 7px 0 0 7px !important;
                 display: inline-flex !important;
                 align-items: center !important;
                 justify-content: center !important;
@@ -702,67 +727,91 @@
                 white-space: nowrap !important;
                 overflow: hidden !important;
                 text-overflow: ellipsis !important;
-                max-width: 150px !important;
+                max-width: 140px !important;
             }
             #btnExportExcelGroup .dropdown-toggle-split {
                 flex: 0 0 auto !important;
-                padding: 8px 10px !important;
-                height: 38px !important;
-                border-radius: 0 8px 8px 0 !important;
+                padding: 6px 8px !important;
+                height: 34px !important;
+                border-radius: 0 7px 7px 0 !important;
             }
             .btn-reload-attendance {
                 flex: 0 0 auto !important;
-                height: 38px !important;
-                padding: 8px 14px !important;
-                font-size: 0.84rem !important;
-                border-radius: 8px !important;
+                height: 34px !important;
+                padding: 6px 10px !important;
+                font-size: 0.78rem !important;
+                border-radius: 7px !important;
                 white-space: nowrap !important;
                 display: inline-flex !important;
                 align-items: center !important;
                 gap: 4px !important;
             }
+            #btnAddManualCheckin, #btnImportExcel {
+                height: 34px !important;
+                padding: 6px 8px !important;
+                font-size: 0.76rem !important;
+                border-radius: 7px !important;
+            }
 
             /* CHỈ DẪN CUỘN BẢNG GỌN 1 HÀNG TRÊN ĐIỆN THOẠI */
             .hint-desktop { display: none !important; }
-            .hint-mobile { display: inline-flex !important; align-items: center; font-size: 0.74rem !important; }
-            .table-scroll-hint-bar { margin-bottom: 4px !important; }
+            .hint-mobile { display: inline-flex !important; align-items: center; font-size: 0.7rem !important; }
+            .table-scroll-hint-bar { margin-bottom: 3px !important; }
             .sticky-table-header-controls {
-                padding: 6px 8px !important;
-                margin-bottom: 6px !important;
+                padding: 5px 6px !important;
+                margin-bottom: 5px !important;
                 border-radius: 8px !important;
             }
             .top-scrollbar-wrapper {
-                height: 6px !important;
+                height: 5px !important;
             }
             .top-scrollbar-wrapper::-webkit-scrollbar {
-                height: 6px !important;
+                height: 5px !important;
             }
             .top-scrollbar-wrapper::-webkit-scrollbar-thumb {
-                border-radius: 4px !important;
+                border-radius: 3px !important;
             }
 
             #selectedStudentBar {
-                font-size: 0.8rem;
-                padding: 8px 10px;
+                font-size: 0.75rem;
+                padding: 6px 8px;
             }
             #attendanceTable th,
             #attendanceTable td {
-                padding: 6px 8px;
-                font-size: 0.78rem;
+                padding: 5px 6px;
+                font-size: 0.74rem;
                 white-space: nowrap;
             }
             #mapSelector {
-                height: 220px;
-                border-radius: 12px;
+                height: 200px;
+                border-radius: 10px;
             }
             .modal-dialog {
-                margin: 0.75rem;
+                margin: 0.5rem;
             }
             .modal-content {
-                border-radius: 14px;
+                border-radius: 12px;
+            }
+            .modal-header {
+                padding: 0.75rem 1rem;
+            }
+            .modal-title {
+                font-size: 0.95rem;
             }
             .modal-body {
-                padding: 1rem;
+                padding: 0.85rem;
+                font-size: 0.82rem;
+            }
+            .modal-footer {
+                padding: 0.6rem 0.85rem;
+            }
+            .modal-footer .btn {
+                padding: 6px 12px;
+                font-size: 0.8rem;
+            }
+            .btn-success#btnSubmitEvent {
+                padding: 9px 12px;
+                font-size: 0.85rem;
             }
         }
 
