@@ -118,14 +118,7 @@
         .test-mode-panel.active { display: block; }
         .device-mode-panel.hidden { display: none; }
 
-        @media (max-width: 576px) {
-            .activity-header { padding: 1rem 1.25rem; }
-            .activity-header h1 { font-size: 1.3rem; }
-            .panel-body { padding: 1rem; }
-            .panel-header { padding: 0.8rem 1rem; }
-            .btn-gps-verify, .btn-submit-checkin { padding: 10px; font-size: 0.85rem; }
-            #checkinMap { height: 220px; }
-        }
+
 
         /* ===== MUCE FOOTER ===== */
         .muce-footer {
@@ -395,6 +388,92 @@
                 font-size: 0.74rem;
                 padding: 0.85rem 10px;
                 line-height: 1.4;
+            }
+
+            /* ===== TỐI ƯU TOÀN DIỆN CHO GIAO DIỆN ĐIỆN THOẠI (< 768px) ===== */
+            .top-bar {
+                padding: 0.4rem 0;
+            }
+            .logo-responsive {
+                max-height: 44px;
+                padding: 2px 6px;
+            }
+            .sub-bar {
+                font-size: 0.78rem;
+                padding: 6px 0 !important;
+            }
+            .activity-header {
+                padding: 1rem 1.15rem;
+                margin-top: 0.85rem;
+                border-radius: 14px;
+            }
+            .activity-header h1 {
+                font-size: 1.25rem;
+                line-height: 1.35;
+                margin: 0.5rem 0 0.4rem;
+            }
+            #btnBackList {
+                width: 100%;
+                margin-top: 6px;
+                text-align: center;
+                justify-content: center;
+                display: inline-flex;
+            }
+            .panel-card {
+                border-radius: 14px;
+                box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08);
+            }
+            .panel-header {
+                padding: 0.8rem 1rem;
+            }
+            .panel-body {
+                padding: 1rem;
+            }
+            #checkinMap {
+                height: 220px;
+                border-radius: 12px;
+            }
+            .gps-info-box {
+                padding: 0.8rem 1rem;
+                border-radius: 10px;
+            }
+            .gps-info-row .value.distance {
+                font-size: 1.35rem;
+            }
+            .btn-gps-verify {
+                padding: 12px 16px;
+                font-size: 0.92rem;
+                border-radius: 12px;
+                min-height: 46px;
+            }
+            .form-section label {
+                font-size: 0.88rem !important;
+                font-weight: 600;
+                margin-bottom: 4px;
+            }
+            .form-section .form-control {
+                font-size: 1rem !important; /* 16px ngăn tự động phóng to trên iOS Safari */
+                padding: 10px 12px;
+                border-radius: 10px;
+            }
+            .quick-samples {
+                overflow-x: auto;
+                flex-wrap: nowrap;
+                padding-bottom: 4px;
+                -webkit-overflow-scrolling: touch;
+            }
+            .quick-sample-btn {
+                white-space: nowrap;
+            }
+            .btn-submit-checkin {
+                padding: 13px 18px;
+                font-size: 0.96rem;
+                border-radius: 12px;
+                min-height: 48px;
+            }
+            .result-box {
+                border-radius: 12px;
+                padding: 0.9rem 1rem;
             }
         }
     </style>

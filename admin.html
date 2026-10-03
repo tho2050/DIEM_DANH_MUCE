@@ -576,6 +576,99 @@
                 padding: 0.85rem 10px;
                 line-height: 1.4;
             }
+
+            /* ===== TỐI ƯU TOÀN DIỆN CHO GIAO DIỆN ĐIỆN THOẠI (< 768px) ===== */
+            .navbar-custom {
+                padding: 0.4rem 0;
+            }
+            .logo-responsive {
+                max-height: 44px;
+                padding: 2px 6px;
+            }
+            .login-container {
+                margin: 1.5rem auto !important;
+                padding: 0 10px;
+                max-width: 100%;
+            }
+            .login-container .card-custom {
+                padding: 1.25rem !important;
+                border-radius: 14px;
+            }
+            .login-container input,
+            .login-container select,
+            .form-control,
+            .form-select {
+                font-size: 1rem !important; /* 16px ngăn tự động phóng to trên iOS Safari */
+            }
+            #adminDashboard {
+                padding-left: 8px !important;
+                padding-right: 8px !important;
+            }
+            .card-custom {
+                padding: 1rem 0.85rem !important;
+                border-radius: 14px;
+            }
+            .admin-top-nav {
+                scrollbar-width: none;
+                -ms-overflow-style: none;
+                margin-bottom: 1rem !important;
+            }
+            .admin-top-nav::-webkit-scrollbar {
+                display: none;
+            }
+            .admin-nav-btn {
+                padding: 8px 12px;
+                font-size: 0.82rem;
+                border-radius: 8px;
+            }
+            .activity-item-row {
+                padding: 12px 0;
+            }
+            .activity-item-row .d-flex.gap-2 {
+                width: 100%;
+                display: grid !important;
+                grid-template-columns: 1fr 1fr;
+                gap: 6px !important;
+                margin-top: 10px;
+            }
+            .activity-item-row .btn {
+                font-size: 0.78rem;
+                padding: 8px 6px;
+                text-align: center;
+                justify-content: center;
+                display: inline-flex;
+                align-items: center;
+            }
+            .attendance-header-actions .d-flex {
+                width: 100%;
+            }
+            .attendance-header-actions .btn,
+            .attendance-header-actions .btn-group {
+                flex: 1 1 calc(50% - 6px);
+            }
+            #selectedStudentBar {
+                font-size: 0.8rem;
+                padding: 8px 10px;
+            }
+            #attendanceTable th,
+            #attendanceTable td {
+                padding: 6px 8px;
+                font-size: 0.78rem;
+                white-space: nowrap;
+            }
+            #mapSelector {
+                height: 220px;
+                border-radius: 12px;
+            }
+            .modal-dialog {
+                margin: 0.75rem;
+            }
+            .modal-content {
+                border-radius: 14px;
+            }
+            .modal-body {
+                padding: 1rem;
+            }
         }
     </style>
 </head>
