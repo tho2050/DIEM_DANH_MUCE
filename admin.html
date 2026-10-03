@@ -1088,12 +1088,18 @@
         <div class="w-100">
             <!-- Tab: Manage Activities -->
             <div class="card card-custom p-4" id="tab-manage-activities">
-                    <h5 class="fw-bold mb-3"><i class="fa-solid fa-list me-2 text-primary"></i>Danh sách sự kiện đang mở
+                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                    <h5 class="fw-bold mb-0 text-dark">
+                        <i class="fa-solid fa-list me-2 text-primary"></i>Danh sách sự kiện đang mở
                     </h5>
-                    <div id="activitiesListContainer">
-                        <!-- Rendered by JS -->
-                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-danger fw-semibold d-inline-flex align-items-center shadow-sm" onclick="openTrashActivitiesModal()" id="btnOpenTrashActivities" title="Xem và khôi phục các sự kiện đã xóa nhầm">
+                        <i class="fa-solid fa-trash-can-arrow-up me-1"></i>Thùng Rác & Khôi Phục <span class="badge bg-danger text-white rounded-pill ms-1 d-none" id="trashCountBadge">0</span>
+                    </button>
                 </div>
+                <div id="activitiesListContainer">
+                    <!-- Rendered by JS -->
+                </div>
+            </div>
 
                 <!-- Tab: Attendance List -->
                 <div class="card card-custom p-4 d-none" id="tab-attendance-list">
@@ -1836,6 +1842,59 @@
         </div>
     </div>
 
+    <!-- Toast Thông Báo Nhanh & Hoàn Tác Sự Kiện Đã Xóa -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 11000;">
+        <div id="undoToast" class="toast align-items-center text-bg-dark border-0 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex align-items-center p-2">
+                <div class="toast-body d-flex align-items-center flex-grow-1" id="undoToastBody">
+                    <i class="fa-solid fa-trash-can text-warning me-2 fs-5"></i>
+                    <span>Đã chuyển sự kiện vào Thùng Rác.</span>
+                </div>
+                <button type="button" class="btn btn-sm btn-warning fw-bold text-dark me-2 px-3" id="btnQuickUndo" onclick="quickUndoRestore()">
+                    <i class="fa-solid fa-rotate-left me-1"></i>Hoàn tác
+                </button>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Thùng Rác & Khôi Phục Sự Kiện -->
+    <div class="modal fade" id="trashActivitiesModal" tabindex="-1" aria-labelledby="trashActivitiesModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content shadow-lg border-0" style="border-radius: 16px;">
+                <div class="modal-header bg-dark text-white py-3"
+                    style="border-top-left-radius: 16px; border-top-right-radius: 16px;">
+                    <h5 class="modal-title fw-bold" id="trashActivitiesModalLabel">
+                        <i class="fa-solid fa-trash-can-arrow-up text-warning me-2"></i>Thùng Rác & Khôi Phục Sự Kiện
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="alert alert-info py-2 small mb-3">
+                        <i class="fa-solid fa-circle-info me-1"></i>
+                        Các sự kiện lỡ xóa nhầm được lưu an toàn tại đây. Bạn có thể nhấn <strong>"Khôi phục"</strong> để đưa sự kiện và toàn bộ thiết lập trở lại hoạt động bình thường!
+                    </div>
+
+                    <div id="trashListContainer">
+                        <!-- Rendered by JS -->
+                    </div>
+                </div>
+                <div class="modal-footer bg-light d-flex justify-content-between p-3"
+                    style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="emptyTrashActivities()" id="btnEmptyTrash" title="Xóa vĩnh viễn tất cả sự kiện trong thùng rác">
+                            <i class="fa-solid fa-fire me-1"></i>Dọn Sạch Thùng Rác
+                        </button>
+                        <button type="button" class="btn btn-sm btn-success fw-bold" onclick="restoreAllActivities()" id="btnRestoreAll" title="Khôi phục toàn bộ sự kiện đã xóa">
+                            <i class="fa-solid fa-rotate-left me-1"></i>Khôi Phục Tất Cả
+                        </button>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-secondary px-3" data-bs-dismiss="modal">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://unpkg.com/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -2210,10 +2269,14 @@
             updateLocalhostWarning();
 
             renderActivities();
+            updateTrashCountBadge();
 
             // Đồng bộ ngầm danh sách sự kiện từ Google Sheet về
             syncActivitiesFromCloud(() => {
                 renderActivities();
+            });
+            syncDeletedActivitiesFromCloud(() => {
+                updateTrashCountBadge();
             });
         }
 
@@ -2403,21 +2466,266 @@
             renderActivities();
         }
 
+        let lastDeletedActivity = null;
+        let undoToastInstance = null;
+        let trashModalInstance = null;
+
+        function updateTrashCountBadge() {
+            const delList = getDeletedActivities();
+            const badge = document.getElementById('trashCountBadge');
+            if (badge) {
+                badge.textContent = delList.length;
+                if (delList.length > 0) {
+                    badge.classList.remove('d-none');
+                } else {
+                    badge.classList.add('d-none');
+                }
+            }
+        }
+
+        function showUndoToast(act) {
+            lastDeletedActivity = act;
+            const toastEl = document.getElementById('undoToast');
+            const bodyEl = document.getElementById('undoToastBody');
+            if (!toastEl || !bodyEl) return;
+
+            bodyEl.innerHTML = `<i class="fa-solid fa-trash-can text-warning me-2 fs-5"></i><span>Đã chuyển sự kiện <strong>${act.title || act.code}</strong> vào Thùng Rác.</span>`;
+
+            if (!undoToastInstance) {
+                undoToastInstance = new bootstrap.Toast(toastEl, { delay: 7000 });
+            }
+            undoToastInstance.show();
+        }
+
+        async function quickUndoRestore() {
+            if (!lastDeletedActivity) return;
+            const actToRestore = lastDeletedActivity;
+            lastDeletedActivity = null;
+            if (undoToastInstance) undoToastInstance.hide();
+            await restoreSingleActivity(actToRestore.code, true);
+        }
+
         async function deleteActivity(idx) {
             const list = getActivities();
             const act = list[idx];
             if (!act) return;
 
-            if (confirm(`Bạn có chắc chắn muốn XÓA sự kiện "${act.title || act.code}" (${act.code})?`)) {
+            if (confirm(`Bạn có chắc chắn muốn XÓA sự kiện "${act.title || act.code}" (${act.code})?\n\n(Lưu ý: Sự kiện sẽ được chuyển vào Thùng Rác và bạn có thể khôi phục lại bất kỳ lúc nào nếu lỡ xóa nhầm!)`)) {
+                // Xóa khỏi danh sách hoạt động
                 list.splice(idx, 1);
                 saveActivities(list);
                 renderActivities();
+
+                // Lưu vào Thùng Rác (deleted activities)
+                const delList = getDeletedActivities();
+                const deletedItem = {
+                    ...act,
+                    deletedAt: (typeof getVietnamTimestamp === 'function' ? getVietnamTimestamp() : new Date().toLocaleString('vi-VN'))
+                };
+                const cleanDel = delList.filter(d => String(d.code).toUpperCase() !== String(act.code).toUpperCase());
+                cleanDel.unshift(deletedItem);
+                saveDeletedActivities(cleanDel);
+                updateTrashCountBadge();
+
+                // Hiển thị toast hoàn tác nhanh
+                showUndoToast(act);
 
                 if (CONFIG.googleScriptUrl) {
                     try {
                         await fetch(CONFIG.googleScriptUrl + '?action=deleteActivity&code=' + encodeURIComponent(act.code) + '&_t=' + Date.now());
                     } catch (e) {
-                        console.error("Lỗi xóa sự kiện trên SQL:", e);
+                        console.error("Lỗi xóa sự kiện trên server:", e);
+                    }
+                }
+            }
+        }
+
+        function openTrashActivitiesModal() {
+            if (!trashModalInstance) {
+                trashModalInstance = new bootstrap.Modal(document.getElementById('trashActivitiesModal'));
+            }
+            renderTrashList();
+            trashModalInstance.show();
+
+            // Đồng bộ thêm từ server nếu có
+            syncDeletedActivitiesFromCloud(() => {
+                renderTrashList();
+                updateTrashCountBadge();
+            });
+        }
+
+        function renderTrashList() {
+            const delList = getDeletedActivities();
+            const container = document.getElementById('trashListContainer');
+            const btnEmpty = document.getElementById('btnEmptyTrash');
+            const btnRestoreAll = document.getElementById('btnRestoreAll');
+
+            if (!container) return;
+
+            if (!delList || delList.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-5 text-muted">
+                        <i class="fa-solid fa-trash-can mb-3" style="font-size: 3rem; opacity: 0.3;"></i>
+                        <h6 class="fw-bold">Thùng rác đang trống</h6>
+                        <p class="small mb-0">Chưa có sự kiện nào bị xóa nhầm.</p>
+                    </div>
+                `;
+                if (btnEmpty) btnEmpty.disabled = true;
+                if (btnRestoreAll) btnRestoreAll.disabled = true;
+                return;
+            }
+
+            if (btnEmpty) btnEmpty.disabled = false;
+            if (btnRestoreAll) btnRestoreAll.disabled = false;
+
+            container.innerHTML = `
+                <div class="table-responsive border rounded" style="max-height: 380px;">
+                    <table class="table table-hover align-middle mb-0 small">
+                        <thead class="table-dark">
+                            <tr>
+                                <th style="width: 110px;">Mã Sự Kiện</th>
+                                <th>Tên Sự Kiện & Địa Điểm</th>
+                                <th style="width: 160px;">Thời Gian Xóa</th>
+                                <th class="text-center" style="width: 170px;">Thao Tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${delList.map(item => `
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-secondary font-monospace">${item.code}</span>
+                                    </td>
+                                    <td>
+                                        <strong class="text-dark d-block">${item.title || item.code}</strong>
+                                        <span class="text-muted small d-block">
+                                            <i class="fa-solid fa-location-dot me-1"></i>${item.locationAddress || 'Chưa có địa chỉ'} (Bán kính: ${item.radiusMeters || 50}m)
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="text-danger fw-semibold">
+                                            <i class="fa-solid fa-clock me-1"></i>${item.deletedAt || 'Gần đây'}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <button class="btn btn-sm btn-success fw-bold px-2 py-1 me-1 shadow-sm" onclick="restoreSingleActivity('${item.code}')" title="Khôi phục lại sự kiện này">
+                                            <i class="fa-solid fa-rotate-left me-1"></i>Khôi phục
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger px-2 py-1" onclick="permanentDeleteSingleActivity('${item.code}')" title="Xóa vĩnh viễn không thể khôi phục">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        async function restoreSingleActivity(code, isUndo = false) {
+            const delList = getDeletedActivities();
+            const actIndex = delList.findIndex(d => String(d.code).toUpperCase() === String(code).toUpperCase());
+            if (actIndex === -1) return;
+
+            const restoredAct = { ...delList[actIndex] };
+            delete restoredAct.deletedAt;
+
+            // Xóa khỏi thùng rác
+            delList.splice(actIndex, 1);
+            saveDeletedActivities(delList);
+
+            // Thêm lại vào danh sách sự kiện hoạt động
+            const activeList = getActivities();
+            const existIdx = activeList.findIndex(a => String(a.code).toUpperCase() === String(code).toUpperCase());
+            if (existIdx !== -1) {
+                activeList[existIdx] = restoredAct;
+            } else {
+                activeList.unshift(restoredAct);
+            }
+            saveActivities(activeList);
+
+            renderActivities();
+            renderTrashList();
+            updateTrashCountBadge();
+
+            if (CONFIG.googleScriptUrl) {
+                try {
+                    await fetch(CONFIG.googleScriptUrl + '?action=restoreActivity&code=' + encodeURIComponent(code) + '&_t=' + Date.now());
+                } catch (e) {
+                    console.error("Lỗi gửi restoreActivity lên server:", e);
+                }
+            }
+
+            if (!isUndo) {
+                alert(`Đã khôi phục thành công sự kiện "${restoredAct.title || restoredAct.code}" (${restoredAct.code})!`);
+            }
+        }
+
+        async function restoreAllActivities() {
+            const delList = getDeletedActivities();
+            if (!delList || delList.length === 0) return;
+
+            if (confirm(`Bạn có chắc muốn KHÔI PHỤC TOÀN BỘ ${delList.length} sự kiện từ thùng rác?`)) {
+                const activeList = getActivities();
+
+                for (const act of delList) {
+                    const clean = { ...act };
+                    delete clean.deletedAt;
+                    const existIdx = activeList.findIndex(a => String(a.code).toUpperCase() === String(clean.code).toUpperCase());
+                    if (existIdx !== -1) {
+                        activeList[existIdx] = clean;
+                    } else {
+                        activeList.unshift(clean);
+                    }
+                    if (CONFIG.googleScriptUrl) {
+                        fetch(CONFIG.googleScriptUrl + '?action=restoreActivity&code=' + encodeURIComponent(clean.code) + '&_t=' + Date.now()).catch(() => {});
+                    }
+                }
+
+                saveDeletedActivities([]);
+                saveActivities(activeList);
+
+                renderActivities();
+                renderTrashList();
+                updateTrashCountBadge();
+
+                alert(`Đã khôi phục thành công toàn bộ sự kiện!`);
+            }
+        }
+
+        async function permanentDeleteSingleActivity(code) {
+            if (confirm(`CẢNH BÁO: Bạn có chắc chắn muốn XÓA VĨNH VIỄN sự kiện này?\n\n(Hành động này sẽ xóa hoàn toàn khỏi thùng rác và không thể khôi phục lại nữa!)`)) {
+                const delList = getDeletedActivities();
+                const filtered = delList.filter(d => String(d.code).toUpperCase() !== String(code).toUpperCase());
+                saveDeletedActivities(filtered);
+
+                renderTrashList();
+                updateTrashCountBadge();
+
+                if (CONFIG.googleScriptUrl) {
+                    try {
+                        await fetch(CONFIG.googleScriptUrl + '?action=permanentDeleteActivity&code=' + encodeURIComponent(code) + '&_t=' + Date.now());
+                    } catch (e) {
+                        console.error("Lỗi xóa vĩnh viễn sự kiện:", e);
+                    }
+                }
+            }
+        }
+
+        async function emptyTrashActivities() {
+            const delList = getDeletedActivities();
+            if (!delList || delList.length === 0) return;
+
+            if (confirm(`CẢNH BÁO QUAN TRỌNG: Bạn có chắc chắn muốn DỌN SẠCH THÙNG RÁC?\n\nToàn bộ ${delList.length} sự kiện đã xóa sẽ bị hủy vĩnh viễn và không thể khôi phục!`)) {
+                saveDeletedActivities([]);
+                renderTrashList();
+                updateTrashCountBadge();
+
+                if (CONFIG.googleScriptUrl) {
+                    try {
+                        await fetch(CONFIG.googleScriptUrl + '?action=emptyTrashActivities&_t=' + Date.now());
+                    } catch (e) {
+                        console.error("Lỗi dọn sạch thùng rác:", e);
                     }
                 }
             }

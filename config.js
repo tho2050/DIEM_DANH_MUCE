@@ -72,3 +72,35 @@ function syncActivitiesFromCloud(callback) {
         })
         .catch(err => console.error("Lỗi đồng bộ danh sách sự kiện từ cloud:", err));
 }
+
+// 3. QUẢN LÝ THÙNG RÁC & KHÔI PHỤC SỰ KIỆN ĐÃ XÓA
+function getDeletedActivities() {
+    const local = localStorage.getItem("gps_deleted_activities");
+    if (local) {
+        try {
+            const parsed = JSON.parse(local);
+            if (Array.isArray(parsed)) return parsed;
+        } catch (e) {
+            console.error("Lỗi đọc gps_deleted_activities:", e);
+        }
+    }
+    return [];
+}
+
+function saveDeletedActivities(list) {
+    localStorage.setItem("gps_deleted_activities", JSON.stringify(list || []));
+}
+
+function syncDeletedActivitiesFromCloud(callback) {
+    if (!CONFIG.googleScriptUrl) return;
+    fetch(CONFIG.googleScriptUrl + "?action=getDeletedActivities&_t=" + Date.now())
+        .then(res => res.json())
+        .then(data => {
+            if (Array.isArray(data)) {
+                localStorage.setItem("gps_deleted_activities", JSON.stringify(data));
+                if (callback) callback(data);
+            }
+        })
+        .catch(err => console.error("Lỗi đồng bộ thùng rác từ cloud:", err));
+}
+

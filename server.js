@@ -36,6 +36,7 @@ if (!fs.existsSync(DATA_DIR)) {
 }
 
 const ACTIVITIES_FILE = path.join(DATA_DIR, 'activities.json');
+const DELETED_ACTIVITIES_FILE = path.join(DATA_DIR, 'deleted_activities.json');
 const RECORDS_FILE = path.join(DATA_DIR, 'records.json');
 const ACCOUNTS_FILE = path.join(DATA_DIR, 'accounts.json');
 const CONFIG_FILE = path.join(DATA_DIR, 'admin_config.json');
@@ -61,7 +62,9 @@ if (DATABASE_URL) {
             radius_meters INT,
             start_time TEXT,
             end_time TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            is_deleted BOOLEAN DEFAULT FALSE,
+            deleted_at TEXT
         );
 
         CREATE TABLE IF NOT EXISTS checkins (
@@ -130,6 +133,15 @@ if (DATABASE_URL) {
             } catch (e) {
                 console.error("Lỗi đồng bộ múi giờ Việt Nam trong SQL:", e);
             }
+
+            try {
+                await pool.query(`
+                    ALTER TABLE activities ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE;
+                    ALTER TABLE activities ADD COLUMN IF NOT EXISTS deleted_at TEXT;
+                `);
+            } catch (e) {
+                console.error("Lỗi cập nhật cột is_deleted cho activities:", e);
+            }
         })
         .catch(err => console.error('❌ Lỗi khởi tạo PostgreSQL Tables:', err));
 } else {
@@ -152,7 +164,7 @@ function getLocalIp() {
 async function dbGetActivities() {
     if (pool) {
         try {
-            const res = await pool.query('SELECT code, title, description, location_address as "locationAddress", latitude, longitude, radius_meters as "radiusMeters", start_time as "startTime", end_time as "endTime" FROM activities ORDER BY created_at DESC');
+            const res = await pool.query('SELECT code, title, description, location_address as "locationAddress", latitude, longitude, radius_meters as "radiusMeters", start_time as "startTime", end_time as "endTime" FROM activities WHERE is_deleted IS NOT TRUE ORDER BY created_at DESC');
             return res.rows;
         } catch (e) { console.error('Lỗi đọc activities từ SQL:', e); }
     }
@@ -162,21 +174,36 @@ async function dbGetActivities() {
     return [];
 }
 
+async function dbGetDeletedActivities() {
+    if (pool) {
+        try {
+            const res = await pool.query('SELECT code, title, description, location_address as "locationAddress", latitude, longitude, radius_meters as "radiusMeters", start_time as "startTime", end_time as "endTime", deleted_at as "deletedAt" FROM activities WHERE is_deleted = TRUE ORDER BY deleted_at DESC');
+            return res.rows;
+        } catch (e) { console.error('Lỗi đọc deleted activities từ SQL:', e); }
+    }
+    if (fs.existsSync(DELETED_ACTIVITIES_FILE)) {
+        try { return JSON.parse(fs.readFileSync(DELETED_ACTIVITIES_FILE, 'utf8')); } catch (e) {}
+    }
+    return [];
+}
+
 async function dbSaveActivities(activitiesList) {
     if (pool) {
         try {
             const validCodes = (activitiesList || []).map(a => a ? a.code : null).filter(Boolean);
             if (validCodes.length > 0) {
-                await pool.query('DELETE FROM activities WHERE code NOT IN (' + validCodes.map((_, i) => '$' + (i + 1)).join(',') + ')', validCodes);
-            } else {
-                await pool.query('DELETE FROM activities');
+                // Đánh dấu is_deleted = TRUE cho các sự kiện không còn trong danh sách (để có thể khôi phục)
+                await pool.query(
+                    'UPDATE activities SET is_deleted = TRUE, deleted_at = $1 WHERE (is_deleted IS NOT TRUE) AND code NOT IN (' + validCodes.map((_, i) => '$' + (i + 2)).join(',') + ')',
+                    [getVietnamTimestamp(), ...validCodes]
+                );
             }
 
             for (const act of activitiesList) {
                 if (!act || !act.code) continue;
                 await pool.query(`
-                    INSERT INTO activities (code, title, description, location_address, latitude, longitude, radius_meters, start_time, end_time)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                    INSERT INTO activities (code, title, description, location_address, latitude, longitude, radius_meters, start_time, end_time, is_deleted, deleted_at)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, FALSE, NULL)
                     ON CONFLICT (code) DO UPDATE SET
                         title = EXCLUDED.title,
                         description = EXCLUDED.description,
@@ -185,7 +212,9 @@ async function dbSaveActivities(activitiesList) {
                         longitude = EXCLUDED.longitude,
                         radius_meters = EXCLUDED.radius_meters,
                         start_time = EXCLUDED.start_time,
-                        end_time = EXCLUDED.end_time;
+                        end_time = EXCLUDED.end_time,
+                        is_deleted = FALSE,
+                        deleted_at = NULL;
                 `, [
                     act.code, act.title || '', act.description || '', act.locationAddress || '',
                     parseFloat(act.latitude) || 0, parseFloat(act.longitude) || 0,
@@ -201,19 +230,90 @@ async function dbSaveActivities(activitiesList) {
 
 async function dbDeleteActivity(code) {
     if (!code) return true;
+    const delTime = getVietnamTimestamp();
     if (pool) {
         try {
-            await pool.query('DELETE FROM activities WHERE code = $1', [code]);
+            await pool.query('UPDATE activities SET is_deleted = TRUE, deleted_at = $1 WHERE code = $2', [delTime, code]);
             return true;
-        } catch (e) { console.error('Lỗi delete activity SQL:', e); }
+        } catch (e) { console.error('Lỗi soft delete activity SQL:', e); }
     }
+    let act = null;
     if (fs.existsSync(ACTIVITIES_FILE)) {
         try {
             let list = JSON.parse(fs.readFileSync(ACTIVITIES_FILE, 'utf8'));
+            act = list.find(a => a.code === code);
             list = list.filter(a => a.code !== code);
             fs.writeFileSync(ACTIVITIES_FILE, JSON.stringify(list, null, 2), 'utf8');
         } catch (e) {}
     }
+    if (act) {
+        let delList = [];
+        if (fs.existsSync(DELETED_ACTIVITIES_FILE)) {
+            try { delList = JSON.parse(fs.readFileSync(DELETED_ACTIVITIES_FILE, 'utf8')); } catch (e) {}
+        }
+        delList = delList.filter(a => a.code !== code);
+        delList.unshift({ ...act, deletedAt: delTime });
+        fs.writeFileSync(DELETED_ACTIVITIES_FILE, JSON.stringify(delList, null, 2), 'utf8');
+    }
+    return true;
+}
+
+async function dbRestoreActivity(code) {
+    if (!code) return true;
+    if (pool) {
+        try {
+            await pool.query('UPDATE activities SET is_deleted = FALSE, deleted_at = NULL WHERE code = $1', [code]);
+            return true;
+        } catch (e) { console.error('Lỗi restore activity SQL:', e); }
+    }
+    let restoredAct = null;
+    if (fs.existsSync(DELETED_ACTIVITIES_FILE)) {
+        try {
+            let delList = JSON.parse(fs.readFileSync(DELETED_ACTIVITIES_FILE, 'utf8'));
+            restoredAct = delList.find(a => a.code === code);
+            delList = delList.filter(a => a.code !== code);
+            fs.writeFileSync(DELETED_ACTIVITIES_FILE, JSON.stringify(delList, null, 2), 'utf8');
+        } catch (e) {}
+    }
+    if (restoredAct) {
+        let list = [];
+        if (fs.existsSync(ACTIVITIES_FILE)) {
+            try { list = JSON.parse(fs.readFileSync(ACTIVITIES_FILE, 'utf8')); } catch (e) {}
+        }
+        delete restoredAct.deletedAt;
+        list = list.filter(a => a.code !== code);
+        list.unshift(restoredAct);
+        fs.writeFileSync(ACTIVITIES_FILE, JSON.stringify(list, null, 2), 'utf8');
+    }
+    return true;
+}
+
+async function dbPermanentDeleteActivity(code) {
+    if (!code) return true;
+    if (pool) {
+        try {
+            await pool.query('DELETE FROM activities WHERE code = $1', [code]);
+            return true;
+        } catch (e) { console.error('Lỗi permanent delete activity SQL:', e); }
+    }
+    if (fs.existsSync(DELETED_ACTIVITIES_FILE)) {
+        try {
+            let delList = JSON.parse(fs.readFileSync(DELETED_ACTIVITIES_FILE, 'utf8'));
+            delList = delList.filter(a => a.code !== code);
+            fs.writeFileSync(DELETED_ACTIVITIES_FILE, JSON.stringify(delList, null, 2), 'utf8');
+        } catch (e) {}
+    }
+    return true;
+}
+
+async function dbEmptyTrashActivities() {
+    if (pool) {
+        try {
+            await pool.query('DELETE FROM activities WHERE is_deleted = TRUE');
+            return true;
+        } catch (e) { console.error('Lỗi empty trash SQL:', e); }
+    }
+    fs.writeFileSync(DELETED_ACTIVITIES_FILE, JSON.stringify([], null, 2), 'utf8');
     return true;
 }
 
@@ -721,7 +821,37 @@ const server = http.createServer(async (req, res) => {
                 const code = parsedUrl.searchParams.get('code') || '';
                 await dbDeleteActivity(code);
                 res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-                res.end(JSON.stringify({ status: 'success', message: 'Đã xóa sự kiện' }));
+                res.end(JSON.stringify({ status: 'success', message: 'Đã chuyển sự kiện vào thùng rác' }));
+                return;
+            }
+
+            if (action === 'getDeletedActivities') {
+                const list = await dbGetDeletedActivities();
+                res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                res.end(JSON.stringify(list));
+                return;
+            }
+
+            if (action === 'restoreActivity') {
+                const code = parsedUrl.searchParams.get('code') || '';
+                await dbRestoreActivity(code);
+                res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                res.end(JSON.stringify({ status: 'success', message: 'Đã khôi phục sự kiện thành công!' }));
+                return;
+            }
+
+            if (action === 'permanentDeleteActivity') {
+                const code = parsedUrl.searchParams.get('code') || '';
+                await dbPermanentDeleteActivity(code);
+                res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                res.end(JSON.stringify({ status: 'success', message: 'Đã xóa vĩnh viễn sự kiện!' }));
+                return;
+            }
+
+            if (action === 'emptyTrashActivities') {
+                await dbEmptyTrashActivities();
+                res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                res.end(JSON.stringify({ status: 'success', message: 'Đã dọn sạch thùng rác sự kiện!' }));
                 return;
             }
 
