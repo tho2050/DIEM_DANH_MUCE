@@ -609,17 +609,37 @@
                 border-radius: 14px;
             }
             .admin-top-nav {
-                scrollbar-width: none;
-                -ms-overflow-style: none;
-                margin-bottom: 1rem !important;
+                background: #f1f5f9 !important;
+                border: 1px solid #e2e8f0 !important;
+                border-radius: 12px !important;
+                padding: 4px !important;
+                gap: 4px !important;
+                box-shadow: none !important;
+                margin-bottom: 0.85rem !important;
+                display: flex !important;
+                flex-wrap: nowrap !important;
+                overflow-x: auto !important;
+                scrollbar-width: none !important;
+                -webkit-overflow-scrolling: touch !important;
             }
             .admin-top-nav::-webkit-scrollbar {
-                display: none;
+                display: none !important;
             }
             .admin-nav-btn {
-                padding: 8px 12px;
-                font-size: 0.82rem;
-                border-radius: 8px;
+                flex: 0 0 auto !important;
+                padding: 7px 12px !important;
+                font-size: 0.8rem !important;
+                border-radius: 8px !important;
+                font-weight: 600 !important;
+                color: #475569 !important;
+                background: transparent !important;
+                box-shadow: none !important;
+                white-space: nowrap !important;
+            }
+            .admin-nav-btn.active {
+                background: #0284c7 !important;
+                color: #ffffff !important;
+                box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25) !important;
             }
             .activity-item-row {
                 padding: 12px 0;
@@ -639,13 +659,88 @@
                 display: inline-flex;
                 align-items: center;
             }
-            .attendance-header-actions .d-flex {
-                width: 100%;
+
+            /* THANH NÚT BẤM DANH SÁCH ĐIỂM DANH: GỌN GÀNG, KHÔNG BỊ PHÌNH TO THÀNH HÌNH VUÔNG */
+            .attendance-header-actions {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                margin-bottom: 0.8rem !important;
+                gap: 8px !important;
             }
-            .attendance-header-actions .btn,
-            .attendance-header-actions .btn-group {
-                flex: 1 1 calc(50% - 6px);
+            .attendance-tab-title {
+                font-size: 1.05rem !important;
+                margin-bottom: 2px !important;
             }
+            .attendance-btn-toolbar {
+                width: 100% !important;
+                display: flex !important;
+                flex-wrap: nowrap !important;
+                gap: 8px !important;
+                align-items: center !important;
+            }
+            #btnExportExcelGroup {
+                flex: 1 1 auto !important;
+                display: flex !important;
+                min-width: 0 !important;
+                height: 38px !important;
+            }
+            #btnExportMain {
+                flex: 1 1 auto !important;
+                font-size: 0.84rem !important;
+                padding: 8px 10px !important;
+                height: 38px !important;
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+                border-radius: 8px 0 0 8px !important;
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+            }
+            #btnExportMainText {
+                display: inline-block !important;
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+                max-width: 150px !important;
+            }
+            #btnExportExcelGroup .dropdown-toggle-split {
+                flex: 0 0 auto !important;
+                padding: 8px 10px !important;
+                height: 38px !important;
+                border-radius: 0 8px 8px 0 !important;
+            }
+            .btn-reload-attendance {
+                flex: 0 0 auto !important;
+                height: 38px !important;
+                padding: 8px 14px !important;
+                font-size: 0.84rem !important;
+                border-radius: 8px !important;
+                white-space: nowrap !important;
+                display: inline-flex !important;
+                align-items: center !important;
+                gap: 4px !important;
+            }
+
+            /* CHỈ DẪN CUỘN BẢNG GỌN 1 HÀNG TRÊN ĐIỆN THOẠI */
+            .hint-desktop { display: none !important; }
+            .hint-mobile { display: inline-flex !important; align-items: center; font-size: 0.74rem !important; }
+            .table-scroll-hint-bar { margin-bottom: 4px !important; }
+            .sticky-table-header-controls {
+                padding: 6px 8px !important;
+                margin-bottom: 6px !important;
+                border-radius: 8px !important;
+            }
+            .top-scrollbar-wrapper {
+                height: 6px !important;
+            }
+            .top-scrollbar-wrapper::-webkit-scrollbar {
+                height: 6px !important;
+            }
+            .top-scrollbar-wrapper::-webkit-scrollbar-thumb {
+                border-radius: 4px !important;
+            }
+
             #selectedStudentBar {
                 font-size: 0.8rem;
                 padding: 8px 10px;
@@ -669,6 +764,11 @@
             .modal-body {
                 padding: 1rem;
             }
+        }
+
+        @media (min-width: 768px) {
+            .hint-desktop { display: inline !important; }
+            .hint-mobile { display: none !important; }
         }
     </style>
 </head>
@@ -868,20 +968,17 @@
                 <!-- Tab: Attendance List -->
                 <div class="card card-custom p-4 d-none" id="tab-attendance-list">
                     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2 attendance-header-actions" style="position: relative; z-index: 100;">
-                        <h5 class="fw-bold mb-0"><i class="fa-solid fa-users text-primary me-2"></i>Danh sách sinh viên
-                            điểm danh</h5>
-                        <div class="d-flex gap-2 flex-wrap" style="position: relative; z-index: 101;">
+                        <h5 class="fw-bold mb-0 text-dark attendance-tab-title"><i class="fa-solid fa-users text-primary me-2"></i>Danh sách sinh viên điểm danh</h5>
+                        <div class="d-flex gap-2 attendance-btn-toolbar" style="position: relative; z-index: 101;">
                             <button type="button" id="btnAddManualCheckin" class="btn btn-sm btn-primary fw-bold d-none"
-                                onclick="openAddManualCheckinModal()"><i class="fa-solid fa-user-plus me-1"></i> Thêm
-                                Điểm Danh Thủ Công</button>
+                                onclick="openAddManualCheckinModal()"><i class="fa-solid fa-user-plus me-1"></i> Thêm Điểm Danh</button>
                             <button type="button" id="btnImportExcel"
                                 class="btn btn-sm btn-outline-success fw-bold d-none"
-                                onclick="openImportExcelModal()"><i class="fa-solid fa-file-import me-1"></i> Nhập Từ
-                                File Excel</button>
+                                onclick="openImportExcelModal()"><i class="fa-solid fa-file-import me-1"></i> Nhập Excel</button>
                             <div class="btn-group" id="btnExportExcelGroup" style="position: relative; z-index: 102;">
                                 <button type="button" class="btn btn-sm btn-success fw-bold" id="btnExportMain"
                                     onclick="handleMainExportClick()">
-                                    <span id="btnExportMainText"><i class="fa-solid fa-file-excel me-1"></i> Xuất File Excel (4 Khoa)</span>
+                                    <span id="btnExportMainText"><i class="fa-solid fa-file-excel me-1"></i> Xuất File Excel</span>
                                 </button>
                                 <button type="button"
                                     class="btn btn-sm btn-success dropdown-toggle dropdown-toggle-split"
@@ -907,28 +1004,28 @@
                                             onclick="exportAllEventsExcel(event)"><i class="fa-solid fa-database me-2"></i>Xuất Toàn Bộ Lịch Sử (Tất Cả Mọi Sự Kiện)</a></li>
                                 </ul>
                             </div>
-                            <button class="btn btn-sm btn-outline-secondary" onclick="fetchAttendanceData()"><i
+                            <button class="btn btn-sm btn-outline-secondary btn-reload-attendance fw-semibold" onclick="fetchAttendanceData()"><i
                                     class="fa-solid fa-rotate me-1"></i> Tải lại</button>
                         </div>
                     </div>
 
                     <!-- Filters -->
                     <div class="row g-2 mb-3">
-                        <div class="col-md-5">
+                        <div class="col-12 col-md-5">
                             <input type="text" id="attendanceSearch" class="form-control form-control-sm"
                                 placeholder="Tìm tên, MSSV, lớp, khoa, SĐT..." oninput="filterAttendanceTable()" />
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-6 col-md-3">
                             <select id="attendanceFacultyFilter" class="form-select form-select-sm"
                                 onchange="filterAttendanceTable()">
-                                <option value="">-- Tất cả các khoa --</option>
+                                <option value="">-- Tất cả khoa --</option>
                                 <option value="Khoa Kỹ thuật Công nghệ">Khoa Kỹ thuật Công nghệ</option>
                                 <option value="Khoa Kinh tế">Khoa Kinh tế</option>
                                 <option value="Khoa Xây dựng">Khoa Xây dựng</option>
                                 <option value="Khoa Kiến trúc">Khoa Kiến trúc</option>
                             </select>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-6 col-md-4">
                             <select id="attendanceActivityFilter" class="form-select form-select-sm"
                                 onchange="filterAttendanceTable()">
                                 <option value="">-- Tất cả sự kiện --</option>
@@ -959,12 +1056,18 @@
                         </div>
 
                         <!-- Thanh kéo cuộn ngang phía trên (Top Scrollbar) -->
-                        <div class="d-flex align-items-center justify-content-between mb-1 px-1">
-                            <span class="small fw-bold text-primary">
+                        <div class="d-flex align-items-center justify-content-between mb-1 px-1 table-scroll-hint-bar">
+                            <span class="small fw-bold text-primary hint-desktop">
                                 <i class="fa-solid fa-arrows-left-right me-1"></i> THANH KÉO CUỘN NGANG (Kéo sang phải để xem Thiết bị, Tọa độ, IP...)
                             </span>
-                            <span class="small text-muted">
+                            <span class="small fw-bold text-primary hint-mobile d-none">
+                                <i class="fa-solid fa-arrows-left-right me-1"></i> Vuốt ngang xem bảng
+                            </span>
+                            <span class="small text-muted hint-desktop">
                                 <i class="fa-regular fa-hand-pointer text-primary me-1"></i> Bấm vào dòng SV để hiện <strong>viền xanh</strong> kiểm tra
+                            </span>
+                            <span class="small text-muted hint-mobile d-none">
+                                <i class="fa-regular fa-hand-pointer text-primary me-1"></i> Chạm dòng để chọn
                             </span>
                         </div>
                         <div id="topScrollWrapper" class="top-scrollbar-wrapper" title="Kéo thanh này để cuộn ngang bảng">
@@ -3489,7 +3592,7 @@
                 const shortName = actName.length > 22 ? actName.substring(0, 20) + '...' : actName;
 
                 if (btnMainText) {
-                    btnMainText.innerHTML = `<i class="fa-solid fa-file-excel me-1"></i> Xuất Excel: ${shortName}`;
+                    btnMainText.innerHTML = `<i class="fa-solid fa-file-excel me-1"></i> Xuất: ${shortName}`;
                     btnMainText.title = `Tải file Excel danh sách sinh viên sự kiện: ${actName} (4 Khoa + Tổng hợp)`;
                 }
                 if (itemSelectedAct) {
@@ -3500,7 +3603,7 @@
                 }
             } else {
                 if (btnMainText) {
-                    btnMainText.innerHTML = `<i class="fa-solid fa-file-excel me-1"></i> Xuất File Excel (Tất Cả Sự Kiện)`;
+                    btnMainText.innerHTML = `<i class="fa-solid fa-file-excel me-1"></i> Xuất File Excel`;
                     btnMainText.title = `Tải file Excel tất cả sự kiện`;
                 }
                 if (itemSelectedAct) {
