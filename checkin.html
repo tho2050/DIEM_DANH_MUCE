@@ -492,7 +492,7 @@
     </div>
     <div class="sub-bar py-2">
         <div class="container">
-            <span class="small text-white-50"><i class="fa-solid fa-info-circle me-1"></i> Xác thực định vị GPS trong bán kính quy định (50m) để mở khóa form và điểm danh về Google Sheets.</span>
+            <span class="small text-white-50"><i class="fa-solid fa-info-circle me-1"></i> Xác thực định vị GPS trong bán kính quy định (<span id="subBarRadius">50</span>m) để mở khóa form và điểm danh.</span>
         </div>
     </div>
 
@@ -520,7 +520,7 @@
                     <div class="panel-header">
                         <div>
                             <span class="step-num">1</span>
-                            <span class="step-title">Xác Thực Định Vị GPS (≤ 50m)</span>
+                            <span class="step-title">Xác Thực Định Vị GPS (≤ <span id="stepRadius">50</span>m)</span>
                         </div>
                     </div>
                     <div class="panel-body">
@@ -847,6 +847,14 @@
             };
         }
 
+        // Nếu URL có truyền bán kính qua mã QR thì đồng bộ theo bán kính của mã QR
+        if (activity && urlParams.has('radius')) {
+            const parsedRadius = parseInt(urlParams.get('radius'));
+            if (!isNaN(parsedRadius) && parsedRadius > 0) {
+                activity.radiusMeters = parsedRadius;
+            }
+        }
+
         if (!activity) {
             alert('Không tìm thấy thông tin hoạt động!');
             window.location.href = '/index.html';
@@ -856,6 +864,12 @@
         document.getElementById('actTitle').textContent = activity.title;
         document.getElementById('actLocation').textContent = activity.locationAddress;
         document.getElementById('actRadius').textContent = activity.radiusMeters + ' mét';
+        if (document.getElementById('subBarRadius')) {
+            document.getElementById('subBarRadius').textContent = activity.radiusMeters;
+        }
+        if (document.getElementById('stepRadius')) {
+            document.getElementById('stepRadius').textContent = activity.radiusMeters;
+        }
 
         const targetLat = activity.latitude;
         const targetLng = activity.longitude;
@@ -1018,7 +1032,7 @@
             resultBox.style.display = 'block';
             resultBox.className = 'result-box success';
             resultBox.innerHTML = `<h5>🎉 Điểm danh THÀNH CÔNG!</h5>
-                <p class="mb-0">Dữ liệu của sinh viên <strong>${fullName} (${studentCode})</strong> đã được ghi nhận trực tiếp vào Bảng tính Google Sheets của Ban tổ chức.</p>`;
+                <p class="mb-0">Dữ liệu của sinh viên <strong>${fullName} (${studentCode})</strong> đã được ghi nhận trực tiếp vào Hệ thống của Ban tổ chức.</p>`;
             
             btn.innerHTML = '<i class="fa-solid fa-check-double"></i> ĐÃ HOÀN TẤT ĐIỂM DANH';
             document.querySelectorAll('#studentForm .form-control').forEach(el => el.disabled = true);
