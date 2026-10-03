@@ -685,9 +685,18 @@
                 border-radius: 6px;
             }
 
-            /* THANH TIÊU ĐỀ & NÚT BẤM DANH SÁCH ĐIỂM DANH: GỌN GÀNG, ĐẸP MẮT TRÊN MOBILE */
-            .attendance-title-row {
-                margin-bottom: 0.5rem !important;
+            /* THANH TIÊU ĐỀ & NÚT BẤM DANH SÁCH ĐIỂM DANH TRÊN MOBILE */
+            .attendance-header-actions {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 8px !important;
+                margin-bottom: 0.75rem !important;
+            }
+            .attendance-title-wrapper {
+                width: 100% !important;
+                display: flex !important;
+                justify-content: space-between !important;
+                align-items: center !important;
             }
             .attendance-tab-title {
                 font-size: 0.95rem !important;
@@ -697,21 +706,15 @@
                 font-size: 0.76rem !important;
                 padding: 3px 8px !important;
             }
-            .btn-reload-attendance {
-                height: 32px !important;
-                padding: 4px 10px !important;
-                font-size: 0.76rem !important;
-                border-radius: 7px !important;
-                display: inline-flex !important;
-                align-items: center !important;
-            }
             .attendance-btn-toolbar {
                 width: 100% !important;
                 display: flex !important;
                 flex-wrap: nowrap !important;
                 gap: 6px !important;
                 align-items: center !important;
-                margin-bottom: 0.65rem !important;
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                margin-bottom: 0.25rem !important;
             }
             #btnExportExcelGroup {
                 flex: 1 1 auto !important;
@@ -755,6 +758,18 @@
                 align-items: center !important;
                 justify-content: center !important;
                 line-height: 1 !important;
+                white-space: nowrap !important;
+            }
+            .btn-reload-attendance {
+                flex: 0 0 auto !important;
+                height: 34px !important;
+                padding: 6px 10px !important;
+                font-size: 0.76rem !important;
+                border-radius: 7px !important;
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                white-space: nowrap !important;
             }
 
             /* CHỈ DẪN CUỘN BẢNG GỌN 1 HÀNG TRÊN ĐIỆN THOẠI */
@@ -1020,57 +1035,55 @@
 
                 <!-- Tab: Attendance List -->
                 <div class="card card-custom p-4 d-none" id="tab-attendance-list">
-                    <!-- Hàng 1: Tiêu đề + Huy hiệu số lượng thông minh + Nút Tải lại -->
-                    <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2 attendance-title-row">
-                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <!-- Tiêu đề + Huy hiệu số lượng + Thanh nút tác vụ -->
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2 attendance-header-actions" style="position: relative; z-index: 100;">
+                        <div class="d-flex align-items-center gap-2 flex-wrap attendance-title-wrapper">
                             <h5 class="fw-bold mb-0 text-dark attendance-tab-title">
-                                <i class="fa-solid fa-users text-primary me-1"></i>DS Điểm Danh
+                                <i class="fa-solid fa-users text-primary me-2"></i>Danh sách sinh viên điểm danh
                             </h5>
-                            <span class="badge bg-primary text-white rounded-pill px-2 py-1 shadow-sm d-inline-flex align-items-center" id="attendanceTotalCountBadge" title="Tổng số sinh viên điểm danh" style="font-size: 0.8rem; font-weight: 700;">
+                            <span class="badge bg-primary text-white rounded-pill px-2 py-1 fs-6 d-inline-flex align-items-center shadow-sm" id="attendanceTotalCountBadge" title="Tổng số sinh viên điểm danh">
                                 <i class="fa-solid fa-users me-1"></i><span id="attendanceCountText">0 SV</span>
                             </span>
                         </div>
-                        <button class="btn btn-sm btn-outline-secondary btn-reload-attendance" onclick="fetchAttendanceData()" title="Làm mới dữ liệu điểm danh">
-                            <i class="fa-solid fa-rotate me-1"></i><span>Tải lại</span>
-                        </button>
-                    </div>
-
-                    <!-- Hàng 2: Thanh nút tác vụ (Xuất Excel, Thêm SV, Nhập Excel) -->
-                    <div class="attendance-btn-toolbar d-flex gap-2 align-items-center mb-3">
-                        <div class="btn-group flex-grow-1" id="btnExportExcelGroup" style="position: relative; z-index: 102;">
-                            <button type="button" class="btn btn-sm btn-success fw-bold flex-grow-1" id="btnExportMain"
-                                onclick="handleMainExportClick()">
-                                <span id="btnExportMainText"><i class="fa-solid fa-file-excel me-1"></i> Xuất File Excel</span>
+                        <div class="d-flex gap-2 attendance-btn-toolbar align-items-center" style="position: relative; z-index: 101;">
+                            <button type="button" id="btnAddManualCheckin" class="btn btn-sm btn-primary fw-bold d-none"
+                                onclick="openAddManualCheckinModal()" title="Thêm điểm danh thủ công"><i class="fa-solid fa-user-plus me-1"></i> Thêm Điểm Danh</button>
+                            <button type="button" id="btnImportExcel"
+                                class="btn btn-sm btn-outline-success fw-bold d-none"
+                                onclick="openImportExcelModal()" title="Nhập danh sách từ file Excel"><i class="fa-solid fa-file-import me-1"></i> Nhập Excel</button>
+                            <div class="btn-group" id="btnExportExcelGroup" style="position: relative; z-index: 102;">
+                                <button type="button" class="btn btn-sm btn-success fw-bold" id="btnExportMain"
+                                    onclick="handleMainExportClick()">
+                                    <span id="btnExportMainText"><i class="fa-solid fa-file-excel me-1"></i> Xuất File Excel</span>
+                                </button>
+                                <button type="button"
+                                    class="btn btn-sm btn-success dropdown-toggle dropdown-toggle-split"
+                                    data-bs-toggle="dropdown" aria-expanded="false" title="Tùy chọn tải file Excel">
+                                    <span class="visually-hidden">Tùy chọn</span>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end shadow" style="min-width: 320px;">
+                                    <li><a class="dropdown-item py-2 fw-bold text-success" href="#" id="menuExportSelectedAct"
+                                            onclick="handleSelectedActExport(event)"><i
+                                                class="fa-solid fa-file-excel me-2"></i>Xuất 1 File Excel Sự Kiện Này (4 Khoa + Tổng hợp)</a></li>
+                                    <li><a class="dropdown-item py-2 fw-semibold text-dark" href="#" id="menuExportSeparateAct"
+                                            onclick="export4SeparateFiles(event)"><i
+                                                class="fa-solid fa-copy me-2"></i>Xuất 4 File Riêng Biệt Cho Từng Khoa</a></li>
+                                    <li>
+                                        <hr class="dropdown-divider my-1">
+                                    </li>
+                                    <li><a class="dropdown-item py-2 text-primary fw-semibold" href="#"
+                                            onclick="exportToExcel(event)"><i class="fa-solid fa-filter me-2"></i>Xuất Theo Bảng Đang Lọc Trên Màn Hình</a></li>
+                                    <li>
+                                        <hr class="dropdown-divider my-1">
+                                    </li>
+                                    <li><a class="dropdown-item py-2 text-secondary small" href="#"
+                                            onclick="exportAllEventsExcel(event)"><i class="fa-solid fa-database me-2"></i>Xuất Toàn Bộ Lịch Sử (Tất Cả Mọi Sự Kiện)</a></li>
+                                </ul>
+                            </div>
+                            <button class="btn btn-sm btn-outline-secondary btn-reload-attendance fw-semibold" onclick="fetchAttendanceData()" title="Làm mới dữ liệu điểm danh">
+                                <i class="fa-solid fa-rotate me-1"></i> Tải lại
                             </button>
-                            <button type="button"
-                                class="btn btn-sm btn-success dropdown-toggle dropdown-toggle-split"
-                                data-bs-toggle="dropdown" aria-expanded="false" title="Tùy chọn tải file Excel">
-                                <span class="visually-hidden">Tùy chọn</span>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end shadow" style="min-width: 320px;">
-                                <li><a class="dropdown-item py-2 fw-bold text-success" href="#" id="menuExportSelectedAct"
-                                        onclick="handleSelectedActExport(event)"><i
-                                            class="fa-solid fa-file-excel me-2"></i>Xuất 1 File Excel Sự Kiện Này (4 Khoa + Tổng hợp)</a></li>
-                                <li><a class="dropdown-item py-2 fw-semibold text-dark" href="#" id="menuExportSeparateAct"
-                                        onclick="export4SeparateFiles(event)"><i
-                                            class="fa-solid fa-copy me-2"></i>Xuất 4 File Riêng Biệt Cho Từng Khoa</a></li>
-                                <li>
-                                    <hr class="dropdown-divider my-1">
-                                </li>
-                                <li><a class="dropdown-item py-2 text-primary fw-semibold" href="#"
-                                        onclick="exportToExcel(event)"><i class="fa-solid fa-filter me-2"></i>Xuất Theo Bảng Đang Lọc Trên Màn Hình</a></li>
-                                <li>
-                                    <hr class="dropdown-divider my-1">
-                                </li>
-                                <li><a class="dropdown-item py-2 text-secondary small" href="#"
-                                        onclick="exportAllEventsExcel(event)"><i class="fa-solid fa-database me-2"></i>Xuất Toàn Bộ Lịch Sử (Tất Cả Mọi Sự Kiện)</a></li>
-                            </ul>
                         </div>
-                        <button type="button" id="btnAddManualCheckin" class="btn btn-sm btn-primary fw-bold d-none"
-                            onclick="openAddManualCheckinModal()" title="Thêm điểm danh thủ công"><i class="fa-solid fa-user-plus me-1"></i> Thêm</button>
-                        <button type="button" id="btnImportExcel"
-                            class="btn btn-sm btn-outline-success fw-bold d-none"
-                            onclick="openImportExcelModal()" title="Nhập danh sách từ file Excel"><i class="fa-solid fa-file-import me-1"></i> Nhập</button>
                     </div>
 
                     <!-- Hàng 3: Bộ lọc tìm kiếm, khoa, sự kiện -->
