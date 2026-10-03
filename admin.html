@@ -545,7 +545,7 @@
                     <div class="mb-3">
                         <label class="form-label fw-bold small">Vai trò (Quyền hạn):</label>
                         <select class="form-select" id="regRoleSelect" onchange="toggleAdminCodeInput()" required>
-                            <option value="staff">Staff / Nhân viên (Hạn chế quyền xuất Excel)</option>
+                            <option value="staff">Staff / Nhân viên (Có quyền xuất Excel)</option>
                             <option value="super">Super Admin / Quản trị cấp cao (Toàn quyền)</option>
                         </select>
                     </div>
@@ -1613,16 +1613,18 @@
             document.getElementById('adminDashboard').classList.remove('d-none');
             document.getElementById('btnLogout').classList.remove('d-none');
 
-            // Ẩn/Hiện nút xuất báo cáo Excel và Menu Duyệt tài khoản dựa theo vai trò
+            // Nút xuất báo cáo Excel cho phép tất cả tài khoản (Super Admin và Staff) đều tải được
             const role = sessionStorage.getItem("admin_role");
             const exportBtn = document.getElementById('btnExportExcel');
+            const exportBtnGroup = document.getElementById('btnExportExcelGroup');
             const approveMenu = document.getElementById('menu-approve');
 
+            if (exportBtn) exportBtn.style.display = 'inline-block';
+            if (exportBtnGroup) exportBtnGroup.style.display = 'inline-flex';
+
             if (role === "staff") {
-                if (exportBtn) exportBtn.style.display = 'none';
                 if (approveMenu) approveMenu.classList.add('d-none');
             } else {
-                if (exportBtn) exportBtn.style.display = 'inline-block';
                 if (approveMenu) {
                     approveMenu.classList.remove('d-none');
                     fetchAccountsList(); // Lấy danh sách duyệt tài khoản cho Super Admin
@@ -3216,12 +3218,6 @@
 
         // XUẤT 1 FILE EXCEL CHO 1 SỰ KIỆN CỤ THỂ (GỒM TỔNG HỢP + 4 KHOA CỦA SỰ KIỆN ĐÓ)
         function exportSingleActivityExcel(actCode, actTitle) {
-            const role = sessionStorage.getItem("admin_role");
-            if (role === "staff") {
-                alert("Tài khoản của bạn không có quyền tải xuống danh sách điểm danh!");
-                return;
-            }
-
             if (!attendanceData || attendanceData.length === 0) {
                 alert("Chưa có dữ liệu điểm danh nào trong hệ thống!");
                 return;
@@ -3289,11 +3285,6 @@
         // XUẤT TOÀN BỘ LỊCH SỬ TẤT CẢ MỌI SỰ KIỆN
         function exportAllEventsExcel(e) {
             if (e) e.preventDefault();
-            const role = sessionStorage.getItem("admin_role");
-            if (role === "staff") {
-                alert("Tài khoản của bạn không có quyền tải xuống danh sách điểm danh!");
-                return;
-            }
 
             if (!attendanceData || attendanceData.length === 0) {
                 alert("Chưa có dữ liệu điểm danh nào để xuất file Excel!");
@@ -3341,11 +3332,6 @@
         // XUẤT 4 FILE EXCEL RIÊNG BIỆT CHO TỪNG KHOA
         function export4SeparateFiles(e) {
             if (e) e.preventDefault();
-            const role = sessionStorage.getItem("admin_role");
-            if (role === "staff") {
-                alert("Tài khoản của bạn không có quyền tải xuống danh sách điểm danh!");
-                return;
-            }
 
             if (!attendanceData || attendanceData.length === 0) {
                 alert("Chưa có dữ liệu điểm danh nào để xuất file!");
@@ -3390,11 +3376,6 @@
         // XUẤT FILE EXCEL THEO BỘ LỌC ĐANG CHỌN
         function exportToExcel(e) {
             if (e) e.preventDefault();
-            const role = sessionStorage.getItem("admin_role");
-            if (role === "staff") {
-                alert("Tài khoản của bạn không có quyền tải xuống danh sách điểm danh!");
-                return;
-            }
 
             const searchQuery = document.getElementById('attendanceSearch').value.toLowerCase().trim();
             const facultyFilter = document.getElementById('attendanceFacultyFilter') ? document.getElementById('attendanceFacultyFilter').value.toLowerCase().trim() : '';
