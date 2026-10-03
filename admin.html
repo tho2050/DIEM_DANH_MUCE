@@ -687,10 +687,11 @@
 
             /* THANH TIÊU ĐỀ & NÚT BẤM DANH SÁCH ĐIỂM DANH TRÊN MOBILE */
             .attendance-header-actions {
+                display: flex !important;
                 flex-direction: column !important;
                 align-items: stretch !important;
                 gap: 8px !important;
-                margin-bottom: 0.75rem !important;
+                margin-bottom: 0.65rem !important;
             }
             .attendance-title-wrapper {
                 width: 100% !important;
@@ -712,11 +713,10 @@
                 flex-wrap: nowrap !important;
                 gap: 6px !important;
                 align-items: center !important;
-                overflow-x: auto !important;
-                -webkit-overflow-scrolling: touch !important;
                 margin-bottom: 0.25rem !important;
             }
             #btnExportExcelGroup {
+                order: 1 !important;
                 flex: 1 1 auto !important;
                 display: flex !important;
                 min-width: 0 !important;
@@ -748,7 +748,21 @@
                 height: 34px !important;
                 border-radius: 0 7px 7px 0 !important;
             }
-            #btnAddManualCheckin, #btnImportExcel {
+            #btnAddManualCheckin {
+                order: 2 !important;
+                flex: 0 0 auto !important;
+                height: 34px !important;
+                padding: 6px 10px !important;
+                font-size: 0.76rem !important;
+                border-radius: 7px !important;
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                line-height: 1 !important;
+                white-space: nowrap !important;
+            }
+            #btnImportExcel {
+                order: 3 !important;
                 flex: 0 0 auto !important;
                 height: 34px !important;
                 padding: 6px 10px !important;
@@ -761,14 +775,12 @@
                 white-space: nowrap !important;
             }
             .btn-reload-attendance {
-                flex: 0 0 auto !important;
-                height: 34px !important;
-                padding: 6px 10px !important;
+                height: 32px !important;
+                padding: 4px 10px !important;
                 font-size: 0.76rem !important;
                 border-radius: 7px !important;
                 display: inline-flex !important;
                 align-items: center !important;
-                justify-content: center !important;
                 white-space: nowrap !important;
             }
 
@@ -837,6 +849,56 @@
         @media (min-width: 768px) {
             .hint-desktop { display: inline !important; }
             .hint-mobile { display: none !important; }
+
+            /* GIAO DIỆN MÁY TÍNH: TẤT CẢ GỌN GÀNG TRÊN 1 HÀNG DUY NHẤT, NÚT XUẤT EXCEL KHÔNG BỊ TO */
+            .attendance-header-actions {
+                display: flex !important;
+                flex-direction: row !important;
+                justify-content: space-between !important;
+                align-items: center !important;
+                gap: 12px !important;
+                margin-bottom: 1rem !important;
+            }
+            .attendance-title-wrapper {
+                display: flex !important;
+                align-items: center !important;
+                gap: 8px !important;
+                width: auto !important;
+            }
+            .attendance-btn-toolbar {
+                display: flex !important;
+                flex-direction: row !important;
+                align-items: center !important;
+                gap: 8px !important;
+                width: auto !important;
+                flex-shrink: 0 !important;
+            }
+            #btnAddManualCheckin {
+                order: 1 !important;
+                flex: 0 0 auto !important;
+                width: auto !important;
+            }
+            #btnImportExcel {
+                order: 2 !important;
+                flex: 0 0 auto !important;
+                width: auto !important;
+            }
+            #btnExportExcelGroup {
+                order: 3 !important;
+                flex: 0 0 auto !important;
+                width: auto !important;
+                height: auto !important;
+            }
+            #btnExportMain {
+                flex: 0 0 auto !important;
+                width: auto !important;
+                white-space: nowrap !important;
+            }
+            .btn-reload-attendance {
+                order: 4 !important;
+                flex: 0 0 auto !important;
+                width: auto !important;
+            }
         }
     </style>
 </head>
@@ -1036,21 +1098,36 @@
                 <!-- Tab: Attendance List -->
                 <div class="card card-custom p-4 d-none" id="tab-attendance-list">
                     <!-- Tiêu đề + Huy hiệu số lượng + Thanh nút tác vụ -->
-                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2 attendance-header-actions" style="position: relative; z-index: 100;">
-                        <div class="d-flex align-items-center gap-2 flex-wrap attendance-title-wrapper">
-                            <h5 class="fw-bold mb-0 text-dark attendance-tab-title">
-                                <i class="fa-solid fa-users text-primary me-2"></i>Danh sách sinh viên điểm danh
-                            </h5>
-                            <span class="badge bg-primary text-white rounded-pill px-2 py-1 fs-6 d-inline-flex align-items-center shadow-sm" id="attendanceTotalCountBadge" title="Tổng số sinh viên điểm danh">
-                                <i class="fa-solid fa-users me-1"></i><span id="attendanceCountText">0 SV</span>
-                            </span>
+                    <div class="attendance-header-actions mb-3" style="position: relative; z-index: 100;">
+                        <!-- Hàng tiêu đề + Huy hiệu số lượng + Nút Tải lại trên mobile -->
+                        <div class="attendance-title-wrapper">
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <h5 class="fw-bold mb-0 text-dark attendance-tab-title">
+                                    <i class="fa-solid fa-users text-primary me-2"></i>
+                                    <span class="d-none d-md-inline">Danh sách sinh viên điểm danh</span>
+                                    <span class="d-inline d-md-none">DS Điểm Danh</span>
+                                </h5>
+                                <span class="badge bg-primary text-white rounded-pill px-2 py-1 fs-6 d-inline-flex align-items-center shadow-sm" id="attendanceTotalCountBadge" title="Tổng số sinh viên điểm danh">
+                                    <i class="fa-solid fa-users me-1"></i><span id="attendanceCountText">0 SV</span>
+                                </span>
+                            </div>
+                            <!-- Nút Tải lại chỉ hiện trên Điện thoại ở góc trên bên phải -->
+                            <button class="btn btn-sm btn-outline-secondary btn-reload-attendance d-inline-flex d-md-none align-items-center" onclick="fetchAttendanceData()" title="Làm mới dữ liệu điểm danh">
+                                <i class="fa-solid fa-rotate me-1"></i><span>Tải lại</span>
+                            </button>
                         </div>
-                        <div class="d-flex gap-2 attendance-btn-toolbar align-items-center" style="position: relative; z-index: 101;">
+
+                        <!-- Thanh nút tác vụ -->
+                        <div class="attendance-btn-toolbar" style="position: relative; z-index: 101;">
                             <button type="button" id="btnAddManualCheckin" class="btn btn-sm btn-primary fw-bold d-none"
-                                onclick="openAddManualCheckinModal()" title="Thêm điểm danh thủ công"><i class="fa-solid fa-user-plus me-1"></i> Thêm Điểm Danh</button>
+                                onclick="openAddManualCheckinModal()" title="Thêm điểm danh thủ công">
+                                <i class="fa-solid fa-user-plus me-1"></i><span class="d-none d-md-inline">Thêm Điểm Danh</span><span class="d-inline d-md-none">Thêm</span>
+                            </button>
                             <button type="button" id="btnImportExcel"
                                 class="btn btn-sm btn-outline-success fw-bold d-none"
-                                onclick="openImportExcelModal()" title="Nhập danh sách từ file Excel"><i class="fa-solid fa-file-import me-1"></i> Nhập Excel</button>
+                                onclick="openImportExcelModal()" title="Nhập danh sách từ file Excel">
+                                <i class="fa-solid fa-file-import me-1"></i><span class="d-none d-md-inline">Nhập Excel</span><span class="d-inline d-md-none">Nhập</span>
+                            </button>
                             <div class="btn-group" id="btnExportExcelGroup" style="position: relative; z-index: 102;">
                                 <button type="button" class="btn btn-sm btn-success fw-bold" id="btnExportMain"
                                     onclick="handleMainExportClick()">
@@ -1080,19 +1157,20 @@
                                             onclick="exportAllEventsExcel(event)"><i class="fa-solid fa-database me-2"></i>Xuất Toàn Bộ Lịch Sử (Tất Cả Mọi Sự Kiện)</a></li>
                                 </ul>
                             </div>
-                            <button class="btn btn-sm btn-outline-secondary btn-reload-attendance fw-semibold" onclick="fetchAttendanceData()" title="Làm mới dữ liệu điểm danh">
+                            <!-- Nút Tải lại chỉ hiện trên Máy tính trong hàng nút -->
+                            <button class="btn btn-sm btn-outline-secondary btn-reload-attendance d-none d-md-inline-flex fw-semibold align-items-center" onclick="fetchAttendanceData()" title="Làm mới dữ liệu điểm danh">
                                 <i class="fa-solid fa-rotate me-1"></i> Tải lại
                             </button>
                         </div>
                     </div>
 
-                    <!-- Hàng 3: Bộ lọc tìm kiếm, khoa, sự kiện -->
+                    <!-- Hàng bộ lọc: Trên máy tính 1 hàng (5-3-4), trên điện thoại (12 cho tìm kiếm, 6-6 cho 2 chọn khoa & sự kiện) -->
                     <div class="row g-2 mb-3">
                         <div class="col-12 col-md-5">
                             <input type="text" id="attendanceSearch" class="form-control form-control-sm"
                                 placeholder="🔍 Tìm tên, MSSV, lớp, khoa, SĐT..." oninput="filterAttendanceTable()" />
                         </div>
-                        <div class="col-12 col-sm-6 col-md-3">
+                        <div class="col-6 col-md-3">
                             <select id="attendanceFacultyFilter" class="form-select form-select-sm"
                                 onchange="filterAttendanceTable()">
                                 <option value="">-- Tất cả khoa --</option>
@@ -1102,7 +1180,7 @@
                                 <option value="Khoa Kiến trúc">Khoa Kiến trúc</option>
                             </select>
                         </div>
-                        <div class="col-12 col-sm-6 col-md-4">
+                        <div class="col-6 col-md-4">
                             <select id="attendanceActivityFilter" class="form-select form-select-sm"
                                 onchange="filterAttendanceTable()">
                                 <option value="">-- Tất cả sự kiện --</option>
