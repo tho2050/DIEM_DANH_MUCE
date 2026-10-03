@@ -25,6 +25,8 @@
             background: #f0f2f5;
             color: #1e293b;
             min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
 
         .logo-responsive {
@@ -303,6 +305,129 @@
             content: "👉 ";
             font-weight: bold;
             color: #0284c7;
+        }
+
+        /* ===== MUCE FOOTER ===== */
+        .muce-footer {
+            margin-top: auto;
+            width: 100%;
+            overflow: hidden;
+            font-family: inherit;
+        }
+
+        .muce-footer-top {
+            background-color: #005fa8;
+            color: #ffffff;
+            padding: 2.2rem 0;
+            border-top: 2px solid #0284c7;
+        }
+
+        .muce-branch-col {
+            text-align: center;
+            padding: 0 1.25rem;
+            border-right: 1px solid rgba(255, 255, 255, 0.28);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .muce-branch-col-last {
+            border-right: none;
+        }
+
+        .muce-branch-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            margin-bottom: 0.65rem;
+            text-transform: uppercase;
+            color: #ffffff;
+            line-height: 1.4;
+        }
+
+        .muce-branch-text {
+            font-size: 0.84rem;
+            line-height: 1.55;
+            color: #f0f7ff;
+            margin-bottom: 0.35rem;
+        }
+
+        .muce-branch-text a {
+            color: #ffffff;
+            text-decoration: none;
+            transition: color 0.15s ease-in-out;
+        }
+
+        .muce-branch-text a:hover {
+            color: #bae6fd;
+            text-decoration: underline;
+        }
+
+        .muce-footer-main {
+            background-color: #1e2638;
+            color: #ffffff;
+            padding: 3rem 0 2.5rem;
+        }
+
+        .muce-menu-title {
+            font-size: 0.92rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            color: #ffffff;
+            margin-bottom: 1.2rem;
+            text-transform: uppercase;
+        }
+
+        .muce-menu-list {
+            list-style: none;
+            padding-left: 0;
+            margin-bottom: 0;
+        }
+
+        .muce-menu-list li {
+            margin-bottom: 0.6rem;
+        }
+
+        .muce-menu-list li a {
+            color: #94a3b8;
+            text-decoration: none;
+            font-size: 0.84rem;
+            display: inline-block;
+            transition: all 0.2s ease;
+        }
+
+        .muce-menu-list li a:hover {
+            color: #38bdf8;
+            transform: translateX(4px);
+        }
+
+        .muce-footer-bottom {
+            background-color: #151a27;
+            padding: 1rem 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            color: #94a3b8;
+            font-size: 0.8rem;
+        }
+
+        @media (max-width: 767.98px) {
+            .muce-branch-col {
+                border-right: none;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+                padding-bottom: 1.25rem;
+                margin-bottom: 1.25rem;
+            }
+            .muce-branch-col-last {
+                border-bottom: none;
+                padding-bottom: 0;
+                margin-bottom: 0;
+            }
+            .muce-footer-main {
+                padding: 2rem 0;
+            }
+            .muce-menu-title {
+                margin-top: 0.8rem;
+                margin-bottom: 0.8rem;
+            }
         }
     </style>
 </head>
@@ -773,6 +898,102 @@
                 </div>
             </div>
         </div>
+
+    <!-- ===== FOOTER CHUẨN MUCE ===== -->
+    <footer class="muce-footer">
+        <!-- Khối Thông Tin Trụ Sở / Phân Hiệu (Màu Xanh MUCE) -->
+        <div class="muce-footer-top">
+            <div class="container">
+                <div class="row g-4 align-items-stretch">
+                    <!-- Trụ sở chính (Khu A) -->
+                    <div class="col-12 col-md-4 muce-branch-col">
+                        <h4 class="muce-branch-title">TRỤ SỞ CHÍNH TẠI ĐẮK LẮK (KHU A)</h4>
+                        <p class="muce-branch-text">ĐC: 24 Nguyễn Du, phường Tuy Hòa, tỉnh Đắk Lắk</p>
+                        <p class="muce-branch-text">ĐT: <a href="tel:02573823371">0257 3823 371</a></p>
+                        <p class="muce-branch-text mb-0">Email: <a href="mailto:dhxdmt@muce.edu.vn">dhxdmt@muce.edu.vn</a></p>
+                    </div>
+
+                    <!-- Trụ sở chính (Khu B) -->
+                    <div class="col-12 col-md-4 muce-branch-col">
+                        <h4 class="muce-branch-title">TRỤ SỞ CHÍNH TẠI ĐẮK LẮK (KHU B)</h4>
+                        <p class="muce-branch-text">ĐC:Khu B, 195 Hà Huy Tập, phường Bình Kiến, tỉnh Đắk Lắk</p>
+                        <p class="muce-branch-text">ĐT: <a href="tel:02573827618">(0257) 3827618</a>; <a href="tel:0962244195">0962 244 195</a>;</p>
+                        <p class="muce-branch-text mb-0">Email: <a href="mailto:dhxdmt@muce.edu.vn">dhxdmt@muce.edu.vn</a></p>
+                    </div>
+
+                    <!-- Phân hiệu Đà Nẵng -->
+                    <div class="col-12 col-md-4 muce-branch-col muce-branch-col-last">
+                        <h4 class="muce-branch-title">PHÂN HIỆU ĐÀ NẴNG</h4>
+                        <p class="muce-branch-text">ĐC: số 544B Nguyễn Lương Bằng, phường Hải Vân, Thành phố Đà Nẵng</p>
+                        <p class="muce-branch-text">ĐT: <a href="tel:02363845102">(0236) 3845102</a>; <a href="tel:0935081799">0935 081 799</a></p>
+                        <p class="muce-branch-text mb-0">Email: <a href="mailto:tuyensinh@mucedanang.edu.vn">tuyensinh@mucedanang.edu.vn</a></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Khối Liên Kết Chức Năng (Màu Tối) -->
+        <div class="muce-footer-main">
+            <div class="container">
+                <div class="row g-4">
+                    <!-- Cột 1: Thông tin tuyển sinh -->
+                    <div class="col-6 col-md-6 col-lg-3">
+                        <h5 class="muce-menu-title">THÔNG TIN TUYỂN SINH</h5>
+                        <ul class="muce-menu-list">
+                            <li><a href="https://tuyensinh.muce.edu.vn/SauDaiHoc/SauDaiHocPage" target="_blank" rel="noopener noreferrer">Sau Đại học</a></li>
+                            <li><a href="https://tuyensinh.muce.edu.vn/DaiHoc/DaiHocPage" target="_blank" rel="noopener noreferrer">Đại học</a></li>
+                        </ul>
+                    </div>
+
+                    <!-- Cột 2: Thông tin đào tạo -->
+                    <div class="col-6 col-md-6 col-lg-3">
+                        <h5 class="muce-menu-title">THÔNG TIN ĐÀO TẠO</h5>
+                        <ul class="muce-menu-list">
+                            <li><a href="https://muce.edu.vn/Nganh-Dao-tao" target="_blank" rel="noopener noreferrer">Ngành đào tạo</a></li>
+                            <li><a href="https://muce.edu.vn/Dao-Tao/Dai-Hoc/chuan-dau-ra" target="_blank" rel="noopener noreferrer">Chuẩn đầu ra</a></li>
+                            <li><a href="https://muce.edu.vn/Dao-Tao/Dai-Hoc/ba-cong-khai" target="_blank" rel="noopener noreferrer">Ba công khai</a></li>
+                            <li><a href="https://muce.edu.vn/Gioi-Thieu/cong-khai-ngan-sach" target="_blank" rel="noopener noreferrer">Công khai ngân sách</a></li>
+                            <li><a href="https://muce.edu.vn/Gioi-Thieu/cong-khai-tai-san-cong" target="_blank" rel="noopener noreferrer">Công khai tài sản công</a></li>
+                            <li><a href="https://muce.edu.vn/Tra-Cuu-Van-Bang" target="_blank" rel="noopener noreferrer">Tra cứu văn bằng</a></li>
+                            <li><a href="https://muce.edu.vn/Tra-Cuu-Chung-Chi-CNTT" target="_blank" rel="noopener noreferrer">Tra cứu chứng chỉ CNTT</a></li>
+                            <li><a href="https://muce.edu.vn/Tra-Cuu-Chung-Nhan-Anh-Van" target="_blank" rel="noopener noreferrer">Tra cứu chứng nhận đầu ra tiếng Anh</a></li>
+                        </ul>
+                    </div>
+
+                    <!-- Cột 3: Thông tin nội bộ -->
+                    <div class="col-6 col-md-6 col-lg-3">
+                        <h5 class="muce-menu-title">THÔNG TIN NỘI BỘ</h5>
+                        <ul class="muce-menu-list">
+                            <li><a href="https://muce.edu.vn/Sinh-Vien/thoi-khoa-bieu" target="_blank" rel="noopener noreferrer">Thời khóa biểu</a></li>
+                            <li><a href="https://muce.edu.vn/Sinh-Vien/thoi-khoa-bieu-lop-hoc-cai-thien" target="_blank" rel="noopener noreferrer">Thời khóa biểu lớp học cải thiện</a></li>
+                            <li><a href="https://muce.edu.vn/Gioi-Thieu/lich-lam-viec" target="_blank" rel="noopener noreferrer">Lịch làm việc</a></li>
+                            <li><a href="https://muce.edu.vn/Thong-Bao/thong-bao-chung" target="_blank" rel="noopener noreferrer">Thông báo chung</a></li>
+                            <li><a href="https://www.google.com/a/muce.edu.vn/ServiceLogin?service=mail&passive=true&rm=false&continue=https://mail.google.com/a/muce.edu.vn/&ltmpl=default&ltmplcache=2" target="_blank" rel="noopener noreferrer">Thư điện tử</a></li>
+                            <li><a href="https://noibo.muce.edu.vn/include/login.asp" target="_blank" rel="noopener noreferrer">Trang tin nội bộ</a></li>
+                        </ul>
+                    </div>
+
+                    <!-- Cột 4: Thông tin kết nối -->
+                    <div class="col-6 col-md-6 col-lg-3">
+                        <h5 class="muce-menu-title">THÔNG TIN KẾT NỐI</h5>
+                        <ul class="muce-menu-list">
+                            <li><a href="https://muce.edu.vn/Gioi-Thieu/dia-chi-lien-he" target="_blank" rel="noopener noreferrer">Liên hệ</a></li>
+                            <li><a href="https://muce.edu.vn/Gioi-Thieu/tuyen-dung" target="_blank" rel="noopener noreferrer">Tuyển dụng</a></li>
+                            <li><a href="https://muce.edu.vn/Sinh-Vien/thong-tin-viec-lam" target="_blank" rel="noopener noreferrer">Giới thiệu việc làm</a></li>
+                            <li><a href="https://muce.edu.vn" target="_blank" rel="noopener noreferrer">Website MUCE</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dòng bản quyền dưới cùng -->
+        <div class="muce-footer-bottom">
+            <div class="container text-center">
+                <span>&copy; 2026 Trường Đại học Xây dựng Miền Trung (MUCE) &bull; Hệ Thống Điểm Danh Hoạt Động & Sự Kiện GPS</span>
+            </div>
+        </div>
+    </footer>
 
     <!-- PRINT SECTION -->
     <div class="print-area" id="printArea">
