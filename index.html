@@ -402,10 +402,15 @@
             text-transform: uppercase;
         }
 
+        .muce-menu-title .muce-chevron {
+            display: none;
+        }
+
         .muce-menu-list {
             list-style: none;
             padding-left: 0;
             margin-bottom: 0;
+            display: block !important;
         }
 
         .muce-menu-list li {
@@ -433,24 +438,167 @@
             font-size: 0.8rem;
         }
 
+        /* ===== TỐI ƯU RIÊNG CHO ĐIỆN THOẠI (< 768px) ===== */
         @media (max-width: 767.98px) {
-            .muce-branch-col {
-                border-right: none;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.18);
-                padding-bottom: 1.25rem;
-                margin-bottom: 1.25rem;
+            .muce-footer-top {
+                padding: 1.2rem 0;
             }
-            .muce-branch-col-last {
+
+            .muce-mobile-branch-wrapper {
+                background: rgba(0, 36, 68, 0.35);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 14px;
+                padding: 12px;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            }
+
+            .muce-mobile-tabs {
+                display: flex;
+                gap: 6px;
+                background: rgba(0, 0, 0, 0.25);
+                padding: 4px;
+                border-radius: 10px;
+                margin-bottom: 10px;
+            }
+
+            .muce-tab-btn {
+                flex: 1;
+                border: none;
+                background: transparent;
+                color: #e0f2fe;
+                font-size: 0.8rem;
+                font-weight: 600;
+                padding: 7px 4px;
+                border-radius: 8px;
+                transition: all 0.2s;
+                text-align: center;
+                cursor: pointer;
+            }
+
+            .muce-tab-btn.active {
+                background: #ffffff;
+                color: #005fa8;
+                font-weight: 700;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            }
+
+            .muce-mobile-card {
+                padding: 6px 4px 4px;
+            }
+
+            .muce-mob-title {
+                font-size: 0.88rem;
+                font-weight: 700;
+                color: #ffffff;
+                margin-bottom: 4px;
+            }
+
+            .muce-mob-addr {
+                font-size: 0.8rem;
+                line-height: 1.45;
+                color: #e0f2fe;
+                margin-bottom: 10px;
+            }
+
+            .muce-mob-actions {
+                display: flex;
+                gap: 8px;
+            }
+
+            .muce-mob-action-btn {
+                flex: 1;
+                background: rgba(255, 255, 255, 0.95);
+                color: #005fa8;
+                font-size: 0.76rem;
+                font-weight: 600;
+                padding: 7px 8px;
+                border-radius: 8px;
+                text-decoration: none;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 5px;
+                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+            }
+
+            .muce-mob-action-btn:hover, .muce-mob-action-btn:active {
+                background: #ffffff;
+                color: #0284c7;
+            }
+
+            /* Links Directory: Thu gọn dạng Accordion trên điện thoại */
+            .muce-footer-main {
+                padding: 1.25rem 0 1rem;
+            }
+
+            .muce-accordion-item {
+                border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+                padding: 2px 0;
+            }
+
+            .muce-accordion-item:last-child {
                 border-bottom: none;
-                padding-bottom: 0;
+            }
+
+            .muce-menu-title {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                font-size: 0.84rem;
+                margin-bottom: 0;
+                padding: 10px 4px;
+                cursor: pointer;
+                user-select: none;
+                transition: color 0.2s;
+            }
+
+            .muce-menu-title:hover {
+                color: #38bdf8;
+            }
+
+            .muce-menu-title .muce-chevron {
+                display: inline-block;
+                font-size: 0.72rem;
+                color: #94a3b8;
+                transition: transform 0.25s ease, color 0.25s ease;
+            }
+
+            .muce-accordion-item.open .muce-chevron {
+                transform: rotate(180deg);
+                color: #38bdf8;
+            }
+
+            .muce-accordion-item .muce-menu-list {
+                display: none !important;
+                padding: 6px 12px 10px 12px;
+                background: rgba(0, 0, 0, 0.18);
+                border-radius: 8px;
+                margin-bottom: 8px;
+            }
+
+            .muce-accordion-item.open .muce-menu-list {
+                display: block !important;
+            }
+
+            .muce-menu-list li {
+                margin-bottom: 0.55rem;
+            }
+
+            .muce-menu-list li:last-child {
                 margin-bottom: 0;
             }
-            .muce-footer-main {
-                padding: 2rem 0;
+
+            .muce-menu-list li a {
+                font-size: 0.8rem;
+                color: #cbd5e1;
+                display: block;
+                padding: 2px 0;
             }
-            .muce-menu-title {
-                margin-top: 0.8rem;
-                margin-bottom: 0.8rem;
+
+            .muce-footer-bottom {
+                font-size: 0.74rem;
+                padding: 0.85rem 10px;
+                line-height: 1.4;
             }
         }
         
@@ -527,9 +675,10 @@
         <!-- Khối Thông Tin Trụ Sở / Phân Hiệu (Màu Xanh MUCE) -->
         <div class="muce-footer-top">
             <div class="container">
-                <div class="row g-4 align-items-stretch">
+                <!-- GIAO DIỆN MÁY TÍNH (DESKTOP >= 768px): 3 cột dàn ngang chuẩn đẹp -->
+                <div class="row g-4 align-items-stretch d-none d-md-flex">
                     <!-- Trụ sở chính (Khu A) -->
-                    <div class="col-12 col-md-4 muce-branch-col">
+                    <div class="col-md-4 muce-branch-col">
                         <h4 class="muce-branch-title">TRỤ SỞ CHÍNH TẠI ĐẮK LẮK (KHU A)</h4>
                         <p class="muce-branch-text">ĐC: 24 Nguyễn Du, phường Tuy Hòa, tỉnh Đắk Lắk</p>
                         <p class="muce-branch-text">ĐT: <a href="tel:02573823371">0257 3823 371</a></p>
@@ -537,7 +686,7 @@
                     </div>
 
                     <!-- Trụ sở chính (Khu B) -->
-                    <div class="col-12 col-md-4 muce-branch-col">
+                    <div class="col-md-4 muce-branch-col">
                         <h4 class="muce-branch-title">TRỤ SỞ CHÍNH TẠI ĐẮK LẮK (KHU B)</h4>
                         <p class="muce-branch-text">ĐC:Khu B, 195 Hà Huy Tập, phường Bình Kiến, tỉnh Đắk Lắk</p>
                         <p class="muce-branch-text">ĐT: <a href="tel:02573827618">(0257) 3827618</a>; <a href="tel:0962244195">0962 244 195</a>;</p>
@@ -552,16 +701,64 @@
                         <p class="muce-branch-text mb-0">Email: <a href="mailto:tuyensinh@mucedanang.edu.vn">tuyensinh@mucedanang.edu.vn</a></p>
                     </div>
                 </div>
+
+                <!-- GIAO DIỆN ĐIỆN THOẠI (MOBILE < 768px): Tinh gọn theo Tab chuyển đổi -->
+                <div class="d-md-none muce-mobile-branch-wrapper">
+                    <div class="muce-mobile-tabs">
+                        <button type="button" class="muce-tab-btn active" onclick="switchMuceTab(this, 'mob-khua')">
+                            <i class="fa-solid fa-school me-1"></i> Khu A
+                        </button>
+                        <button type="button" class="muce-tab-btn" onclick="switchMuceTab(this, 'mob-khub')">
+                            <i class="fa-solid fa-building-columns me-1"></i> Khu B
+                        </button>
+                        <button type="button" class="muce-tab-btn" onclick="switchMuceTab(this, 'mob-danang')">
+                            <i class="fa-solid fa-landmark me-1"></i> Đà Nẵng
+                        </button>
+                    </div>
+
+                    <!-- Card Khu A -->
+                    <div class="muce-mobile-card" id="mob-khua">
+                        <div class="muce-mob-title"><i class="fa-solid fa-location-dot text-warning me-1"></i> TRỤ SỞ CHÍNH (KHU A)</div>
+                        <div class="muce-mob-addr">24 Nguyễn Du, phường Tuy Hòa, tỉnh Đắk Lắk</div>
+                        <div class="muce-mob-actions">
+                            <a href="tel:02573823371" class="muce-mob-action-btn"><i class="fa-solid fa-phone"></i> 0257 3823 371</a>
+                            <a href="mailto:dhxdmt@muce.edu.vn" class="muce-mob-action-btn"><i class="fa-solid fa-envelope"></i> Gửi Mail</a>
+                        </div>
+                    </div>
+
+                    <!-- Card Khu B -->
+                    <div class="muce-mobile-card d-none" id="mob-khub">
+                        <div class="muce-mob-title"><i class="fa-solid fa-location-dot text-warning me-1"></i> TRỤ SỞ CHÍNH (KHU B)</div>
+                        <div class="muce-mob-addr">Khu B, 195 Hà Huy Tập, phường Bình Kiến, tỉnh Đắk Lắk</div>
+                        <div class="muce-mob-actions">
+                            <a href="tel:02573827618" class="muce-mob-action-btn"><i class="fa-solid fa-phone"></i> (0257) 3827618</a>
+                            <a href="tel:0962244195" class="muce-mob-action-btn"><i class="fa-solid fa-mobile-screen"></i> 0962 244 195</a>
+                        </div>
+                    </div>
+
+                    <!-- Card Đà Nẵng -->
+                    <div class="muce-mobile-card d-none" id="mob-danang">
+                        <div class="muce-mob-title"><i class="fa-solid fa-location-dot text-warning me-1"></i> PHÂN HIỆU ĐÀ NẴNG</div>
+                        <div class="muce-mob-addr">544B Nguyễn Lương Bằng, p. Hải Vân, TP. Đà Nẵng</div>
+                        <div class="muce-mob-actions">
+                            <a href="tel:02363845102" class="muce-mob-action-btn"><i class="fa-solid fa-phone"></i> (0236) 3845102</a>
+                            <a href="mailto:tuyensinh@mucedanang.edu.vn" class="muce-mob-action-btn"><i class="fa-solid fa-envelope"></i> Gửi Mail</a>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- Khối Liên Kết Chức Năng (Màu Tối) -->
         <div class="muce-footer-main">
             <div class="container">
-                <div class="row g-4">
+                <div class="row g-md-4">
                     <!-- Cột 1: Thông tin tuyển sinh -->
-                    <div class="col-6 col-md-6 col-lg-3">
-                        <h5 class="muce-menu-title">THÔNG TIN TUYỂN SINH</h5>
+                    <div class="col-12 col-md-6 col-lg-3 muce-accordion-item">
+                        <h5 class="muce-menu-title" onclick="toggleMuceMenu(this)">
+                            <span>THÔNG TIN TUYỂN SINH</span>
+                            <i class="fa-solid fa-chevron-down muce-chevron"></i>
+                        </h5>
                         <ul class="muce-menu-list">
                             <li><a href="https://tuyensinh.muce.edu.vn/SauDaiHoc/SauDaiHocPage" target="_blank" rel="noopener noreferrer">Sau Đại học</a></li>
                             <li><a href="https://tuyensinh.muce.edu.vn/DaiHoc/DaiHocPage" target="_blank" rel="noopener noreferrer">Đại học</a></li>
@@ -569,8 +766,11 @@
                     </div>
 
                     <!-- Cột 2: Thông tin đào tạo -->
-                    <div class="col-6 col-md-6 col-lg-3">
-                        <h5 class="muce-menu-title">THÔNG TIN ĐÀO TẠO</h5>
+                    <div class="col-12 col-md-6 col-lg-3 muce-accordion-item">
+                        <h5 class="muce-menu-title" onclick="toggleMuceMenu(this)">
+                            <span>THÔNG TIN ĐÀO TẠO</span>
+                            <i class="fa-solid fa-chevron-down muce-chevron"></i>
+                        </h5>
                         <ul class="muce-menu-list">
                             <li><a href="https://muce.edu.vn/Nganh-Dao-tao" target="_blank" rel="noopener noreferrer">Ngành đào tạo</a></li>
                             <li><a href="https://muce.edu.vn/Dao-Tao/Dai-Hoc/chuan-dau-ra" target="_blank" rel="noopener noreferrer">Chuẩn đầu ra</a></li>
@@ -584,8 +784,11 @@
                     </div>
 
                     <!-- Cột 3: Thông tin nội bộ -->
-                    <div class="col-6 col-md-6 col-lg-3">
-                        <h5 class="muce-menu-title">THÔNG TIN NỘI BỘ</h5>
+                    <div class="col-12 col-md-6 col-lg-3 muce-accordion-item">
+                        <h5 class="muce-menu-title" onclick="toggleMuceMenu(this)">
+                            <span>THÔNG TIN NỘI BỘ</span>
+                            <i class="fa-solid fa-chevron-down muce-chevron"></i>
+                        </h5>
                         <ul class="muce-menu-list">
                             <li><a href="https://muce.edu.vn/Sinh-Vien/thoi-khoa-bieu" target="_blank" rel="noopener noreferrer">Thời khóa biểu</a></li>
                             <li><a href="https://muce.edu.vn/Sinh-Vien/thoi-khoa-bieu-lop-hoc-cai-thien" target="_blank" rel="noopener noreferrer">Thời khóa biểu lớp học cải thiện</a></li>
@@ -597,8 +800,11 @@
                     </div>
 
                     <!-- Cột 4: Thông tin kết nối -->
-                    <div class="col-6 col-md-6 col-lg-3">
-                        <h5 class="muce-menu-title">THÔNG TIN KẾT NỐI</h5>
+                    <div class="col-12 col-md-6 col-lg-3 muce-accordion-item">
+                        <h5 class="muce-menu-title" onclick="toggleMuceMenu(this)">
+                            <span>THÔNG TIN KẾT NỐI</span>
+                            <i class="fa-solid fa-chevron-down muce-chevron"></i>
+                        </h5>
                         <ul class="muce-menu-list">
                             <li><a href="https://muce.edu.vn/Gioi-Thieu/dia-chi-lien-he" target="_blank" rel="noopener noreferrer">Liên hệ</a></li>
                             <li><a href="https://muce.edu.vn/Gioi-Thieu/tuyen-dung" target="_blank" rel="noopener noreferrer">Tuyển dụng</a></li>
@@ -616,6 +822,26 @@
                 <span>&copy; 2026 Trường Đại học Xây dựng Miền Trung (MUCE) &bull; Hệ Thống Điểm Danh Hoạt Động & Sự Kiện GPS</span>
             </div>
         </div>
+
+        <script>
+            function switchMuceTab(btn, targetId) {
+                const wrapper = btn.closest('.muce-mobile-branch-wrapper');
+                if (!wrapper) return;
+                wrapper.querySelectorAll('.muce-tab-btn').forEach(b => b.classList.remove('active'));
+                wrapper.querySelectorAll('.muce-mobile-card').forEach(c => c.classList.add('d-none'));
+                btn.classList.add('active');
+                const target = wrapper.querySelector('#' + targetId);
+                if (target) target.classList.remove('d-none');
+            }
+
+            function toggleMuceMenu(titleEl) {
+                if (window.innerWidth >= 768) return;
+                const item = titleEl.closest('.muce-accordion-item');
+                if (item) {
+                    item.classList.toggle('open');
+                }
+            }
+        </script>
     </footer>
 
     <script src="config.js?v=2.5"></script>
