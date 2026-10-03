@@ -940,8 +940,11 @@
                         <div class="activity-card">
                             <div class="card-header-strip"></div>
                             <div class="card-body-content">
-                                <div>
+                                <div class="d-flex justify-content-between align-items-center mb-1">
                                     <span class="code-badge"><i class="fa-solid fa-hashtag"></i> ${item.code}</span>
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill py-1 px-2" style="font-size: 0.72rem;">
+                                        <i class="fa-solid fa-users me-1"></i><span id="home-act-count-${item.code}">0</span> SV
+                                    </span>
                                 </div>
                                 <h5 class="card-title">${item.title}</h5>
                                 <p class="card-desc">${item.description || 'Không có mô tả.'}</p>
@@ -958,6 +961,10 @@
                                     <div class="info-row">
                                         <i class="fa-regular fa-clock"></i>
                                         <span>Thời gian: ${item.startTime}</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <i class="fa-solid fa-user-check" style="color: #0284c7;"></i>
+                                        <span>Đã điểm danh: <strong class="text-primary font-monospace" id="home-act-text-${item.code}">0 SV</strong></span>
                                     </div>
                                     <div class="info-row distance-row d-none">
                                         <i class="fa-solid fa-route" style="color: #0284c7;"></i>
@@ -978,6 +985,33 @@
                 if (userCoords) {
                     updateAllDistances();
                 }
+
+                // Cập nhật số lượng sinh viên đã điểm danh cho từng sự kiện
+                fetchHomeCheckinCounts();
+            }
+
+            function fetchHomeCheckinCounts() {
+                if (!CONFIG.googleScriptUrl) return;
+                fetch(CONFIG.googleScriptUrl + '?_t=' + Date.now())
+                    .then(res => res.json())
+                    .then(data => {
+                        if (Array.isArray(data)) {
+                            const counts = {};
+                            data.forEach(r => {
+                                const c = String(r.code || '').trim().toUpperCase();
+                                counts[c] = (counts[c] || 0) + 1;
+                            });
+                            document.querySelectorAll('[id^="home-act-count-"]').forEach(el => {
+                                const code = el.id.replace('home-act-count-', '').trim().toUpperCase();
+                                el.textContent = counts[code] || 0;
+                            });
+                            document.querySelectorAll('[id^="home-act-text-"]').forEach(el => {
+                                const code = el.id.replace('home-act-text-', '').trim().toUpperCase();
+                                el.textContent = (counts[code] || 0) + ' SV';
+                            });
+                        }
+                    })
+                    .catch(() => {});
             }
 
             // 1. Tải tức thì bằng Local Cache trước

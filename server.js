@@ -1,8 +1,31 @@
+process.env.TZ = 'Asia/Ho_Chi_Minh';
+
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { Pool } = require('pg');
+
+// Helper định dạng ngày giờ chuẩn Việt Nam (UTC+7 / Asia/Ho_Chi_Minh)
+function getVietnamTimestamp(d = new Date()) {
+    try {
+        const dateObj = (d instanceof Date) ? d : new Date(d);
+        if (isNaN(dateObj.getTime())) {
+            return new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour12: false });
+        }
+        const parts = new Intl.DateTimeFormat('en-GB', {
+            timeZone: 'Asia/Ho_Chi_Minh',
+            hour: '2-digit', minute: '2-digit', second: '2-digit',
+            day: '2-digit', month: '2-digit', year: 'numeric',
+            hour12: false
+        }).formatToParts(dateObj);
+        const map = {};
+        parts.forEach(p => map[p.type] = p.value);
+        return `${map.hour}:${map.minute}:${map.second} ${map.day}/${map.month}/${map.year}`;
+    } catch (e) {
+        return new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour12: false });
+    }
+}
 
 const PORT = process.env.PORT || 5252;
 const DATABASE_URL = process.env.DATABASE_URL;
@@ -91,6 +114,21 @@ if (DATABASE_URL) {
                 }
             } catch (e) {
                 console.error("Lỗi seed tài khoản mặc định:", e);
+            }
+
+            // Tự động chuẩn hóa thời gian về giờ Việt Nam (UTC+7) cho các bản ghi cũ nếu trước đây lưu giờ UTC
+            try {
+                await pool.query(`
+                    UPDATE checkins 
+                    SET timestamp = to_char(created_at AT TIME ZONE 'Asia/Ho_Chi_Minh', 'HH24:MI:SS DD/MM/YYYY')
+                    WHERE created_at IS NOT NULL AND (
+                        timestamp IS NULL 
+                        OR timestamp = '' 
+                        OR timestamp ~ '^[0-9]{2}:[0-9]{2}:[0-9]{2}$'
+                    );
+                `);
+            } catch (e) {
+                console.error("Lỗi đồng bộ múi giờ Việt Nam trong SQL:", e);
             }
         })
         .catch(err => console.error('❌ Lỗi khởi tạo PostgreSQL Tables:', err));
@@ -281,8 +319,14 @@ async function dbGetCheckins() {
     let rows = [];
     if (pool) {
         try {
-            const res = await pool.query('SELECT id, timestamp, code, title, student_code as "studentCode", name, class_name as "className", faculty, phone_number as "phoneNumber", email, coords, distance, device, ip, device_uuid as "deviceUuid" FROM checkins ORDER BY id DESC');
-            rows = res.rows;
+            const res = await pool.query('SELECT id, timestamp, code, title, student_code as "studentCode", name, class_name as "className", faculty, phone_number as "phoneNumber", email, coords, distance, device, ip, device_uuid as "deviceUuid", created_at as "createdAt" FROM checkins ORDER BY id DESC');
+            rows = res.rows.map(r => {
+                // Đảm bảo thời gian hiển thị luôn chuẩn giờ Việt Nam
+                if (r.createdAt && (!r.timestamp || r.timestamp.trim() === '' || /^\d{2}:\d{2}:\d{2}$/.test(r.timestamp.trim()))) {
+                    r.timestamp = getVietnamTimestamp(r.createdAt);
+                }
+                return r;
+            });
         } catch (e) { console.error('Lỗi đọc checkins từ SQL:', e); }
     } else if (fs.existsSync(RECORDS_FILE)) {
         try { rows = JSON.parse(fs.readFileSync(RECORDS_FILE, 'utf8')); } catch (e) {}
@@ -342,7 +386,7 @@ async function dbSaveCheckin(record) {
                 INSERT INTO checkins (timestamp, code, title, student_code, name, class_name, faculty, phone_number, email, coords, distance, device, ip, device_uuid)
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);
             `, [
-                record.timestamp || new Date().toLocaleString('vi-VN'),
+                record.timestamp || getVietnamTimestamp(),
                 record.code || '', record.title || '', record.studentCode || '',
                 record.name || '', record.className || '', record.faculty || '',
                 record.phoneNumber || '', record.email || '', record.coords || '',
@@ -354,6 +398,9 @@ async function dbSaveCheckin(record) {
     let list = [];
     if (fs.existsSync(RECORDS_FILE)) {
         try { list = JSON.parse(fs.readFileSync(RECORDS_FILE, 'utf8')); } catch (e) {}
+    }
+    if (!record.timestamp) {
+        record.timestamp = getVietnamTimestamp();
     }
     list.unshift(record);
     fs.writeFileSync(RECORDS_FILE, JSON.stringify(list, null, 2), 'utf8');
@@ -371,7 +418,7 @@ async function dbSaveBatchCheckins(records) {
                     INSERT INTO checkins (timestamp, code, title, student_code, name, class_name, faculty, phone_number, email, coords, distance, device, ip, device_uuid)
                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);
                 `, [
-                    r.timestamp || new Date().toLocaleString('vi-VN'),
+                    r.timestamp || getVietnamTimestamp(),
                     r.code || '', r.title || '', r.studentCode || '',
                     r.name || '', r.className || '', r.faculty || '',
                     r.phoneNumber || '', r.email || '', r.coords || 'Thủ công (Excel)',
@@ -387,7 +434,10 @@ async function dbSaveBatchCheckins(records) {
     if (fs.existsSync(RECORDS_FILE)) {
         try { list = JSON.parse(fs.readFileSync(RECORDS_FILE, 'utf8')); } catch (e) {}
     }
-    records.slice().reverse().forEach(r => list.unshift(r));
+    records.slice().reverse().forEach(r => {
+        if (!r.timestamp) r.timestamp = getVietnamTimestamp();
+        list.unshift(r);
+    });
     fs.writeFileSync(RECORDS_FILE, JSON.stringify(list, null, 2), 'utf8');
     return { status: 'success', count: records.length, message: `Đã nhập ${records.length} bản ghi!` };
 }
@@ -450,7 +500,7 @@ async function dbRegister(username, password, role, adminCode) {
         return { status: 'error', message: 'Mã Admin bảo mật không chính xác!' };
     }
 
-    const regDate = new Date().toLocaleString('vi-VN');
+    const regDate = getVietnamTimestamp();
     const status = (role === 'super') ? 'approved' : 'pending';
 
     if (pool) {
@@ -854,7 +904,7 @@ const server = http.createServer(async (req, res) => {
 
                     // Điểm danh sinh viên
                     if (!json.timestamp) {
-                        json.timestamp = new Date().toLocaleString('vi-VN');
+                        json.timestamp = getVietnamTimestamp();
                     }
                     await dbSaveCheckin(json);
 

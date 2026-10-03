@@ -702,6 +702,20 @@
                 flex-wrap: nowrap !important;
                 gap: 6px !important;
                 align-items: center !important;
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                padding-bottom: 2px !important;
+            }
+            #toolbarSubCountBadge {
+                flex: 0 0 auto !important;
+                height: 34px !important;
+                font-size: 0.74rem !important;
+                padding: 4px 8px !important;
+                white-space: nowrap !important;
+            }
+            #attendanceTotalCountBadge {
+                font-size: 0.78rem !important;
+                padding: 3px 8px !important;
             }
             #btnExportExcelGroup {
                 flex: 1 1 auto !important;
@@ -1017,8 +1031,16 @@
                 <!-- Tab: Attendance List -->
                 <div class="card card-custom p-4 d-none" id="tab-attendance-list">
                     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2 attendance-header-actions" style="position: relative; z-index: 100;">
-                        <h5 class="fw-bold mb-0 text-dark attendance-tab-title"><i class="fa-solid fa-users text-primary me-2"></i>Danh sách sinh viên điểm danh</h5>
-                        <div class="d-flex gap-2 attendance-btn-toolbar" style="position: relative; z-index: 101;">
+                        <div class="d-flex align-items-center flex-wrap gap-2">
+                            <h5 class="fw-bold mb-0 text-dark attendance-tab-title"><i class="fa-solid fa-users text-primary me-2"></i>Danh sách sinh viên điểm danh</h5>
+                            <span class="badge bg-primary text-white rounded-pill px-2 py-1 fs-6 d-inline-flex align-items-center shadow-sm" id="attendanceTotalCountBadge" title="Tổng số sinh viên điểm danh">
+                                <i class="fa-solid fa-user-check me-1"></i><span id="attendanceCountText">0 SV</span>
+                            </span>
+                        </div>
+                        <div class="d-flex gap-2 attendance-btn-toolbar align-items-center" style="position: relative; z-index: 101;">
+                            <div class="badge bg-info-subtle text-info-emphasis border border-info-subtle rounded-pill px-2 py-1 d-inline-flex align-items-center fw-bold" id="toolbarSubCountBadge" style="font-size: 0.8rem; height: 34px; white-space: nowrap;" title="Số lượng sinh viên đang hiển thị">
+                                <i class="fa-solid fa-filter me-1"></i><span id="toolbarSubCountText">Tất cả: 0 SV</span>
+                            </div>
                             <button type="button" id="btnAddManualCheckin" class="btn btn-sm btn-primary fw-bold d-none"
                                 onclick="openAddManualCheckinModal()"><i class="fa-solid fa-user-plus me-1"></i> Thêm Điểm Danh</button>
                             <button type="button" id="btnImportExcel"
@@ -2191,21 +2213,41 @@
                 return;
             }
 
-            container.innerHTML = list.map((item, idx) => `
+            container.innerHTML = list.map((item, idx) => {
+                const actCount = (attendanceData || []).filter(r => String(r.code || '').trim().toUpperCase() === String(item.code || '').trim().toUpperCase()).length;
+                return `
                 <div class="activity-item-row d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <div>
-                        <span class="badge bg-primary font-monospace">${item.code}</span>
-                        <strong class="d-block mt-1">${item.title}</strong>
+                    <div style="cursor: pointer;" onclick="viewActivityAttendance('${item.code}')" title="Nhấn vào để xem danh sách ${actCount} sinh viên điểm danh sự kiện này">
+                        <div class="d-flex align-items-center flex-wrap gap-1">
+                            <span class="badge bg-primary font-monospace">${item.code}</span>
+                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill fw-bold" id="act-count-badge-${item.code}">
+                                <i class="fa-solid fa-users me-1"></i><span id="act-count-${item.code}">${actCount}</span> SV
+                            </span>
+                        </div>
+                        <strong class="d-block mt-1 text-primary">${item.title}</strong>
                         <span class="small text-muted d-block"><i class="fa-solid fa-location-dot"></i> ${item.locationAddress} (Bán kính: ${item.radiusMeters}m)</span>
                     </div>
                     <div class="d-flex gap-2">
-                        <button class="btn btn-sm btn-outline-primary" onclick="printQr('${item.code}', '${item.title}', ${item.radiusMeters})"><i class="fa-solid fa-print me-1"></i>In QR Điểm Danh</button>
-                        <button class="btn btn-sm btn-outline-success fw-semibold" onclick="exportSingleActivityExcel('${item.code}', '${(item.title || item.code).replace(/'/g, "\\'")}')" title="Tải file Excel danh sách sinh viên sự kiện này"><i class="fa-solid fa-file-excel me-1"></i>Tải DS Excel</button>
+                        <button class="btn btn-sm btn-primary fw-semibold" onclick="viewActivityAttendance('${item.code}')" title="Xem danh sách ${actCount} sinh viên sự kiện này"><i class="fa-solid fa-users-viewfinder me-1"></i>Xem DS (${actCount} SV)</button>
+                        <button class="btn btn-sm btn-outline-primary" onclick="printQr('${item.code}', '${item.title}', ${item.radiusMeters})"><i class="fa-solid fa-print me-1"></i>In QR</button>
+                        <button class="btn btn-sm btn-outline-success fw-semibold" onclick="exportSingleActivityExcel('${item.code}', '${(item.title || item.code).replace(/'/g, "\\'")}')" title="Tải file Excel danh sách sinh viên sự kiện này"><i class="fa-solid fa-file-excel me-1"></i>Tải Excel</button>
                         <button class="btn btn-sm btn-outline-info" onclick="editActivity(${idx})"><i class="fa-solid fa-pencil"></i> Sửa</button>
                         <button class="btn btn-sm btn-danger" onclick="deleteActivity(${idx})"><i class="fa-solid fa-trash"></i></button>
                     </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
+        }
+
+        function viewActivityAttendance(actCode) {
+            switchTab('attendance-list', true);
+            setTimeout(() => {
+                const filterSelect = document.getElementById('attendanceActivityFilter');
+                if (filterSelect) {
+                    filterSelect.value = actCode;
+                    filterAttendanceTable();
+                }
+            }, 120);
         }
 
         // Helpers convert datetime-local <-> hh:mm DD/MM/YYYY
@@ -2737,14 +2779,6 @@
             const tbody = document.getElementById('attendanceTableBody');
             tbody.innerHTML = `<tr><td colspan="15" class="text-center py-4"><i class="fa-solid fa-spinner fa-spin me-2"></i>Đang tải dữ liệu điểm danh...</td></tr>`;
 
-            // Cập nhật bộ lọc sự kiện dropdown
-            const filterSelect = document.getElementById('attendanceActivityFilter');
-            const acts = getActivities();
-            filterSelect.innerHTML = '<option value="">-- Tất cả sự kiện --</option>';
-            acts.forEach(a => {
-                filterSelect.innerHTML += `<option value="${a.code}">${a.code} - ${a.title}</option>`;
-            });
-
             // Lấy dữ liệu điểm danh đã lưu cục bộ (nếu có khi điền form trên máy)
             const localRecords = localStorage.getItem("gps_attendance_local_records")
                 ? JSON.parse(localStorage.getItem("gps_attendance_local_records"))
@@ -2765,6 +2799,7 @@
                     ];
                     // Sắp xếp theo Sự kiện -> Khoa (CNTT -> Kinh tế -> Xây dựng -> Kiến trúc) -> Lớp
                     attendanceData = sortAttendanceData([...localRecords, ...mockData]);
+                    populateActivityFilterDropdown();
                     if (document.getElementById('attendanceSearch')?.value || document.getElementById('attendanceFacultyFilter')?.value || document.getElementById('attendanceActivityFilter')?.value) {
                         filterAttendanceTable();
                     } else {
@@ -2776,10 +2811,11 @@
 
             // Nếu có link thật, fetch JSON trực tiếp từ Google Apps Script Web App / API Server
             try {
-                const res = await fetch(scriptUrl);
+                const res = await fetch(scriptUrl + (scriptUrl.includes('?') ? '&' : '?') + '_t=' + Date.now());
                 const sheetData = await res.json();
                 // Sắp xếp theo Sự kiện -> Khoa (CNTT -> Kinh tế -> Xây dựng -> Kiến trúc) -> Lớp
                 attendanceData = sortAttendanceData([...localRecords, ...sheetData]);
+                populateActivityFilterDropdown();
                 if (document.getElementById('attendanceSearch')?.value || document.getElementById('attendanceFacultyFilter')?.value || document.getElementById('attendanceActivityFilter')?.value) {
                     filterAttendanceTable();
                 } else {
@@ -2789,8 +2825,25 @@
                 console.error("Lỗi khi fetch dữ liệu từ Google Apps Script / API", err);
                 // Nếu lỗi, vẫn hiển thị các bản ghi cục bộ đã lưu
                 attendanceData = sortAttendanceData(localRecords);
+                populateActivityFilterDropdown();
                 renderAttendanceTable(attendanceData);
             }
+        }
+
+        function populateActivityFilterDropdown() {
+            const filterSelect = document.getElementById('attendanceActivityFilter');
+            if (!filterSelect) return;
+            const currentVal = filterSelect.value;
+            const acts = getActivities();
+            const total = attendanceData ? attendanceData.length : 0;
+
+            let html = `<option value="">-- Tất cả sự kiện (${total} SV) --</option>`;
+            acts.forEach(a => {
+                const count = (attendanceData || []).filter(r => String(r.code || '').trim().toUpperCase() === String(a.code || '').trim().toUpperCase()).length;
+                html += `<option value="${a.code}">${a.code} - ${a.title} (${count} SV)</option>`;
+            });
+            filterSelect.innerHTML = html;
+            if (currentVal) filterSelect.value = currentVal;
         }
 
         // PARSE CSV THÀNH ARRAY OBJECT
@@ -3082,6 +3135,92 @@
             }
         }
 
+        function getVietnamTimestamp(d = new Date()) {
+            try {
+                const dateObj = (d instanceof Date) ? d : new Date(d);
+                if (isNaN(dateObj.getTime())) return String(d);
+                const parts = new Intl.DateTimeFormat('en-GB', {
+                    timeZone: 'Asia/Ho_Chi_Minh',
+                    hour: '2-digit', minute: '2-digit', second: '2-digit',
+                    day: '2-digit', month: '2-digit', year: 'numeric',
+                    hour12: false
+                }).formatToParts(dateObj);
+                const map = {};
+                parts.forEach(p => map[p.type] = p.value);
+                return `${map.hour}:${map.minute}:${map.second} ${map.day}/${map.month}/${map.year}`;
+            } catch (e) {
+                return new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour12: false });
+            }
+        }
+
+        // CẬP NHẬT SỐ LƯỢNG SINH VIÊN (TỔNG & THEO BỘ LỌC SỰ KIỆN TỰ ĐỘNG TĂNG GIẢM THẬT)
+        function updateAttendanceCountBadges() {
+            const total = attendanceData ? attendanceData.length : 0;
+            const currentCount = currentRenderedAttendanceData ? currentRenderedAttendanceData.length : total;
+            const actFilter = document.getElementById('attendanceActivityFilter')?.value || '';
+            const facultyFilter = document.getElementById('attendanceFacultyFilter')?.value || '';
+            const searchVal = document.getElementById('attendanceSearch')?.value || '';
+
+            const isFiltering = !!(actFilter || facultyFilter || searchVal);
+
+            // 1. Badge cạnh tiêu đề tab Danh sách điểm danh
+            const mainCountText = document.getElementById('attendanceCountText');
+            if (mainCountText) {
+                mainCountText.textContent = total + ' SV';
+            }
+
+            // 2. Badge trên thanh toolbar cạnh nút Thêm Điểm Danh
+            const subCountBadge = document.getElementById('toolbarSubCountBadge');
+            const subCountText = document.getElementById('toolbarSubCountText');
+            if (subCountText) {
+                if (isFiltering) {
+                    subCountText.innerHTML = `<i class="fa-solid fa-filter me-1"></i><span class="text-primary fw-bold">${currentCount}</span> / ${total} SV`;
+                    if (subCountBadge) subCountBadge.title = `Đang lọc: ${currentCount} SV (trên tổng số ${total} SV)`;
+                } else {
+                    subCountText.innerHTML = `<i class="fa-solid fa-users me-1"></i>Tổng: <span class="fw-bold">${total}</span> SV`;
+                    if (subCountBadge) subCountBadge.title = `Tổng cộng: ${total} sinh viên đã điểm danh`;
+                }
+            }
+
+            // 3. Cập nhật số lượng trên các thẻ sự kiện trong tab Quản lý sự kiện
+            getActivities().forEach(act => {
+                const numEl = document.getElementById('act-count-' + act.code);
+                if (numEl) {
+                    const c = (attendanceData || []).filter(r => String(r.code || '').trim().toUpperCase() === String(act.code || '').trim().toUpperCase()).length;
+                    numEl.textContent = c;
+                }
+            });
+        }
+
+        // ĐỒNG BỘ DỮ LIỆU ĐIỂM DANH CHẠY NGẦM KHÔNG GÂY GIẬT LAG
+        async function fetchAttendanceDataSilently() {
+            const scriptUrl = CONFIG.googleScriptUrl;
+            if (!scriptUrl) return;
+            try {
+                const res = await fetch(scriptUrl + (scriptUrl.includes('?') ? '&' : '?') + '_t=' + Date.now());
+                const sheetData = await res.json();
+                if (Array.isArray(sheetData)) {
+                    const localRecords = localStorage.getItem("gps_attendance_local_records")
+                        ? JSON.parse(localStorage.getItem("gps_attendance_local_records"))
+                        : [];
+                    attendanceData = sortAttendanceData([...localRecords, ...sheetData]);
+                    populateActivityFilterDropdown();
+                    if (document.getElementById('attendanceSearch')?.value || document.getElementById('attendanceFacultyFilter')?.value || document.getElementById('attendanceActivityFilter')?.value) {
+                        filterAttendanceTable();
+                    } else {
+                        renderAttendanceTable(attendanceData);
+                    }
+                }
+            } catch (e) {}
+        }
+
+        // Tự động kiểm tra cập nhật số lượng sinh viên mỗi 15 giây khi đang mở trang Admin
+        setInterval(() => {
+            if (document.getElementById('adminDashboard') && !document.getElementById('adminDashboard').classList.contains('d-none')) {
+                fetchAttendanceDataSilently();
+            }
+        }, 15000);
+
         // HIỂN THỊ DỮ LIỆU LÊN BẢNG
         function renderAttendanceTable(data) {
             currentRenderedAttendanceData = data;
@@ -3100,6 +3239,7 @@
                 tbody.innerHTML = `<tr><td colspan="${colSpanVal}" class="text-center py-4 text-muted">Chưa có ai điểm danh hoặc không tìm thấy kết quả.</td></tr>`;
                 clearSelectedStudentRow();
                 initTopScrollbarSync();
+                updateAttendanceCountBadges();
                 return;
             }
 
@@ -3108,10 +3248,14 @@
                 const editIdx = actualIdx >= 0 ? actualIdx : idx;
                 const isSelected = (currentSelectedStudentIdx === idx);
 
+                const displayTime = item.timestamp 
+                    ? (item.timestamp.includes('T') ? getVietnamTimestamp(item.timestamp) : item.timestamp)
+                    : '--';
+
                 return `
                 <tr class="text-nowrap attendance-row-item ${isSelected ? 'row-selected' : ''}" onclick="selectStudentRow(this, ${idx})" title="Click để hiện viền xanh kiểm tra sinh viên này">
                     <td class="text-center">${idx + 1}</td>
-                    <td class="small text-muted">${item.timestamp}</td>
+                    <td class="small text-muted font-monospace">${displayTime}</td>
                     <td><span class="badge bg-secondary">${item.code}</span></td>
                     <td>${item.title || '--'}</td>
                     <td style="min-width: 130px;"><span class="badge bg-light text-primary font-monospace border border-primary px-2 py-1 fs-6">${item.studentCode || '--'}</span></td>
@@ -3139,6 +3283,7 @@
 
             initTopScrollbarSync();
             updateExportButtonLabel();
+            updateAttendanceCountBadges();
         }
 
         let manualCheckinModalInstance = null;
@@ -3158,10 +3303,7 @@
             document.getElementById('mcEmail').value = '';
             document.getElementById('mcDistance').value = 'Bổ sung thủ công (Admin)';
 
-            const now = new Date();
-            const pad = (n) => String(n).padStart(2, '0');
-            const friendlyTime = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-            document.getElementById('mcTimestamp').value = friendlyTime;
+            document.getElementById('mcTimestamp').value = getVietnamTimestamp();
 
             const actSelect = document.getElementById('mcActivityCode');
             const acts = getActivities();

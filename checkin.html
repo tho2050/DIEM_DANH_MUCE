@@ -1038,6 +1038,22 @@
             document.getElementById('fullName').value = name;
         }
 
+        function getVietnamTimestamp(d = new Date()) {
+            try {
+                const parts = new Intl.DateTimeFormat('en-GB', {
+                    timeZone: 'Asia/Ho_Chi_Minh',
+                    hour: '2-digit', minute: '2-digit', second: '2-digit',
+                    day: '2-digit', month: '2-digit', year: 'numeric',
+                    hour12: false
+                }).formatToParts(d);
+                const map = {};
+                parts.forEach(p => map[p.type] = p.value);
+                return `${map.hour}:${map.minute}:${map.second} ${map.day}/${map.month}/${map.year}`;
+            } catch (e) {
+                return new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour12: false });
+            }
+        }
+
         function saveLocalAndShowSuccess(studentCode, fullName, dist) {
             const btn = document.getElementById('btnSubmit');
             const localRecords = localStorage.getItem("gps_attendance_local_records") 
@@ -1045,7 +1061,7 @@
                 : [];
             
             localRecords.unshift({
-                timestamp: new Date().toLocaleString('vi-VN'),
+                timestamp: getVietnamTimestamp(),
                 code: activity.code,
                 studentCode: studentCode,
                 name: fullName,
@@ -1100,6 +1116,7 @@
             }
 
             const payload = {
+                timestamp: getVietnamTimestamp(),
                 code: activity.code,
                 title: activity.title || '', // Gửi kèm tên sự kiện
                 studentCode: studentCode,
