@@ -898,14 +898,13 @@ async function dbSendOtp(emailOrUsername) {
         };
     } else {
         return {
-            status: 'success',
+            status: 'error',
             sentViaEmail: false,
             needConfig: mailResult.needConfig,
-            otp: otpCode,
             email: recipientEmail,
             message: mailResult.needConfig
-                ? `Đã tạo mã OTP cho tài khoản ${recipientEmail}. (Hệ thống chưa cài đặt mật khẩu ứng dụng Gmail SMTP nên tạm cung cấp mã: ${otpCode})`
-                : `Không thể kết nối máy chủ gửi mail (${mailResult.error || 'Lỗi SMTP'}). Mã OTP: ${otpCode}`
+                ? `Hệ thống chưa cài đặt tài khoản Gmail gửi mã OTP tự động. Vui lòng liên hệ Quản trị viên để được cấp mã!`
+                : `Không thể kết nối máy chủ gửi mail (${mailResult.error || mailResult.reason || 'Lỗi gửi mail'}). Vui lòng thử lại sau!`
         };
     }
 }

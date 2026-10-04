@@ -2838,39 +2838,24 @@
                 });
                 const result = await response.json();
 
-                if (result.status === 'success') {
-                    if (result.sentViaEmail) {
-                        sentEl.innerHTML = `
-                            <div class="d-flex align-items-start gap-2">
-                                <i class="fa-solid fa-envelope-circle-check text-success fs-3 mt-1"></i>
-                                <div>
-                                    <strong class="text-success fs-6">Đã gửi mã xác nhận OTP thành công!</strong>
-                                    <div class="mt-1 small">Mã OTP 6 chữ số đã được gửi trực tiếp đến hộp thư Gmail: <strong class="text-primary">${result.email}</strong>.</div>
-                                    <div class="text-muted small mt-1"><i class="fa-solid fa-circle-info me-1"></i>Vui lòng mở ứng dụng Gmail (kiểm tra <strong>Hộp thư đến</strong> hoặc mục <strong>Thư rác / Spam</strong>) để lấy mã xác nhận.</div>
-                                </div>
+                if (result.status === 'success' && result.sentViaEmail) {
+                    sentEl.innerHTML = `
+                        <div class="d-flex align-items-start gap-2">
+                            <i class="fa-solid fa-envelope-circle-check text-success fs-3 mt-1"></i>
+                            <div>
+                                <strong class="text-success fs-6">Đã gửi mã xác nhận OTP thành công!</strong>
+                                <div class="mt-1 small">Mã OTP 6 chữ số đã được gửi trực tiếp đến hộp thư Gmail: <strong class="text-primary">${result.email}</strong>.</div>
+                                <div class="text-muted small mt-1"><i class="fa-solid fa-circle-info me-1"></i>Vui lòng mở ứng dụng Gmail (kiểm tra <strong>Hộp thư đến</strong> hoặc mục <strong>Thư rác / Spam</strong>) để lấy mã xác nhận.</div>
                             </div>
-                        `;
-                    } else if (result.needConfig) {
-                        sentEl.innerHTML = `
-                            <div class="d-flex align-items-start gap-2">
-                                <i class="fa-solid fa-circle-info text-warning fs-3 mt-1"></i>
-                                <div>
-                                    <strong class="text-warning">Mã OTP đã được tạo:</strong> <span class="fs-5 text-danger fw-bold ms-1 font-monospace">${result.otp}</span>
-                                    <div class="text-muted small mt-1">Máy chủ chưa cấu hình Mật khẩu ứng dụng Gmail SMTP nên tạm thời cấp mã trực tiếp tại đây để bạn khôi phục mật khẩu.</div>
-                                </div>
-                            </div>
-                        `;
-                    } else {
-                        sentEl.innerHTML = `<i class="fa-solid fa-check-circle me-1"></i> ${result.message || 'Mã OTP đã được tạo thành công!'} (Mã: <strong class="text-danger">${result.otp || ''}</strong>)`;
-                    }
-
+                        </div>
+                    `;
                     sentEl.classList.remove('d-none');
                     document.getElementById('otpInputContainer').classList.remove('d-none');
                     btn.classList.add('d-none'); // Ẩn nút gửi OTP đi
                 } else {
                     btn.disabled = false;
                     btn.innerHTML = '<i class="fa-solid fa-paper-plane me-2"></i>Gửi Mã OTP Về Gmail';
-                    errorEl.textContent = result.message || "Lỗi hệ thống khởi tạo OTP!";
+                    errorEl.textContent = result.message || "Không thể gửi email OTP lúc này! Vui lòng liên hệ Admin.";
                     errorEl.classList.remove('d-none');
                 }
             } catch (err) {
