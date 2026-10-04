@@ -1719,14 +1719,19 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold small">Lớp:</label>
-                                <input type="text" class="form-control" id="mcClassName" placeholder="VD: DH20KT01"
-                                    required />
+                                <input type="text" class="form-control" id="mcClassName" placeholder="VD: D23CTC1, D22XDK2, D20KTR1..."
+                                    required oninput="autoDetectManualFaculty(this.value)" />
                             </div>
                         </div>
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
-                                <label class="form-label fw-bold small">Khoa:</label>
-                                <select class="form-select fw-bold" id="mcFaculty" required>
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label class="form-label fw-bold small mb-0">Khoa:</label>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-0 d-none" id="mcFacultyAutoBadge" style="font-size: 0.72rem; font-weight: 500;">
+                                        <i class="fa-solid fa-wand-magic-sparkles me-1"></i>Tự chọn
+                                    </span>
+                                </div>
+                                <select class="form-select fw-bold" id="mcFaculty" required onchange="handleManualFacultyChange()">
                                     <option value="Khoa Kỹ thuật Công nghệ">Khoa Kỹ thuật Công nghệ</option>
                                     <option value="Khoa Kinh tế">Khoa Kinh tế</option>
                                     <option value="Khoa Xây dựng">Khoa Xây dựng</option>
@@ -1899,7 +1904,7 @@
     <script src="https://unpkg.com/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="config.js?v=2.6"></script>
+    <script src="config.js?v=2.7"></script>
     <script>
         let selectMap, selectMarker;
         let serverIp = 'localhost';
@@ -3693,6 +3698,9 @@
 
             document.getElementById('mcTimestamp').value = getVietnamTimestamp();
 
+            const mcBadge = document.getElementById('mcFacultyAutoBadge');
+            if (mcBadge) mcBadge.classList.add('d-none');
+
             const actSelect = document.getElementById('mcActivityCode');
             const acts = getActivities();
             if (acts.length === 0) {
@@ -3729,6 +3737,9 @@
             document.getElementById('mcTimestamp').value = item.timestamp || '';
             document.getElementById('mcDistance').value = item.distance || 'Sửa thủ công (Admin)';
 
+            const mcBadge = document.getElementById('mcFacultyAutoBadge');
+            if (mcBadge) mcBadge.classList.add('d-none');
+
             const actSelect = document.getElementById('mcActivityCode');
             const acts = getActivities();
             if (acts.length === 0) {
@@ -3742,6 +3753,37 @@
                 manualCheckinModalInstance = new bootstrap.Modal(document.getElementById('manualCheckinModal'));
             }
             manualCheckinModalInstance.show();
+        }
+
+        function autoDetectManualFaculty(val) {
+            const facultySelect = document.getElementById('mcFaculty');
+            const badge = document.getElementById('mcFacultyAutoBadge');
+            if (!facultySelect) return;
+            if (typeof detectFacultyFromClassName === 'function') {
+                const detected = detectFacultyFromClassName(val);
+                if (detected) {
+                    facultySelect.value = detected;
+                    if (badge) {
+                        badge.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles me-1"></i>Tự chọn: <strong>${detected.replace('Khoa ', '')}</strong>`;
+                        badge.classList.remove('d-none');
+                    }
+                    return;
+                }
+            }
+            if (badge) badge.classList.add('d-none');
+        }
+
+        function handleManualFacultyChange() {
+            const badge = document.getElementById('mcFacultyAutoBadge');
+            if (badge) {
+                const facultySelect = document.getElementById('mcFaculty');
+                if (facultySelect && facultySelect.value) {
+                    badge.innerHTML = `<i class="fa-solid fa-hand me-1"></i>Thủ công: <strong>${facultySelect.value.replace('Khoa ', '')}</strong>`;
+                    badge.classList.remove('d-none');
+                } else {
+                    badge.classList.add('d-none');
+                }
+            }
         }
 
         function onManualCheckinActivityChange() { }
@@ -3991,7 +4033,7 @@
                             continue;
                         }
 
-                        // Chỉ định dạng Khoa khi trong file CÓ dữ liệu Khoa, KHÔNG tự thêm mặc định khi file thiếu cột Khoa!
+                        // Chỉ định dạng Khoa khi trong file CÓ dữ liệu Khoa, hoặc tự động nhận diện từ Lớp
                         let faculty = '';
                         if (rawFaculty) {
                             const facLower = rawFaculty.toLowerCase();
@@ -4006,6 +4048,9 @@
                             } else {
                                 faculty = rawFaculty;
                             }
+                        } else if (className && typeof detectFacultyFromClassName === 'function') {
+                            // Tự động nhận diện Khoa từ mã Lớp nếu file Excel không có cột Khoa
+                            faculty = detectFacultyFromClassName(className);
                         }
 
                         const item = {

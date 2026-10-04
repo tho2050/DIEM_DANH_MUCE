@@ -604,9 +604,9 @@
                                 <input type="text" class="form-control" id="studentCode" placeholder="Ví dụ: 21000123" disabled />
                                 <div class="quick-samples">
                                     <span class="small text-muted">Chọn mẫu:</span>
-                                    <button class="quick-sample-btn" onclick="fillSample('21000123', 'Nguyễn Văn An')">An</button>
-                                    <button class="quick-sample-btn" onclick="fillSample('21000456', 'Trần Thị Bình')">Bình</button>
-                                    <button class="quick-sample-btn" onclick="fillSample('21000789', 'Lê Văn Nam')">Nam</button>
+                                    <button type="button" class="quick-sample-btn" onclick="fillSample('21000123', 'Nguyễn Văn An', 'D21CTC1')">An (CNTT)</button>
+                                    <button type="button" class="quick-sample-btn" onclick="fillSample('21000456', 'Trần Thị Bình', 'D22XDK2')">Bình (Xây dựng)</button>
+                                    <button type="button" class="quick-sample-btn" onclick="fillSample('21000789', 'Lê Văn Nam', 'D20KTR1')">Nam (Kiến trúc)</button>
                                 </div>
                             </div>
                             <div class="mb-3">
@@ -615,11 +615,19 @@
                             </div>
                             <div class="mb-3">
                                 <label>Lớp</label>
-                                <input type="text" class="form-control" id="className" placeholder="CNTT-K21A" disabled />
+                                <input type="text" class="form-control" id="className" placeholder="Ví dụ: D23CTC1, D22XDK2, D20KTR1, D24QHC1..." disabled oninput="handleClassInput(this.value)" />
+                                <div class="small text-muted mt-1" style="font-size: 0.76rem;">
+                                    <i class="fa-solid fa-wand-magic-sparkles text-primary me-1"></i>Nhập mã lớp sẽ <strong>tự động nhận diện Khoa</strong> tương ứng (bạn vẫn có thể tự chọn lại thủ công bên dưới).
+                                </div>
                             </div>
                             <div class="mb-3">
-                                <label>Khoa <span class="text-danger">*</span></label>
-                                <select class="form-select form-control" id="faculty" disabled>
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label class="mb-0">Khoa <span class="text-danger">*</span></label>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-0 d-none" id="facultyAutoBadge" style="font-size: 0.72rem;">
+                                        <i class="fa-solid fa-check me-1"></i>Tự động nhận diện
+                                    </span>
+                                </div>
+                                <select class="form-select form-control" id="faculty" disabled onchange="handleFacultyManualChange()">
                                     <option value="">-- Chọn Khoa --</option>
                                     <option value="Khoa Kỹ thuật Công nghệ">Khoa Kỹ thuật Công nghệ</option>
                                     <option value="Khoa Kinh tế">Khoa Kinh tế</option>
@@ -825,7 +833,7 @@
     </footer>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="config.js?v=2.5"></script>
+    <script src="config.js?v=2.7"></script>
     <script>
         // 1. Sinh UUID duy nhất cho thiết bị nếu chưa có để nhận diện chống gian lận
         let deviceUuid = localStorage.getItem("device_uuid");
@@ -1032,10 +1040,49 @@
             }
         }
 
-        function fillSample(code, name) {
+        function fillSample(code, name, className = '') {
             if (document.getElementById('studentCode').disabled) return;
             document.getElementById('studentCode').value = code;
             document.getElementById('fullName').value = name;
+            if (className) {
+                const classInput = document.getElementById('className');
+                if (classInput) {
+                    classInput.value = className;
+                    handleClassInput(className);
+                }
+            }
+        }
+
+        function handleClassInput(val) {
+            const facultySelect = document.getElementById('faculty');
+            const badge = document.getElementById('facultyAutoBadge');
+            if (!facultySelect) return;
+
+            if (typeof detectFacultyFromClassName === 'function') {
+                const detected = detectFacultyFromClassName(val);
+                if (detected) {
+                    facultySelect.value = detected;
+                    if (badge) {
+                        badge.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles me-1"></i>Đã tự chọn: <strong>${detected.replace('Khoa ', '')}</strong>`;
+                        badge.classList.remove('d-none');
+                    }
+                    return;
+                }
+            }
+            if (badge) badge.classList.add('d-none');
+        }
+
+        function handleFacultyManualChange() {
+            const badge = document.getElementById('facultyAutoBadge');
+            if (badge) {
+                const facultySelect = document.getElementById('faculty');
+                if (facultySelect && facultySelect.value) {
+                    badge.innerHTML = `<i class="fa-solid fa-hand me-1"></i>Đã chọn thủ công: <strong>${facultySelect.value.replace('Khoa ', '')}</strong>`;
+                    badge.classList.remove('d-none');
+                } else {
+                    badge.classList.add('d-none');
+                }
+            }
         }
 
         function getVietnamTimestamp(d = new Date()) {
