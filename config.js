@@ -9,6 +9,9 @@ const CONFIG = {
     // Endpoint API Backend C# nội bộ để lưu và đọc dữ liệu điểm danh
     googleScriptUrl: "/api",
 
+    // Google OAuth 2.0 Client ID để mở cửa sổ đăng nhập Google thật
+    googleClientId: "",
+
     // 2. DANH SÁCH CÁC SỰ KIỆN / HOẠT ĐỘNG MẶC ĐỊNH
     activities: []
 };

@@ -1018,6 +1018,48 @@ async function dbSetAdminCode(newCode) {
     return true;
 }
 
+async function dbGetGoogleClientId() {
+    if (process.env.GOOGLE_CLIENT_ID) return process.env.GOOGLE_CLIENT_ID.trim();
+    if (pool) {
+        try {
+            const res = await pool.query("SELECT value_text FROM system_config WHERE key_name = 'googleClientId'");
+            if (res.rows.length > 0 && res.rows[0].value_text) return res.rows[0].value_text.trim();
+        } catch (e) {}
+    }
+    if (fs.existsSync(CONFIG_FILE)) {
+        try {
+            const cfg = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+            if (cfg.googleClientId) return cfg.googleClientId.trim();
+        } catch (e) {}
+    }
+    return '';
+}
+
+async function dbSetGoogleClientId(newId) {
+    const cleanId = (newId || '').trim();
+    if (pool) {
+        try {
+            await pool.query(`
+                INSERT INTO system_config (key_name, value_text) VALUES ('googleClientId', $1)
+                ON CONFLICT (key_name) DO UPDATE SET value_text = EXCLUDED.value_text
+            `, [cleanId]);
+            return true;
+        } catch (e) { console.error('Lỗi setGoogleClientId SQL:', e); }
+    }
+    try {
+        let existing = {};
+        if (fs.existsSync(CONFIG_FILE)) {
+            existing = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+        }
+        existing.googleClientId = cleanId;
+        fs.writeFileSync(CONFIG_FILE, JSON.stringify(existing, null, 2), 'utf8');
+        return true;
+    } catch (e) {
+        console.error('Lỗi ghi CONFIG_FILE googleClientId:', e);
+        return false;
+    }
+}
+
 const server = http.createServer(async (req, res) => {
     const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
     let pathname = parsedUrl.pathname;
@@ -1186,6 +1228,26 @@ const server = http.createServer(async (req, res) => {
                 return;
             }
 
+            if (action === 'getGoogleClientId') {
+                const clientId = await dbGetGoogleClientId();
+                res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                res.end(JSON.stringify({ status: 'success', clientId: clientId }));
+                return;
+            }
+
+            if (action === 'getSmtpConfig') {
+                const cfg = await dbGetSmtpConfig();
+                res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                res.end(JSON.stringify({
+                    status: 'success',
+                    user: cfg.user,
+                    host: cfg.host,
+                    port: cfg.port,
+                    hasPass: !!cfg.pass
+                }));
+                return;
+            }
+
             // Mặc định GET /api trả về danh sách bản ghi
             const list = await dbGetCheckins();
             res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
@@ -1226,6 +1288,21 @@ const server = http.createServer(async (req, res) => {
                         const result = await dbGoogleAuth(json.email, json.name, json.picture, json.googleId);
                         res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
                         res.end(JSON.stringify(result));
+                        return;
+                    }
+
+                    if (action === 'getGoogleClientId' || json.action === 'getGoogleClientId') {
+                        const clientId = await dbGetGoogleClientId();
+                        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                        res.end(JSON.stringify({ status: 'success', clientId: clientId }));
+                        return;
+                    }
+
+                    if (action === 'setGoogleClientId' || json.action === 'setGoogleClientId') {
+                        const newId = json.clientId || parsedUrl.searchParams.get('clientId') || '';
+                        const ok = await dbSetGoogleClientId(newId);
+                        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                        res.end(JSON.stringify({ status: ok ? 'success' : 'error', message: ok ? 'Đã lưu Google Client ID thành công!' : 'Lỗi khi lưu Google Client ID!' }));
                         return;
                     }
 

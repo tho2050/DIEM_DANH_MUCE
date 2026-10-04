@@ -18,6 +18,8 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/bootstrap@5.3.2/dist/css/bootstrap.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Google Identity Services (GIS) Official SDK -->
+    <script src="https://accounts.google.com/gsi/client" async defer onload="if (typeof initGoogleIdentityServices === 'function') initGoogleIdentityServices()"></script>
 
     <style>
         body {
@@ -1208,8 +1210,9 @@
 
             <!-- FORM ĐĂNG NHẬP -->
             <div id="loginFormContainer">
-                <!-- NÚT ĐĂNG NHẬP GOOGLE GAME / GMAIL -->
-                <button type="button" class="btn btn-google mb-2" onclick="triggerGoogleLogin('login')" id="btnGoogleLogin">
+                <!-- NÚT ĐĂNG NHẬP GOOGLE GIS & POPUP THẬT -->
+                <div id="googleSignInBtnLogin" class="mb-2 w-100 d-flex justify-content-center"></div>
+                <button type="button" class="btn btn-google mb-2" onclick="triggerRealGoogleLogin('login')" id="btnGoogleLogin">
                     <svg class="google-icon-svg" viewBox="0 0 48 48">
                         <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
                         <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
@@ -1296,8 +1299,9 @@
                     <p class="text-muted small">Tạo tài khoản quản trị viên mới</p>
                 </div>
 
-                <!-- NÚT ĐĂNG KÝ NHANH GOOGLE GAME / GMAIL -->
-                <button type="button" class="btn btn-google mb-2" onclick="triggerGoogleLogin('register')" id="btnGoogleRegister">
+                <!-- NÚT ĐĂNG KÝ GOOGLE GIS & POPUP THẬT -->
+                <div id="googleSignInBtnRegister" class="mb-2 w-100 d-flex justify-content-center"></div>
+                <button type="button" class="btn btn-google mb-2" onclick="triggerRealGoogleLogin('register')" id="btnGoogleRegister">
                     <svg class="google-icon-svg" viewBox="0 0 48 48">
                         <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
                         <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
@@ -1355,9 +1359,9 @@
         </div>
     </div>
 
-    <!-- MODAL ĐĂNG NHẬP / ĐĂNG KÝ BẰNG GOOGLE GAME & GMAIL THẬT -->
-    <div class="modal fade" id="googleAuthModal" tabindex="-1" aria-labelledby="googleAuthModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
+    <!-- MODAL CẤU HÌNH GOOGLE OAUTH CLIENT ID (CHỈ HIỂN THỊ KHI CHƯA CÀI ĐẶT CLIENT ID) -->
+    <div class="modal fade" id="googleClientIdModal" tabindex="-1" aria-labelledby="googleClientIdModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 480px;">
             <div class="modal-content shadow-lg border-0" style="border-radius: 18px; overflow: hidden;">
                 <div class="modal-header border-0 pb-0 pt-4 px-4">
                     <div class="d-flex align-items-center gap-2">
@@ -1367,47 +1371,50 @@
                             <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
                             <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
                         </svg>
-                        <h5 class="modal-title fw-bold mb-0 text-dark" id="googleAuthModalLabel">Đăng Nhập Với Google</h5>
+                        <h5 class="modal-title fw-bold mb-0 text-dark" id="googleClientIdModalLabel">Kích Hoạt Đăng Nhập Google Thật</h5>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body px-4 pt-3 pb-4">
-                    <p class="text-muted small mb-3">Đăng nhập hoặc đăng ký tài khoản quản trị MUCE tức thì bằng tài khoản Gmail thật / Google Game.</p>
+                    <p class="text-muted small mb-3">
+                        Để mở cửa sổ đăng nhập trực tiếp từ máy chủ Google (<strong>accounts.google.com</strong>) giống như các trang web và ứng dụng hiện nay, hệ thống cần <strong>Google Client ID (OAuth 2.0)</strong> của dự án.
+                    </p>
 
-                    <!-- Danh sách tài khoản đã dùng hoặc gợi ý -->
                     <div class="mb-3">
-                        <label class="form-label small fw-bold text-muted text-uppercase mb-2" style="font-size:0.75rem;">Chọn tài khoản Google nhanh:</label>
-                        <div class="d-flex flex-column gap-2" id="googleQuickAccountsList">
-                            <!-- Populated dynamically via JS -->
+                        <label class="form-label fw-bold small">Dán Google Client ID của bạn vào đây:</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white text-danger"><i class="fa-brands fa-google"></i></span>
+                            <input type="text" class="form-control font-monospace" id="googleClientIdInput" placeholder="VD: 123456789-xxxxx.apps.googleusercontent.com" />
                         </div>
                     </div>
 
-                    <div class="login-divider my-3">HOẶC NHẬP GMAIL CỦA BẠN</div>
+                    <button type="button" class="btn btn-primary w-100 fw-bold py-2 mb-3" onclick="saveGoogleClientIdAction()">
+                        <i class="fa-solid fa-bolt me-2"></i>Lưu & Mở Cửa Sổ Đăng Nhập Google Ngay
+                    </button>
 
-                    <form id="googleDirectAuthForm" onsubmit="handleGoogleDirectAuth(event)">
-                        <div class="mb-3">
-                            <label class="form-label fw-bold small">Địa chỉ Gmail thật của bạn:</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-white text-danger"><i class="fa-solid fa-envelope"></i></span>
-                                <input type="email" class="form-control" id="googleDirectEmail" placeholder="VD: yourname@gmail.com" required autocomplete="email" />
+                    <!-- Hướng dẫn 3 bước -->
+                    <div class="accordion accordion-flush border rounded" id="accGoogleGuide">
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed py-2 small fw-bold text-primary" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseGuide">
+                                    <i class="fa-solid fa-circle-question me-2"></i>Hướng dẫn lấy Client ID miễn phí từ Google (2 phút)
+                                </button>
+                            </h2>
+                            <div id="flush-collapseGuide" class="accordion-collapse collapse" data-bs-parent="#accGoogleGuide">
+                                <div class="accordion-body small text-muted p-3">
+                                    <ol class="mb-0 ps-3">
+                                        <li class="mb-1">Vào <a href="https://console.cloud.google.com/apis/credentials" target="_blank" class="fw-bold">console.cloud.google.com</a> và đăng nhập Gmail.</li>
+                                        <li class="mb-1">Bấm <strong>Create Credentials (Tạo thông tin xác thực)</strong> &rarr; Chọn <strong>OAuth client ID</strong>.</li>
+                                        <li class="mb-1">Application type chọn <strong>Web application</strong>.</li>
+                                        <li class="mb-1">Mục <strong>Authorized JavaScript origins</strong> thêm:
+                                            <code class="d-block my-1 text-dark bg-light p-1 rounded" id="suggestedOrigin">http://localhost:5252</code>
+                                        </li>
+                                        <li>Bấm <strong>Create</strong> &rarr; Copy chuỗi <strong>Client ID</strong> dán vào ô trên là xong!</li>
+                                    </ol>
+                                </div>
                             </div>
-                            <span class="text-muted" style="font-size: 0.72rem; display: block; margin-top: 4px;">* Hỗ trợ đuôi @gmail.com hoặc @muce.edu.vn</span>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold small">Tên hiển thị / Nickname Google Game (Tùy chọn):</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-white text-success"><i class="fa-solid fa-gamepad"></i></span>
-                                <input type="text" class="form-control" id="googleDirectName" placeholder="VD: Hồng Nhung, Admin 2050..." />
-                            </div>
-                        </div>
-
-                        <div class="alert alert-danger py-2 small d-none" id="googleAuthError"></div>
-                        <div class="alert alert-success py-2 small d-none" id="googleAuthSuccess"></div>
-
-                        <button type="submit" class="btn btn-primary w-100 fw-bold py-2 mt-2" id="btnSubmitGoogleAuth">
-                            <i class="fa-brands fa-google me-2"></i>Tiếp Tục Với Tài Khoản Này
-                        </button>
-                    </form>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1826,6 +1833,32 @@
                             </div>
                         </div>
                         <div class="alert alert-info py-2 small d-none mt-2 mb-0" id="smtpStatusAlert"></div>
+                    </div>
+
+                    <!-- Cấu hình Google OAuth 2.0 Client ID -->
+                    <div class="card border border-danger shadow-sm p-3 mt-4"
+                        style="background-color: #fff5f5; border-radius: 12px;">
+                        <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                            <div>
+                                <h6 class="fw-bold text-dark mb-0"><i class="fa-brands fa-google text-danger me-2"></i>Cấu Hình Google OAuth 2.0 Client ID (Đăng Nhập Google Thật)</h6>
+                                <p class="text-muted small mb-0">Dùng để kết nối trực tiếp với cửa sổ đăng nhập chính thức của Google (accounts.google.com).</p>
+                            </div>
+                        </div>
+                        <div class="row g-2 align-items-end">
+                            <div class="col-md-9">
+                                <label class="form-label small fw-bold mb-1">Google Client ID (từ console.cloud.google.com):</label>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-white"><i class="fa-brands fa-google text-danger"></i></span>
+                                    <input type="text" class="form-control font-monospace" id="adminGoogleClientIdInput" placeholder="VD: 123456789-xxxx.apps.googleusercontent.com" />
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn btn-sm btn-danger fw-bold w-100" onclick="saveAdminGoogleClientId()">
+                                    <i class="fa-solid fa-save me-1"></i>Lưu Client ID
+                                </button>
+                            </div>
+                        </div>
+                        <div class="alert alert-info py-2 small d-none mt-2 mb-0" id="googleClientStatusAlert"></div>
                     </div>
                 </div>
             </div>
@@ -2345,6 +2378,11 @@
                 showDashboard();
             }
 
+            // Khởi tạo dịch vụ đăng nhập Google GIS
+            if (typeof initGoogleIdentityServices === 'function') {
+                initGoogleIdentityServices();
+            }
+
 
 
             // Lấy IP nội bộ của server để tạo QR hoạt động được trên điện thoại
@@ -2553,163 +2591,290 @@
             }
         }
 
-        // ===== GOOGLE AUTH & GOOGLE GAME LOGIN =====
-        let googleAuthMode = 'login'; // 'login' or 'register'
+        // ===== GOOGLE IDENTITY SERVICES (GIS) & OFFICIAL GOOGLE OAUTH POPUP =====
+        let activeGoogleAuthMode = 'login';
 
-        function triggerGoogleLogin(mode = 'login') {
-            googleAuthMode = mode;
-            const modalEl = document.getElementById('googleAuthModal');
-            const titleEl = document.getElementById('googleAuthModalLabel');
-            const submitBtn = document.getElementById('btnSubmitGoogleAuth');
-            const errEl = document.getElementById('googleAuthError');
-            const succEl = document.getElementById('googleAuthSuccess');
+        function parseJwtPayload(token) {
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                return JSON.parse(jsonPayload);
+            } catch (e) {
+                console.error("Lỗi giải mã JWT token:", e);
+                return null;
+            }
+        }
 
-            if (errEl) errEl.classList.add('d-none');
-            if (succEl) succEl.classList.add('d-none');
+        async function handleGoogleCredentialResponse(response) {
+            if (!response || !response.credential) {
+                console.warn("Không nhận được Google credential hợp lệ!");
+                return;
+            }
+            const payload = parseJwtPayload(response.credential);
+            if (!payload || !payload.email) {
+                alert("Không thể đọc thông tin tài khoản Google của bạn!");
+                return;
+            }
+            submitGoogleAuth(payload.email, payload.name, payload.picture, payload.sub);
+        }
 
-            if (mode === 'register') {
-                if (titleEl) titleEl.textContent = "Đăng Ký Nhanh Với Google";
-                if (submitBtn) submitBtn.innerHTML = '<i class="fa-brands fa-google me-2"></i>Đăng Ký & Đăng Nhập Ngay';
-            } else {
-                if (titleEl) titleEl.textContent = "Đăng Nhập Với Google";
-                if (submitBtn) submitBtn.innerHTML = '<i class="fa-brands fa-google me-2"></i>Tiếp Tục Đăng Nhập';
+        async function submitGoogleAuth(email, name, picture, googleId) {
+            try {
+                const response = await fetch(CONFIG.googleScriptUrl + '?action=googleAuth', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email, name: name, picture: picture, googleId: googleId })
+                });
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    sessionStorage.setItem("admin_logged", "true");
+                    sessionStorage.setItem("admin_role", result.role || "staff");
+                    sessionStorage.setItem("admin_user", result.username || email);
+
+                    showDashboard();
+                } else {
+                    alert(result.message || "Đăng nhập Google thất bại!");
+                }
+            } catch (err) {
+                console.error("Lỗi kết nối submitGoogleAuth:", err);
+                alert("Lỗi kết nối máy chủ khi đăng nhập Google!");
+            }
+        }
+
+        function getGoogleClientId() {
+            return (CONFIG.googleClientId || localStorage.getItem('google_client_id') || '').trim();
+        }
+
+        function triggerRealGoogleLogin(mode = 'login') {
+            activeGoogleAuthMode = mode;
+            const clientId = getGoogleClientId();
+
+            if (!clientId) {
+                showGoogleClientIdModal(mode);
+                return;
             }
 
-            // Gợi ý danh sách tài khoản Google nhanh
-            renderGoogleQuickAccounts();
+            // Mở cửa sổ đăng nhập chính thức từ máy chủ Google accounts.google.com
+            openRealGooglePopup(clientId);
+        }
+
+        function openRealGooglePopup(clientId) {
+            const width = 500;
+            const height = 620;
+            const left = Math.max(0, Math.round(window.screenX + (window.outerWidth - width) / 2));
+            const top = Math.max(0, Math.round(window.screenY + (window.outerHeight - height) / 2));
+
+            const redirectUri = window.location.origin + window.location.pathname;
+            const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+                `client_id=${encodeURIComponent(clientId)}&` +
+                `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+                `response_type=token%20id_token&` +
+                `scope=${encodeURIComponent('openid email profile')}&` +
+                `nonce=${Date.now()}&` +
+                `prompt=select_account`;
+
+            const popup = window.open(authUrl, 'GoogleLoginPopup', `width=${width},height=${height},left=${left},top=${top},status=no,toolbar=no,menubar=no`);
+            if (popup) {
+                popup.focus();
+            } else {
+                // Nếu trình duyệt chặn popup, chuyển hướng trực tiếp
+                window.location.href = authUrl;
+            }
+        }
+
+        function showGoogleClientIdModal(mode = 'login') {
+            activeGoogleAuthMode = mode;
+            const modalEl = document.getElementById('googleClientIdModal');
+            if (!modalEl) return;
+
+            const originEl = document.getElementById('suggestedOrigin');
+            if (originEl) {
+                originEl.textContent = window.location.origin;
+            }
+
+            const input = document.getElementById('googleClientIdInput');
+            if (input) {
+                input.value = getGoogleClientId();
+            }
 
             const modal = new bootstrap.Modal(modalEl);
             modal.show();
         }
 
-        function renderGoogleQuickAccounts() {
-            const listEl = document.getElementById('googleQuickAccountsList');
-            if (!listEl) return;
+        async function saveGoogleClientIdAction() {
+            const input = document.getElementById('googleClientIdInput');
+            const val = (input ? input.value : '').trim();
 
-            const accounts = [
-                { email: "hongnhung2050py@gmail.com", name: "Nguyễn Nữ Hồng Nhung", role: "Super Admin", icon: "🌸", color: "#e11d48" }
-            ];
-
-            // Đọc thêm tài khoản đăng nhập Google gần nhất nếu có
-            try {
-                const saved = localStorage.getItem('last_google_account');
-                if (saved) {
-                    const parsed = JSON.parse(saved);
-                    if (parsed && parsed.email && parsed.email !== "hongnhung2050py@gmail.com") {
-                        accounts.push({
-                            email: parsed.email,
-                            name: parsed.name || parsed.email.split('@')[0],
-                            role: "Quản trị viên",
-                            icon: "🎮",
-                            color: "#0284c7"
-                        });
-                    }
-                }
-            } catch (e) {}
-
-            let html = '';
-            accounts.forEach(acc => {
-                html += `
-                    <button type="button" class="google-quick-acc-btn" onclick="executeGoogleAuth('${acc.email}', '${acc.name}')">
-                        <div class="rounded-circle d-flex align-items-center justify-content-center me-2 text-white fw-bold shadow-sm" style="width: 38px; height: 38px; background: ${acc.color}; font-size: 1rem;">
-                            ${acc.icon}
-                        </div>
-                        <div class="flex-grow-1 text-truncate">
-                            <div class="fw-bold text-dark text-truncate" style="font-size:0.9rem;">${acc.name}</div>
-                            <div class="text-muted small text-truncate" style="font-size:0.75rem;">${acc.email}</div>
-                        </div>
-                        <span class="badge bg-light text-secondary border ms-2" style="font-size:0.7rem;">${acc.role}</span>
-                        <i class="fa-solid fa-chevron-right text-muted ms-2" style="font-size:0.75rem;"></i>
-                    </button>
-                `;
-            });
-
-            listEl.innerHTML = html;
-        }
-
-        async function handleGoogleDirectAuth(e) {
-            if (e) e.preventDefault();
-            const email = (document.getElementById('googleDirectEmail').value || '').trim().toLowerCase();
-            const name = (document.getElementById('googleDirectName').value || '').trim();
-            if (!email) return;
-            executeGoogleAuth(email, name);
-        }
-
-        async function executeGoogleAuth(email, name) {
-            const cleanEmail = (email || '').trim().toLowerCase();
-            const errEl = document.getElementById('googleAuthError');
-            const succEl = document.getElementById('googleAuthSuccess');
-            const submitBtn = document.getElementById('btnSubmitGoogleAuth');
-
-            if (errEl) errEl.classList.add('d-none');
-            if (succEl) succEl.classList.add('d-none');
-
-            if (!cleanEmail || (!cleanEmail.includes('@gmail.com') && !cleanEmail.includes('@muce.edu.vn') && !cleanEmail.includes('@'))) {
-                if (errEl) {
-                    errEl.textContent = "Vui lòng nhập địa chỉ Gmail hợp lệ (@gmail.com hoặc @muce.edu.vn)!";
-                    errEl.classList.remove('d-none');
-                }
+            if (!val) {
+                alert("Vui lòng dán Client ID được cấp từ Google Cloud Console!");
                 return;
             }
 
-            if (submitBtn) {
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Đang xác thực Google...';
-            }
-
+            CONFIG.googleClientId = val;
             try {
-                const response = await fetch(CONFIG.googleScriptUrl + '?action=googleAuth', {
+                localStorage.setItem('google_client_id', val);
+            } catch (e) {}
+
+            // Lưu lên máy chủ để đồng bộ
+            try {
+                await fetch(CONFIG.googleScriptUrl + '?action=setGoogleClientId', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: cleanEmail, name: name || cleanEmail.split('@')[0] })
+                    body: JSON.stringify({ clientId: val })
                 });
-                const result = await response.json();
+            } catch (e) {}
 
-                if (result.status === 'success') {
-                    // Lưu trạng thái đăng nhập
-                    sessionStorage.setItem("admin_logged", "true");
-                    sessionStorage.setItem("admin_role", result.role || "staff");
-                    sessionStorage.setItem("admin_user", result.username || cleanEmail);
+            const modalEl = document.getElementById('googleClientIdModal');
+            if (modalEl) {
+                const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                if (modalInstance) modalInstance.hide();
+            }
 
-                    // Lưu vào localStorage để lần sau chọn nhanh
+            // Tái khởi tạo GIS và mở ngay cửa sổ Google thật
+            initGoogleIdentityServices();
+            openRealGooglePopup(val);
+        }
+
+        async function saveAdminGoogleClientId() {
+            const input = document.getElementById('adminGoogleClientIdInput');
+            const alertEl = document.getElementById('googleClientStatusAlert');
+            const val = (input ? input.value : '').trim();
+
+            if (!val) {
+                alert("Vui lòng nhập Google Client ID!");
+                return;
+            }
+
+            CONFIG.googleClientId = val;
+            try { localStorage.setItem('google_client_id', val); } catch (e) {}
+
+            try {
+                const res = await fetch(CONFIG.googleScriptUrl + '?action=setGoogleClientId', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ clientId: val })
+                });
+                const data = await res.json();
+                if (alertEl) {
+                    alertEl.className = "alert alert-success py-2 small mt-2 mb-0";
+                    alertEl.innerHTML = '<i class="fa-solid fa-circle-check me-2"></i>' + (data.message || 'Đã lưu Google Client ID thành công!');
+                    alertEl.classList.remove('d-none');
+                }
+                initGoogleIdentityServices();
+            } catch (e) {
+                if (alertEl) {
+                    alertEl.className = "alert alert-danger py-2 small mt-2 mb-0";
+                    alertEl.innerHTML = '<i class="fa-solid fa-circle-xmark me-2"></i>Lỗi lưu Google Client ID lên máy chủ!';
+                    alertEl.classList.remove('d-none');
+                }
+            }
+        }
+
+        // Lắng nghe phản hồi từ cửa sổ Google OAuth Popup
+        window.addEventListener('message', async (event) => {
+            if (event.origin !== window.location.origin) return;
+            if (event.data && event.data.type === 'GOOGLE_OAUTH_RESPONSE') {
+                if (event.data.idToken) {
+                    handleGoogleCredentialResponse({ credential: event.data.idToken });
+                } else if (event.data.accessToken) {
                     try {
-                        localStorage.setItem('last_google_account', JSON.stringify({
-                            email: result.username || cleanEmail,
-                            name: name || cleanEmail.split('@')[0]
-                        }));
-                    } catch (e) {}
+                        const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                            headers: { Authorization: `Bearer ${event.data.accessToken}` }
+                        });
+                        const userInfo = await res.json();
+                        if (userInfo.email) {
+                            submitGoogleAuth(userInfo.email, userInfo.name, userInfo.picture, userInfo.sub);
+                        }
+                    } catch (e) {
+                        console.error("Lỗi lấy thông tin Google UserInfo:", e);
+                    }
+                }
+            }
+        });
 
-                    if (succEl) {
-                        succEl.innerHTML = `<i class="fa-solid fa-check-circle me-1"></i> ${result.message || 'Đăng nhập Google thành công!'}`;
-                        succEl.classList.remove('d-none');
+        // Kiểm tra nếu trang này đang được mở làm callback từ Google OAuth
+        (function checkOAuthPopupCallback() {
+            if (window.location.hash && (window.location.hash.includes('access_token=') || window.location.hash.includes('id_token='))) {
+                const hash = window.location.hash.substring(1);
+                const params = new URLSearchParams(hash);
+                const idToken = params.get('id_token');
+                const accessToken = params.get('access_token');
+
+                if (window.opener) {
+                    window.opener.postMessage({
+                        type: 'GOOGLE_OAUTH_RESPONSE',
+                        idToken: idToken,
+                        accessToken: accessToken
+                    }, window.location.origin);
+                    window.close();
+                } else if (idToken) {
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    handleGoogleCredentialResponse({ credential: idToken });
+                }
+            }
+        })();
+
+        // Tự động nạp Google Client ID từ máy chủ và khởi tạo GIS khi mở trang
+        async function initGoogleIdentityServices() {
+            try {
+                const res = await fetch(CONFIG.googleScriptUrl + '?action=getGoogleClientId&_t=' + Date.now());
+                const data = await res.json();
+                if (data.status === 'success' && data.clientId) {
+                    CONFIG.googleClientId = data.clientId;
+                    try { localStorage.setItem('google_client_id', data.clientId); } catch (e) {}
+                    const adminInput = document.getElementById('adminGoogleClientIdInput');
+                    if (adminInput) adminInput.value = data.clientId;
+                }
+            } catch (e) {}
+
+            const clientId = getGoogleClientId();
+            if (!clientId) return;
+
+            if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+                try {
+                    google.accounts.id.initialize({
+                        client_id: clientId,
+                        callback: handleGoogleCredentialResponse,
+                        auto_select: false,
+                        cancel_on_tap_outside: true
+                    });
+
+                    const btnLogin = document.getElementById('googleSignInBtnLogin');
+                    if (btnLogin) {
+                        google.accounts.id.renderButton(btnLogin, {
+                            type: 'standard',
+                            shape: 'rectangular',
+                            theme: 'outline',
+                            text: 'signin_with',
+                            size: 'large',
+                            logo_alignment: 'left',
+                            width: 320
+                        });
+                        const fbLogin = document.getElementById('btnGoogleLogin');
+                        if (fbLogin) fbLogin.classList.add('d-none');
                     }
 
-                    setTimeout(() => {
-                        const modalEl = document.getElementById('googleAuthModal');
-                        const modalInstance = bootstrap.Modal.getInstance(modalEl);
-                        if (modalInstance) modalInstance.hide();
-                        showDashboard();
-                    }, 500);
-                } else {
-                    if (errEl) {
-                        errEl.textContent = result.message || "Không thể xác thực tài khoản Google!";
-                        errEl.classList.remove('d-none');
+                    const btnReg = document.getElementById('googleSignInBtnRegister');
+                    if (btnReg) {
+                        google.accounts.id.renderButton(btnReg, {
+                            type: 'standard',
+                            shape: 'rectangular',
+                            theme: 'outline',
+                            text: 'signup_with',
+                            size: 'large',
+                            logo_alignment: 'left',
+                            width: 320
+                        });
+                        const fbReg = document.getElementById('btnGoogleRegister');
+                        if (fbReg) fbReg.classList.add('d-none');
                     }
-                    if (submitBtn) {
-                        submitBtn.disabled = false;
-                        submitBtn.innerHTML = '<i class="fa-brands fa-google me-2"></i>Tiếp Tục Với Tài Khoản Này';
-                    }
+                } catch (e) {
+                    console.warn("Lỗi render Google GIS:", e);
                 }
-            } catch (err) {
-                if (errEl) {
-                    errEl.textContent = "Lỗi kết nối máy chủ khi đăng nhập Google!";
-                    errEl.classList.remove('d-none');
-                }
-                if (submitBtn) {
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = '<i class="fa-brands fa-google me-2"></i>Tiếp Tục Với Tài Khoản Này';
-                }
-                console.error("Lỗi Google Auth:", err);
             }
         }
 
