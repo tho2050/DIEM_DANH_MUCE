@@ -931,9 +931,15 @@
         body.weather-bg-rain {
             background: linear-gradient(180deg, #e2e8f0 0%, #cbd5e1 55%, #f8fafc 100%) !important;
         }
-        nav, .container, .muce-footer, .modal {
+        nav, .container, .muce-footer {
             position: relative;
             z-index: 1;
+        }
+        .modal {
+            z-index: 1060 !important;
+        }
+        .modal-backdrop {
+            z-index: 1050 !important;
         }
 
         /* Thẻ quản trị trong suốt kính mờ */
