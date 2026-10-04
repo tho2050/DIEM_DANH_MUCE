@@ -6,6 +6,13 @@ const path = require('path');
 const os = require('os');
 const { Pool } = require('pg');
 
+let nodemailer = null;
+try {
+    nodemailer = require('nodemailer');
+} catch (e) {
+    console.warn('⚠️ Gói nodemailer chưa nạp được:', e.message);
+}
+
 // Helper định dạng ngày giờ chuẩn Việt Nam (UTC+7 / Asia/Ho_Chi_Minh)
 function getVietnamTimestamp(d = new Date()) {
     try {
@@ -706,30 +713,190 @@ async function dbUpdateAccount(username, password, role, status) {
     return { status: 'success', message: 'Đã cập nhật tài khoản!' };
 }
 
+// Cấu hình SMTP gửi mail Gmail thực tế
+async function dbGetSmtpConfig() {
+    let host = process.env.SMTP_HOST || 'smtp.gmail.com';
+    let port = parseInt(process.env.SMTP_PORT) || 465;
+    let user = process.env.GMAIL_USER || process.env.SMTP_USER || '';
+    let pass = process.env.GMAIL_PASS || process.env.SMTP_PASS || '';
+
+    if (pool) {
+        try {
+            const res = await pool.query("SELECT value_text FROM system_config WHERE key_name = 'smtp_config'");
+            if (res.rows.length > 0 && res.rows[0].value_text) {
+                const parsed = JSON.parse(res.rows[0].value_text);
+                if (parsed.user) user = parsed.user;
+                if (parsed.pass) pass = parsed.pass;
+                if (parsed.host) host = parsed.host;
+                if (parsed.port) port = parseInt(parsed.port) || 465;
+            }
+        } catch (e) {}
+    }
+    if ((!user || !pass) && fs.existsSync(CONFIG_FILE)) {
+        try {
+            const cfg = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+            if (cfg.smtp) {
+                if (cfg.smtp.user) user = cfg.smtp.user;
+                if (cfg.smtp.pass) pass = cfg.smtp.pass;
+                if (cfg.smtp.host) host = cfg.smtp.host;
+                if (cfg.smtp.port) port = parseInt(cfg.smtp.port) || 465;
+            }
+        } catch (e) {}
+    }
+    return { host, port, user, pass };
+}
+
+async function dbSaveSmtpConfig(user, pass, host = 'smtp.gmail.com', port = 465) {
+    const configData = JSON.stringify({ user: (user || '').trim(), pass: (pass || '').trim().replace(/\s+/g, ''), host, port });
+    if (pool) {
+        try {
+            await pool.query(`
+                INSERT INTO system_config (key_name, value_text) VALUES ('smtp_config', $1)
+                ON CONFLICT (key_name) DO UPDATE SET value_text = EXCLUDED.value_text
+            `, [configData]);
+        } catch (e) { console.error('Lỗi lưu smtp_config SQL:', e); }
+    }
+    try {
+        let cur = {};
+        if (fs.existsSync(CONFIG_FILE)) {
+            try { cur = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')); } catch (e) {}
+        }
+        cur.smtp = { user: (user || '').trim(), pass: (pass || '').trim().replace(/\s+/g, ''), host, port };
+        fs.writeFileSync(CONFIG_FILE, JSON.stringify(cur, null, 2), 'utf8');
+    } catch (e) {}
+    return { status: 'success', message: 'Đã lưu cấu hình gửi Gmail SMTP thành công!' };
+}
+
+async function sendRealOtpEmail(recipientEmail, otpCode, username) {
+    if (!nodemailer) {
+        return { sent: false, needConfig: true, reason: 'Chưa cài đặt thư viện nodemailer' };
+    }
+    const { host, port, user, pass } = await dbGetSmtpConfig();
+    if (!user || !pass) {
+        return { sent: false, needConfig: true, reason: 'Chưa thiết lập tài khoản Gmail gửi mã (App Password)' };
+    }
+
+    try {
+        const transporter = nodemailer.createTransport({
+            host: host,
+            port: port,
+            secure: port === 465,
+            auth: { user, pass },
+            tls: { rejectUnauthorized: false }
+        });
+
+        const mailOptions = {
+            from: `"Điểm Danh GPS MUCE" <${user}>`,
+            to: recipientEmail,
+            subject: `[MUCE] Mã OTP khôi phục mật khẩu tài khoản: ${otpCode}`,
+            html: `
+                <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 580px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
+                    <div style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); padding: 24px 20px; text-align: center; color: #ffffff;">
+                        <h2 style="margin: 0; font-size: 20px; font-weight: 700;">HỆ THỐNG ĐIỂM DANH GPS - MUCE</h2>
+                        <p style="margin: 6px 0 0; opacity: 0.9; font-size: 13px;">Xác thực khôi phục mật khẩu tài khoản</p>
+                    </div>
+                    <div style="padding: 28px 24px;">
+                        <p style="font-size: 15px; color: #1e293b; margin: 0 0 12px;">Xin chào <strong>${username || recipientEmail}</strong>,</p>
+                        <p style="font-size: 14px; color: #475569; line-height: 1.6; margin: 0 0 20px;">
+                            Bạn vừa yêu cầu mã xác nhận để lấy lại mật khẩu trên hệ thống Điểm Danh GPS. Vui lòng sử dụng mã OTP 6 chữ số dưới đây:
+                        </p>
+                        <div style="text-align: center; margin: 24px 0;">
+                            <div style="display: inline-block; background: #f0f9ff; border: 2px dashed #0284c7; border-radius: 12px; padding: 14px 32px;">
+                                <div style="font-size: 11px; font-weight: 700; color: #0369a1; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">MÃ OTP XÁC THỰC</div>
+                                <span style="font-family: monospace; font-size: 36px; font-weight: 800; color: #0284c7; letter-spacing: 8px;">${otpCode}</span>
+                            </div>
+                        </div>
+                        <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px;">
+                            <p style="margin: 0; font-size: 13px; color: #991b1b; line-height: 1.5;">
+                                ⚠️ <strong>Lưu ý:</strong> Mã xác thực có hiệu lực trong <strong>10 phút</strong>. Tuyệt đối không cung cấp mã này cho người khác.
+                            </p>
+                        </div>
+                        <p style="font-size: 13px; color: #64748b; margin: 0;">
+                            Nếu không phải bạn gửi yêu cầu, vui lòng bỏ qua email này.
+                        </p>
+                    </div>
+                    <div style="background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 14px 20px; text-align: center; font-size: 12px; color: #94a3b8;">
+                        <p style="margin: 0;">Trường Đại học Xây dựng Miền Trung (MUCE)</p>
+                    </div>
+                </div>
+            `
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+        console.log(`✅ Đã gửi email OTP tới ${recipientEmail}:`, info.messageId);
+        return { sent: true, messageId: info.messageId };
+    } catch (err) {
+        console.error('❌ Lỗi gửi email SMTP:', err);
+        return { sent: false, error: err.message };
+    }
+}
+
 async function dbSendOtp(emailOrUsername) {
     const target = (emailOrUsername || '').trim().toLowerCase();
     if (!target) return { status: 'error', message: 'Vui lòng nhập Email / Tên đăng nhập!' };
 
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    let foundUser = target;
+    let recipientEmail = target;
 
     if (pool) {
         try {
-            const res = await pool.query('SELECT username FROM accounts WHERE LOWER(username) = $1 OR LOWER(username) LIKE $2', [target, `%${target}%`]);
+            const res = await pool.query('SELECT username, password FROM accounts WHERE LOWER(username) = $1 OR LOWER(username) LIKE $2', [target, `%${target}%`]);
             if (res.rows.length === 0) {
-                return { status: 'error', message: 'Tên đăng nhập không tồn tại trong CSDL SQL!' };
+                if (target === 'hongnhung2050py@gmail.com' || target === 'dhxdmtmuce') {
+                    foundUser = target;
+                    recipientEmail = target;
+                } else {
+                    return { status: 'error', message: 'Tài khoản hoặc Email này không tồn tại trong hệ thống!' };
+                }
+            } else {
+                foundUser = res.rows[0].username;
+                recipientEmail = foundUser.includes('@') ? foundUser : (target.includes('@') ? target : foundUser + '@gmail.com');
             }
-            const foundUser = res.rows[0].username;
-            await pool.query('UPDATE accounts SET otp_code = $1 WHERE username = $2', [otpCode, foundUser]);
-            return { status: 'success', otp: otpCode, message: 'Đã khởi tạo mã OTP xác nhận!' };
-        } catch (e) { console.error('Lỗi sendOtp SQL:', e); }
+            await pool.query('UPDATE accounts SET otp_code = $1 WHERE LOWER(username) = $2', [otpCode, foundUser.toLowerCase()]);
+        } catch (e) {
+            console.error('Lỗi sendOtp SQL:', e);
+        }
+    } else {
+        const list = await dbGetAccounts();
+        const acc = list.find(a => String(a.username || '').toLowerCase() === target || String(a.username || '').toLowerCase().includes(target));
+        if (!acc) {
+            if (target === 'hongnhung2050py@gmail.com' || target === 'dhxdmtmuce') {
+                foundUser = target;
+                recipientEmail = target;
+            } else {
+                return { status: 'error', message: 'Tài khoản hoặc Email này không tồn tại trong hệ thống!' };
+            }
+        } else {
+            foundUser = acc.username;
+            recipientEmail = foundUser.includes('@') ? foundUser : (target.includes('@') ? target : foundUser + '@gmail.com');
+            acc.otp_code = otpCode;
+            await dbSaveAccountsLocal(list);
+        }
     }
 
-    const list = await dbGetAccounts();
-    const acc = list.find(a => String(a.username || '').toLowerCase().includes(target));
-    if (!acc) return { status: 'error', message: 'Tên đăng nhập không tồn tại!' };
-    acc.otp_code = otpCode;
-    await dbSaveAccountsLocal(list);
-    return { status: 'success', otp: otpCode, message: 'Đã khởi tạo mã OTP!' };
+    // Gửi email thật tới Gmail của người đăng ký
+    const mailResult = await sendRealOtpEmail(recipientEmail, otpCode, foundUser);
+
+    if (mailResult.sent) {
+        return {
+            status: 'success',
+            sentViaEmail: true,
+            email: recipientEmail,
+            message: `Mã OTP đã được gửi trực tiếp tới hòm thư Gmail: ${recipientEmail}. Vui lòng kiểm tra hộp thư đến (Inbox) hoặc thư rác (Spam)!`
+        };
+    } else {
+        return {
+            status: 'success',
+            sentViaEmail: false,
+            needConfig: mailResult.needConfig,
+            otp: otpCode,
+            email: recipientEmail,
+            message: mailResult.needConfig
+                ? `Đã tạo mã OTP cho tài khoản ${recipientEmail}. (Hệ thống chưa cài đặt mật khẩu ứng dụng Gmail SMTP nên tạm cung cấp mã: ${otpCode})`
+                : `Không thể kết nối máy chủ gửi mail (${mailResult.error || 'Lỗi SMTP'}). Mã OTP: ${otpCode}`
+        };
+    }
 }
 
 async function dbVerifyOtp(emailOrUsername, otp) {
@@ -749,10 +916,76 @@ async function dbVerifyOtp(emailOrUsername, otp) {
     }
 
     const list = await dbGetAccounts();
-    const acc = list.find(a => String(a.username || '').toLowerCase().includes(target));
+    const acc = list.find(a => String(a.username || '').toLowerCase() === target || String(a.username || '').toLowerCase().includes(target));
     if (!acc) return { status: 'error', message: 'Tài khoản không tồn tại!' };
     if (!acc.otp_code || acc.otp_code !== otpClean) return { status: 'error', message: 'Mã OTP không chính xác!' };
     return { status: 'success', password: acc.password, message: 'Xác thực OTP thành công!' };
+}
+
+// Xử lý đăng nhập / đăng ký qua tài khoản Google (OAuth)
+async function dbGoogleAuth(email, name, picture, googleId) {
+    const cleanEmail = (email || '').trim().toLowerCase();
+    if (!cleanEmail || (!cleanEmail.includes('@gmail.com') && !cleanEmail.includes('@muce.edu.vn') && !cleanEmail.includes('@'))) {
+        return { status: 'error', message: 'Vui lòng sử dụng địa chỉ Gmail hợp lệ (@gmail.com hoặc @muce.edu.vn)!' };
+    }
+
+    const superUsers = ["hongnhung2050py@gmail.com", "hongnhung@muce.edu.vn", "dhxdmtmuce"];
+    const isSuper = superUsers.includes(cleanEmail);
+    const role = isSuper ? 'super' : 'staff';
+    const status = 'approved';
+
+    if (pool) {
+        try {
+            const check = await pool.query('SELECT username, role, status FROM accounts WHERE LOWER(username) = $1', [cleanEmail]);
+            if (check.rows.length > 0) {
+                const acc = check.rows[0];
+                return {
+                    status: 'success',
+                    username: acc.username,
+                    role: isSuper ? 'super' : acc.role,
+                    message: 'Đăng nhập bằng tài khoản Google thành công!'
+                };
+            }
+
+            // Đăng ký tự động tài khoản Google
+            const regDate = getVietnamTimestamp();
+            await pool.query(`
+                INSERT INTO accounts (username, password, role, status, reg_date, is_default)
+                VALUES ($1, $2, $3, $4, $5, $6)
+            `, [cleanEmail, 'google_sso_' + Date.now(), role, status, regDate, false]);
+
+            return {
+                status: 'success',
+                username: cleanEmail,
+                role: role,
+                isNewUser: true,
+                message: 'Đăng ký tài khoản Google mới và đăng nhập thành công!'
+            };
+        } catch (e) {
+            console.error('Lỗi dbGoogleAuth SQL:', e);
+        }
+    }
+
+    const list = await dbGetAccounts();
+    let acc = list.find(a => String(a.username || '').toLowerCase() === cleanEmail);
+    if (!acc) {
+        acc = {
+            username: cleanEmail,
+            password: 'google_sso_' + Date.now(),
+            role: role,
+            status: status,
+            regDate: getVietnamTimestamp(),
+            isDefault: false
+        };
+        list.push(acc);
+        await dbSaveAccountsLocal(list);
+    }
+    return {
+        status: 'success',
+        username: acc.username,
+        role: isSuper ? 'super' : acc.role,
+        message: 'Đăng nhập Google thành công!'
+    };
 }
 
 async function dbGetAdminCode() {
@@ -986,6 +1219,45 @@ const server = http.createServer(async (req, res) => {
                         const result = await dbRegister(json.username, json.password, json.role, json.adminCode);
                         res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
                         res.end(JSON.stringify(result));
+                        return;
+                    }
+
+                    if (action === 'googleAuth' || json.action === 'googleAuth' || action === 'googleLogin' || json.action === 'googleLogin') {
+                        const result = await dbGoogleAuth(json.email, json.name, json.picture, json.googleId);
+                        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                        res.end(JSON.stringify(result));
+                        return;
+                    }
+
+                    if (action === 'saveSmtpConfig' || json.action === 'saveSmtpConfig') {
+                        const result = await dbSaveSmtpConfig(json.user, json.pass, json.host, json.port);
+                        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                        res.end(JSON.stringify(result));
+                        return;
+                    }
+
+                    if (action === 'getSmtpConfig' || json.action === 'getSmtpConfig') {
+                        const cfg = await dbGetSmtpConfig();
+                        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                        res.end(JSON.stringify({
+                            status: 'success',
+                            user: cfg.user,
+                            host: cfg.host,
+                            port: cfg.port,
+                            hasPass: !!cfg.pass
+                        }));
+                        return;
+                    }
+
+                    if (action === 'testSmtp' || json.action === 'testSmtp') {
+                        const target = json.email || '';
+                        const testOtp = Math.floor(100000 + Math.random() * 900000).toString();
+                        const result = await sendRealOtpEmail(target, testOtp, 'Admin Test');
+                        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                        res.end(JSON.stringify({
+                            status: result.sent ? 'success' : 'error',
+                            message: result.sent ? `Đã gửi email thử nghiệm thành công tới ${target}!` : `Gửi email thất bại: ${result.error || result.reason}`
+                        }));
                         return;
                     }
 
