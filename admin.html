@@ -900,10 +900,99 @@
                 width: auto !important;
             }
         }
+
+        /* ===== HIỆU ỨNG CÁC MÙA & GLASSMORPHISM CHO ADMIN ===== */
+        #weatherCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 0;
+        }
+        body {
+            position: relative;
+            background: #f8fafc;
+            transition: background 0.8s ease;
+        }
+        body.weather-bg-sunrise {
+            background: linear-gradient(180deg, #fff1f2 0%, #fee2e2 35%, #f8fafc 100%) !important;
+        }
+        body.weather-bg-sunshine {
+            background: linear-gradient(180deg, #fefce8 0%, #fffbeb 40%, #f8fafc 100%) !important;
+        }
+        body.weather-bg-autumn {
+            background: linear-gradient(180deg, #fffbeb 0%, #fed7aa 35%, #f8fafc 100%) !important;
+        }
+        body.weather-bg-snow {
+            background: linear-gradient(180deg, #f0f9ff 0%, #e0f2fe 45%, #ffffff 100%) !important;
+        }
+        body.weather-bg-rain {
+            background: linear-gradient(180deg, #e2e8f0 0%, #cbd5e1 55%, #f8fafc 100%) !important;
+        }
+        nav, .container, .muce-footer, .modal {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Thẻ quản trị trong suốt kính mờ */
+        .card-custom, .admin-top-nav {
+            background: rgba(255, 255, 255, 0.38) !important;
+            backdrop-filter: blur(8px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(8px) saturate(180%) !important;
+            border: 1.5px solid rgba(255, 255, 255, 0.75) !important;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04), inset 0 1px 2px rgba(255, 255, 255, 0.8) !important;
+        }
+        .form-control, .form-select {
+            background-color: rgba(255, 255, 255, 0.25) !important;
+            backdrop-filter: blur(3px) !important;
+            -webkit-backdrop-filter: blur(3px) !important;
+            border: 1.5px solid rgba(2, 132, 199, 0.4) !important;
+        }
+        .form-control:focus, .form-select:focus {
+            background-color: rgba(255, 255, 255, 0.65) !important;
+        }
+        .navbar-custom {
+            background: rgba(255, 255, 255, 0.68) !important;
+            backdrop-filter: blur(12px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(12px) saturate(180%) !important;
+        }
+        .weather-pill-group {
+            background: rgba(255, 255, 255, 0.35);
+            backdrop-filter: blur(8px);
+            border-radius: 20px;
+            padding: 2px 5px;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+        .weather-pill-btn {
+            background: transparent;
+            border: none;
+            font-size: 0.82rem;
+            line-height: 1;
+            padding: 3px 6px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            opacity: 0.78;
+        }
+        .weather-pill-btn:hover {
+            opacity: 1;
+            transform: scale(1.18);
+        }
+        .weather-pill-btn.active {
+            background: #ffffff;
+            opacity: 1;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.16);
+            transform: scale(1.12);
+        }
     </style>
 </head>
 
 <body>
+    <!-- Canvas Hiệu Ứng Các Mùa Động (60FPS) -->
+    <canvas id="weatherCanvas"></canvas>
 
     <!-- NAV BAR -->
     <nav class="navbar navbar-custom">
@@ -911,7 +1000,17 @@
             <a class="navbar-brand d-flex align-items-center me-2" href="index.html" style="max-width: 68%;">
                 <img src="logo.png" alt="MUCE Logo" class="logo-responsive">
             </a>
-            <div class="d-flex gap-1 gap-sm-2 flex-shrink-0">
+            <div class="d-flex align-items-center gap-1 gap-sm-2 flex-shrink-0">
+                <div class="weather-selector-wrap d-inline-flex align-items-center gap-1 me-1">
+                    <div class="weather-pill-group d-flex" id="weatherPills">
+                        <button type="button" class="weather-pill-btn active" id="wpSunrise" onclick="setWeatherMode('sunrise')" title="Mùa Xuân (Bình minh & Hoa anh đào)">🌸</button>
+                        <button type="button" class="weather-pill-btn" id="wpSunshine" onclick="setWeatherMode('sunshine')" title="Mùa Hạ (Nắng vàng rực rỡ & Lens flare)">☀️</button>
+                        <button type="button" class="weather-pill-btn" id="wpAutumn" onclick="setWeatherMode('autumn')" title="Mùa Thu (Lá vàng chao liệng trong gió)">🍂</button>
+                        <button type="button" class="weather-pill-btn" id="wpSnow" onclick="setWeatherMode('snow')" title="Mùa Đông (Tuyết rơi 3D & Pha lê băng)">❄️</button>
+                        <button type="button" class="weather-pill-btn" id="wpRain" onclick="setWeatherMode('rain')" title="Mùa Mưa (Mưa rào xiên gió & Sấm chớp)">🌧️</button>
+                        <button type="button" class="weather-pill-btn" id="wpAuto" onclick="toggleWeatherAuto()" title="Tự động luân chuyển các mùa">🔄</button>
+                    </div>
+                </div>
                 <a href="index.html" class="btn btn-sm btn-outline-primary"><i class="fa-solid fa-house"></i><span
                         class="d-none d-sm-inline ms-1">Trang Chủ</span></a>
                 <button class="btn btn-sm btn-danger d-none" id="btnLogout" onclick="logout()"><i
@@ -4549,6 +4648,585 @@
                 }, 300);
             };
         }
+    </script>
+
+    <!-- ===== HỆ THỐNG HIỆU ỨNG CÁC MÙA CHÂN THỰC & SỐNG ĐỘNG (CANVAS 60FPS) ===== -->
+    <script>
+        (function() {
+            const canvas = document.getElementById('weatherCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            let width = 0, height = 0;
+            let currentMode = localStorage.getItem('muce_weather_mode') || 'sunrise';
+            let isAutoCycle = localStorage.getItem('muce_weather_auto') === 'true';
+            let animId = null;
+            let lastTime = performance.now();
+
+            function resize() {
+                const dpr = Math.min(window.devicePixelRatio || 1, 2);
+                width = window.innerWidth;
+                height = window.innerHeight;
+                canvas.width = width * dpr;
+                canvas.height = height * dpr;
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
+                ctx.scale(dpr, dpr);
+            }
+            window.addEventListener('resize', resize);
+            resize();
+
+            // 1. MÙA XUÂN: HOA ANH ĐÀO & BÌNH MINH
+            const sakuraPetals = [];
+            const MAX_PETALS = window.innerWidth < 768 ? 26 : 48;
+            const petalColors = ['rgba(251, 113, 133, 0.85)', 'rgba(244, 114, 182, 0.82)', 'rgba(253, 164, 175, 0.88)', 'rgba(249, 168, 212, 0.82)', 'rgba(254, 205, 211, 0.90)'];
+
+            for (let i = 0; i < MAX_PETALS; i++) {
+                sakuraPetals.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    size: Math.random() * 7 + 7,
+                    speedY: Math.random() * 0.9 + 0.7,
+                    speedX: Math.random() * 0.8 + 0.3,
+                    swayAngle: Math.random() * Math.PI * 2,
+                    swaySpeed: Math.random() * 0.025 + 0.015,
+                    roll: Math.random() * Math.PI * 2,
+                    rollSpeed: Math.random() * 0.03 + 0.015,
+                    pitch: Math.random() * Math.PI * 2,
+                    pitchSpeed: Math.random() * 0.02 + 0.01,
+                    color: petalColors[Math.floor(Math.random() * petalColors.length)]
+                });
+            }
+
+            function drawSpringSakura(dt, now) {
+                const sunX = width > 768 ? width * 0.86 : width * 0.82;
+                const sunY = height * 0.14;
+                const sunriseGlow = ctx.createRadialGradient(sunX, sunY, 10, sunX, sunY, Math.max(width, height) * 0.7);
+                sunriseGlow.addColorStop(0, 'rgba(255, 228, 230, 0.45)');
+                sunriseGlow.addColorStop(0.3, 'rgba(254, 215, 170, 0.18)');
+                sunriseGlow.addColorStop(0.65, 'rgba(254, 240, 138, 0.05)');
+                sunriseGlow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                ctx.fillStyle = sunriseGlow;
+                ctx.fillRect(0, 0, width, height);
+
+                const sunBall = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, 65);
+                sunBall.addColorStop(0, 'rgba(255, 255, 255, 0.96)');
+                sunBall.addColorStop(0.35, 'rgba(254, 205, 211, 0.65)');
+                sunBall.addColorStop(0.75, 'rgba(251, 146, 60, 0.2)');
+                sunBall.addColorStop(1, 'rgba(251, 146, 60, 0)');
+                ctx.beginPath();
+                ctx.arc(sunX, sunY, 65, 0, Math.PI * 2);
+                ctx.fillStyle = sunBall;
+                ctx.fill();
+
+                const wind = Math.sin(now * 0.0008) * 0.8 + 0.5;
+                sakuraPetals.forEach(p => {
+                    p.y += p.speedY;
+                    p.swayAngle += p.swaySpeed;
+                    p.x += p.speedX + Math.sin(p.swayAngle) * 0.9 + wind;
+                    p.roll += p.rollSpeed;
+                    p.pitch += p.pitchSpeed;
+
+                    if (p.y > height + 20) { p.y = -20; p.x = Math.random() * width; }
+                    if (p.x > width + 20) p.x = -20;
+                    if (p.x < -20) p.x = width + 20;
+
+                    ctx.save();
+                    ctx.translate(p.x, p.y);
+                    ctx.rotate(p.roll);
+                    ctx.scale(Math.cos(p.pitch), 1);
+                    ctx.beginPath();
+                    ctx.moveTo(0, -p.size);
+                    ctx.bezierCurveTo(p.size * 0.85, -p.size * 0.7, p.size * 0.9, p.size * 0.6, 0, p.size);
+                    ctx.bezierCurveTo(-p.size * 0.9, p.size * 0.6, -p.size * 0.85, -p.size * 0.7, 0, -p.size);
+                    ctx.fillStyle = p.color;
+                    ctx.shadowBlur = 5;
+                    ctx.shadowColor = 'rgba(244, 114, 182, 0.35)';
+                    ctx.fill();
+
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+                    ctx.lineWidth = 0.8;
+                    ctx.beginPath();
+                    ctx.moveTo(0, -p.size * 0.65);
+                    ctx.lineTo(0, p.size * 0.7);
+                    ctx.stroke();
+                    ctx.restore();
+                });
+            }
+
+            // 2. MÙA HẠ: NẮNG VÀNG & LENS FLARE
+            let sunAngle = 0;
+            const summerMotes = [];
+            const MAX_SUMMER_MOTES = window.innerWidth < 768 ? 24 : 45;
+            for (let i = 0; i < MAX_SUMMER_MOTES; i++) {
+                summerMotes.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    radius: Math.random() * 2.5 + 1.2,
+                    speedY: -(Math.random() * 0.5 + 0.25),
+                    speedX: Math.random() * 0.6 - 0.3,
+                    alpha: Math.random() * 0.5 + 0.25,
+                    pulseSpeed: Math.random() * 0.03 + 0.015,
+                    pulseAngle: Math.random() * Math.PI * 2
+                });
+            }
+
+            function drawSummerSunshine(dt, now) {
+                sunAngle += 0.002;
+                const sunX = width > 768 ? width * 0.88 : width * 0.84;
+                const sunY = height * 0.12;
+                const screenDiag = Math.max(width, height);
+
+                const sunGlow = ctx.createRadialGradient(sunX, sunY, 15, sunX, sunY, screenDiag * 0.75);
+                sunGlow.addColorStop(0, 'rgba(254, 240, 138, 0.52)');
+                sunGlow.addColorStop(0.22, 'rgba(253, 224, 71, 0.20)');
+                sunGlow.addColorStop(0.55, 'rgba(250, 204, 21, 0.06)');
+                sunGlow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                ctx.fillStyle = sunGlow;
+                ctx.fillRect(0, 0, width, height);
+
+                const flareGrad = ctx.createLinearGradient(0, sunY, width, sunY);
+                flareGrad.addColorStop(0, 'rgba(255, 255, 255, 0)');
+                flareGrad.addColorStop(Math.max(0, (sunX / width) - 0.25), 'rgba(254, 240, 138, 0.02)');
+                flareGrad.addColorStop(sunX / width, 'rgba(255, 255, 255, 0.25)');
+                flareGrad.addColorStop(Math.min(1, (sunX / width) + 0.25), 'rgba(254, 240, 138, 0.02)');
+                flareGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                ctx.fillStyle = flareGrad;
+                ctx.fillRect(0, sunY - 4, width, 8);
+
+                ctx.save();
+                ctx.translate(sunX, sunY);
+                ctx.rotate(sunAngle);
+                for (let i = 0; i < 14; i++) {
+                    const angle = (i * Math.PI * 2) / 14;
+                    const pulse = 0.03 + 0.02 * Math.sin(now * 0.0015 + i);
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.arc(0, 0, screenDiag, angle - 0.07, angle + 0.07);
+                    ctx.closePath();
+                    ctx.fillStyle = `rgba(234, 179, 8, ${pulse})`;
+                    ctx.fill();
+                }
+                ctx.restore();
+
+                ctx.beginPath();
+                ctx.arc(sunX, sunY, 70, 0, Math.PI * 2);
+                const coreGrad = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, 70);
+                coreGrad.addColorStop(0, 'rgba(255, 255, 255, 1)');
+                coreGrad.addColorStop(0.35, 'rgba(254, 240, 138, 0.75)');
+                coreGrad.addColorStop(0.7, 'rgba(234, 179, 8, 0.28)');
+                coreGrad.addColorStop(1, 'rgba(234, 179, 8, 0)');
+                ctx.fillStyle = coreGrad;
+                ctx.fill();
+
+                const cX = width / 2, cY = height / 2, vX = cX - sunX, vY = cY - sunY;
+                ctx.beginPath();
+                ctx.arc(sunX + vX * 0.45, sunY + vY * 0.45, 32, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(251, 191, 36, 0.08)';
+                ctx.strokeStyle = 'rgba(245, 158, 11, 0.18)';
+                ctx.lineWidth = 1;
+                ctx.fill();
+                ctx.stroke();
+
+                summerMotes.forEach(m => {
+                    m.y += m.speedY;
+                    m.x += m.speedX;
+                    m.pulseAngle += m.pulseSpeed;
+                    if (m.y < 0) { m.y = height + 10; m.x = Math.random() * width; }
+                    const a = m.alpha * (0.6 + 0.4 * Math.sin(m.pulseAngle));
+                    ctx.beginPath();
+                    ctx.arc(m.x, m.y, m.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(234, 179, 8, ${a})`;
+                    ctx.shadowBlur = 4;
+                    ctx.shadowColor = '#f59e0b';
+                    ctx.fill();
+                });
+                ctx.shadowBlur = 0;
+            }
+
+            // 3. MÙA THU: LÁ VÀNG BAY 3D
+            const autumnLeaves = [];
+            const MAX_LEAVES = window.innerWidth < 768 ? 22 : 38;
+            const leafColors = [
+                { main: '#dc2626', alt: '#b91c1c' },
+                { main: '#d97706', alt: '#b45309' },
+                { main: '#ea580c', alt: '#c2410c' },
+                { main: '#ca8a04', alt: '#a16207' }
+            ];
+            for (let i = 0; i < MAX_LEAVES; i++) {
+                autumnLeaves.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    size: Math.random() * 9 + 11,
+                    type: Math.random() > 0.45 ? 'maple' : 'oval',
+                    speedY: Math.random() * 0.85 + 0.65,
+                    speedX: Math.random() * 0.7 + 0.4,
+                    swayAngle: Math.random() * Math.PI * 2,
+                    swaySpeed: Math.random() * 0.022 + 0.012,
+                    roll: Math.random() * Math.PI * 2,
+                    rollSpeed: Math.random() * 0.028 + 0.015,
+                    pitch: Math.random() * Math.PI * 2,
+                    pitchSpeed: Math.random() * 0.02 + 0.01,
+                    color: leafColors[Math.floor(Math.random() * leafColors.length)]
+                });
+            }
+
+            function drawMapleLeaf(ctx, size, color) {
+                ctx.beginPath();
+                ctx.moveTo(0, size * 1.15);
+                ctx.lineTo(0, size * 0.6);
+                ctx.lineTo(size * 0.35, size * 0.45);
+                ctx.lineTo(size * 0.8, size * 0.35);
+                ctx.lineTo(size * 0.55, 0);
+                ctx.lineTo(size * 0.85, -size * 0.35);
+                ctx.lineTo(size * 0.4, -size * 0.45);
+                ctx.lineTo(0, -size * 0.95);
+                ctx.lineTo(-size * 0.4, -size * 0.45);
+                ctx.lineTo(-size * 0.85, -size * 0.35);
+                ctx.lineTo(-size * 0.55, 0);
+                ctx.lineTo(-size * 0.8, size * 0.35);
+                ctx.lineTo(-size * 0.35, size * 0.45);
+                ctx.closePath();
+                ctx.fillStyle = color.main;
+                ctx.fill();
+                ctx.strokeStyle = color.alt;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(0, size * 0.6);
+                ctx.lineTo(0, -size * 0.8);
+                ctx.stroke();
+            }
+
+            function drawOvalLeaf(ctx, size, color) {
+                ctx.beginPath();
+                ctx.moveTo(0, size * 1.1);
+                ctx.lineTo(0, size * 0.7);
+                ctx.bezierCurveTo(size * 0.7, size * 0.3, size * 0.75, -size * 0.3, 0, -size * 0.85);
+                ctx.bezierCurveTo(-size * 0.75, -size * 0.3, -size * 0.7, size * 0.3, 0, size * 0.7);
+                ctx.closePath();
+                ctx.fillStyle = color.main;
+                ctx.fill();
+                ctx.strokeStyle = color.alt;
+                ctx.lineWidth = 0.9;
+                ctx.beginPath();
+                ctx.moveTo(0, size * 0.7);
+                ctx.lineTo(0, -size * 0.75);
+                ctx.stroke();
+            }
+
+            function drawAutumnLeaves(dt, now) {
+                const sunsetGlow = ctx.createLinearGradient(0, 0, width, height);
+                sunsetGlow.addColorStop(0, 'rgba(254, 215, 170, 0.15)');
+                sunsetGlow.addColorStop(0.5, 'rgba(254, 243, 199, 0.08)');
+                sunsetGlow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                ctx.fillStyle = sunsetGlow;
+                ctx.fillRect(0, 0, width, height);
+
+                const wind = Math.sin(now * 0.0007) * 1.1 + 0.6;
+                autumnLeaves.forEach(l => {
+                    l.y += l.speedY;
+                    l.swayAngle += l.swaySpeed;
+                    l.x += l.speedX + Math.sin(l.swayAngle) * 1.2 + wind;
+                    l.roll += l.rollSpeed;
+                    l.pitch += l.pitchSpeed;
+
+                    if (l.y > height + 25) { l.y = -25; l.x = Math.random() * width; }
+                    if (l.x > width + 25) l.x = -25;
+                    if (l.x < -25) l.x = width + 25;
+
+                    ctx.save();
+                    ctx.translate(l.x, l.y);
+                    ctx.rotate(l.roll);
+                    ctx.scale(Math.cos(l.pitch), Math.sin(l.pitch * 0.7) * 0.4 + 0.6);
+                    ctx.shadowBlur = 4;
+                    ctx.shadowColor = 'rgba(180, 83, 9, 0.25)';
+                    if (l.type === 'maple') drawMapleLeaf(ctx, l.size, l.color);
+                    else drawOvalLeaf(ctx, l.size, l.color);
+                    ctx.restore();
+                });
+            }
+
+            // 4. MÙA ĐÔNG: TUYẾT PHA LÊ 3D ĐA TẦNG
+            const snowLayers = { bg: [], mid: [], fg: [] };
+            const BG_SNOW = window.innerWidth < 768 ? 40 : 75;
+            const MID_SNOW = window.innerWidth < 768 ? 25 : 45;
+            const FG_SNOW = window.innerWidth < 768 ? 10 : 18;
+
+            for (let i = 0; i < BG_SNOW; i++) snowLayers.bg.push({ x: Math.random() * width, y: Math.random() * height, r: Math.random() * 1.2 + 0.8, speedY: Math.random() * 0.6 + 0.35, speedX: Math.random() * 0.4 - 0.2 });
+            for (let i = 0; i < MID_SNOW; i++) snowLayers.mid.push({ x: Math.random() * width, y: Math.random() * height, r: Math.random() * 1.8 + 1.8, speedY: Math.random() * 0.95 + 0.5, swayAngle: Math.random() * Math.PI * 2, swaySpeed: Math.random() * 0.02 + 0.01, opacity: Math.random() * 0.45 + 0.45 });
+            for (let i = 0; i < FG_SNOW; i++) snowLayers.fg.push({ x: Math.random() * width, y: Math.random() * height, size: Math.random() * 4.5 + 4.5, angle: Math.random() * Math.PI * 2, rotSpeed: (Math.random() - 0.5) * 0.02, speedY: Math.random() * 1.2 + 0.8, swayAngle: Math.random() * Math.PI * 2, swaySpeed: Math.random() * 0.018 + 0.01, opacity: Math.random() * 0.35 + 0.6 });
+
+            function drawCrystalSnowflake(ctx, x, y, size, angle, opacity) {
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.rotate(angle);
+                ctx.strokeStyle = `rgba(255, 255, 255, ${opacity})`;
+                ctx.shadowColor = 'rgba(56, 189, 248, 0.75)';
+                ctx.shadowBlur = 6;
+                ctx.lineWidth = 1.3;
+                for (let i = 0; i < 6; i++) {
+                    ctx.rotate(Math.PI / 3);
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.lineTo(0, size);
+                    ctx.moveTo(0, size * 0.55);
+                    ctx.lineTo(size * 0.28, size * 0.78);
+                    ctx.moveTo(0, size * 0.55);
+                    ctx.lineTo(-size * 0.28, size * 0.78);
+                    ctx.stroke();
+                }
+                ctx.restore();
+            }
+
+            function drawWinterSnow(dt, now) {
+                const wind = Math.sin(now * 0.0006) * 1.5 + Math.cos(now * 0.0014) * 0.8;
+                ctx.fillStyle = 'rgba(224, 242, 254, 0.5)';
+                snowLayers.bg.forEach(f => {
+                    f.y += f.speedY;
+                    f.x += f.speedX + wind * 0.4;
+                    if (f.y > height + 5) { f.y = -5; f.x = Math.random() * width; }
+                    if (f.x > width + 5) f.x = -5;
+                    if (f.x < -5) f.x = width + 5;
+                    ctx.beginPath();
+                    ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+
+                snowLayers.mid.forEach(f => {
+                    f.y += f.speedY;
+                    f.swayAngle += f.swaySpeed;
+                    f.x += Math.sin(f.swayAngle) * 0.8 + wind * 0.75;
+                    if (f.y > height + 8) { f.y = -8; f.x = Math.random() * width; }
+                    if (f.x > width + 8) f.x = -8;
+                    if (f.x < -8) f.x = width + 8;
+                    ctx.beginPath();
+                    ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(56, 189, 248, ${f.opacity * 0.7})`;
+                    ctx.shadowBlur = 6;
+                    ctx.shadowColor = '#0284c7';
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(f.x, f.y, f.r * 0.65, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+                    ctx.fill();
+                });
+                ctx.shadowBlur = 0;
+
+                snowLayers.fg.forEach(f => {
+                    f.y += f.speedY;
+                    f.swayAngle += f.swaySpeed;
+                    f.angle += f.rotSpeed;
+                    f.x += Math.sin(f.swayAngle) * 1.1 + wind;
+                    if (f.y > height + 15) { f.y = -15; f.x = Math.random() * width; }
+                    if (f.x > width + 15) f.x = -15;
+                    if (f.x < -15) f.x = width + 15;
+                    drawCrystalSnowflake(ctx, f.x, f.y, f.size, f.angle, f.opacity);
+                });
+            }
+
+            // 5. MÙA MƯA: MƯA RÀO & SẤM SÉT PHÂN NHÁNH
+            const rainDrops = [];
+            const splashes = [];
+            const ripples = [];
+            const MAX_RAIN = window.innerWidth < 768 ? 75 : 140;
+            for (let i = 0; i < MAX_RAIN; i++) {
+                rainDrops.push({
+                    x: Math.random() * (width + 120),
+                    y: Math.random() * height,
+                    len: Math.random() * 22 + 15,
+                    speedY: Math.random() * 12 + 20,
+                    speedX: -3.8,
+                    opacity: Math.random() * 0.45 + 0.25
+                });
+            }
+
+            let lightning = { active: false, opacity: 0, bolt: null, branches: [], nextTime: performance.now() + 3500, pulseCount: 0 };
+            function createFractalBolt(startX, startY, endY, maxDisplacement) {
+                const points = [{ x: startX, y: startY }];
+                const segments = 12;
+                const dy = (endY - startY) / segments;
+                let curX = startX, curY = startY;
+                for (let i = 1; i <= segments; i++) {
+                    curX += (Math.random() - 0.5) * maxDisplacement;
+                    curY += dy;
+                    points.push({ x: curX, y: curY });
+                }
+                return points;
+            }
+
+            function triggerRealisticLightning(now) {
+                lightning.active = true;
+                lightning.opacity = 1;
+                lightning.pulseCount = Math.floor(Math.random() * 2) + 2;
+                const startX = Math.random() * width * 0.8 + width * 0.1;
+                const targetY = height * (Math.random() * 0.45 + 0.4);
+                lightning.bolt = createFractalBolt(startX, 0, targetY, 55);
+                lightning.branches = [];
+                for (let i = 3; i < lightning.bolt.length - 2; i += 2) {
+                    if (Math.random() < 0.6) {
+                        const pt = lightning.bolt[i];
+                        lightning.branches.push(createFractalBolt(pt.x, pt.y, pt.y + height * 0.18, 35));
+                    }
+                }
+                lightning.nextTime = now + Math.random() * 5500 + 4000;
+            }
+
+            function drawRainAndLightning(dt, now) {
+                if (now > lightning.nextTime) triggerRealisticLightning(now);
+
+                if (lightning.active) {
+                    ctx.fillStyle = `rgba(255, 255, 255, ${lightning.opacity * 0.78})`;
+                    ctx.fillRect(0, 0, width, height);
+                    if (lightning.bolt && lightning.bolt.length > 1) {
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.moveTo(lightning.bolt[0].x, lightning.bolt[0].y);
+                        for (let i = 1; i < lightning.bolt.length; i++) ctx.lineTo(lightning.bolt[i].x, lightning.bolt[i].y);
+                        ctx.strokeStyle = `rgba(255, 255, 255, ${Math.min(1, lightning.opacity * 1.8)})`;
+                        ctx.lineWidth = 4.5;
+                        ctx.shadowBlur = 28;
+                        ctx.shadowColor = '#0284c7';
+                        ctx.stroke();
+
+                        ctx.lineWidth = 2;
+                        ctx.strokeStyle = '#ffffff';
+                        ctx.stroke();
+
+                        lightning.branches.forEach(branch => {
+                            ctx.beginPath();
+                            ctx.moveTo(branch[0].x, branch[0].y);
+                            for (let j = 1; j < branch.length; j++) ctx.lineTo(branch[j].x, branch[j].y);
+                            ctx.strokeStyle = `rgba(255, 255, 255, ${Math.min(1, lightning.opacity * 1.4)})`;
+                            ctx.lineWidth = 1.8;
+                            ctx.stroke();
+                        });
+                        ctx.restore();
+                    }
+
+                    lightning.opacity -= 0.06;
+                    if (lightning.opacity <= 0) {
+                        if (lightning.pulseCount > 0) {
+                            lightning.pulseCount--;
+                            lightning.opacity = Math.random() * 0.6 + 0.4;
+                        } else {
+                            lightning.active = false;
+                            lightning.bolt = null;
+                            lightning.branches = [];
+                        }
+                    }
+                }
+
+                ctx.lineWidth = 1.8;
+                rainDrops.forEach(d => {
+                    d.y += d.speedY;
+                    d.x += d.speedX;
+                    if (d.y > height) {
+                        if (Math.random() < 0.35) splashes.push({ x: d.x, y: height - 6, vx: (Math.random() - 0.5) * 4, vy: -(Math.random() * 4 + 2), alpha: 0.85 });
+                        if (Math.random() < 0.22) ripples.push({ x: d.x, y: height - 5, rx: 3, ry: 1.2, alpha: 0.7 });
+                        d.y = -d.len;
+                        d.x = Math.random() * (width + 120);
+                    }
+                    const grad = ctx.createLinearGradient(d.x, d.y, d.x + d.speedX, d.y + d.len);
+                    grad.addColorStop(0, `rgba(2, 132, 199, 0)`);
+                    grad.addColorStop(1, `rgba(2, 132, 199, ${d.opacity * 1.5})`);
+                    ctx.beginPath();
+                    ctx.moveTo(d.x, d.y);
+                    ctx.lineTo(d.x + d.speedX * 1.4, d.y + d.len);
+                    ctx.strokeStyle = grad;
+                    ctx.stroke();
+                });
+
+                for (let i = splashes.length - 1; i >= 0; i--) {
+                    const sp = splashes[i];
+                    sp.x += sp.vx;
+                    sp.y += sp.vy;
+                    sp.vy += 0.25;
+                    sp.alpha -= 0.05;
+                    if (sp.alpha <= 0) { splashes.splice(i, 1); continue; }
+                    ctx.beginPath();
+                    ctx.arc(sp.x, sp.y, 1.3, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(56, 189, 248, ${sp.alpha})`;
+                    ctx.fill();
+                }
+
+                for (let i = ripples.length - 1; i >= 0; i--) {
+                    const rp = ripples[i];
+                    rp.rx += 1.2;
+                    rp.ry += 0.45;
+                    rp.alpha -= 0.038;
+                    if (rp.alpha <= 0) { ripples.splice(i, 1); continue; }
+                    ctx.beginPath();
+                    ctx.ellipse(rp.x, rp.y, rp.rx, rp.ry, 0, 0, Math.PI * 2);
+                    ctx.strokeStyle = `rgba(56, 189, 248, ${rp.alpha})`;
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                }
+            }
+
+            function render(now) {
+                animId = requestAnimationFrame(render);
+                const dt = (now - lastTime) / 1000;
+                lastTime = now;
+                ctx.clearRect(0, 0, width, height);
+
+                if (currentMode === 'sunrise') drawSpringSakura(dt, now);
+                else if (currentMode === 'sunshine') drawSummerSunshine(dt, now);
+                else if (currentMode === 'autumn') drawAutumnLeaves(dt, now);
+                else if (currentMode === 'snow') drawWinterSnow(dt, now);
+                else if (currentMode === 'rain') drawRainAndLightning(dt, now);
+            }
+
+            window.setWeatherMode = function(mode, save = true) {
+                currentMode = mode;
+                if (save) {
+                    localStorage.setItem('muce_weather_mode', mode);
+                    if (isAutoCycle && mode !== 'auto') {
+                        isAutoCycle = false;
+                        localStorage.setItem('muce_weather_auto', 'false');
+                        const autoBtn = document.getElementById('wpAuto');
+                        if (autoBtn) autoBtn.classList.remove('active');
+                    }
+                }
+
+                document.body.classList.remove('weather-bg-sunrise', 'weather-bg-sunshine', 'weather-bg-autumn', 'weather-bg-snow', 'weather-bg-rain');
+                if (mode !== 'off') document.body.classList.add('weather-bg-' + mode);
+
+                document.querySelectorAll('.weather-pill-btn').forEach(btn => btn.classList.remove('active'));
+                const btnIdMap = { 'sunrise': 'wpSunrise', 'sunshine': 'wpSunshine', 'autumn': 'wpAutumn', 'snow': 'wpSnow', 'rain': 'wpRain' };
+                const activeBtn = document.getElementById(btnIdMap[mode]);
+                if (activeBtn) activeBtn.classList.add('active');
+
+                if (mode === 'off') canvas.style.display = 'none';
+                else canvas.style.display = 'block';
+            };
+
+            window.toggleWeatherAuto = function() {
+                isAutoCycle = !isAutoCycle;
+                localStorage.setItem('muce_weather_auto', isAutoCycle ? 'true' : 'false');
+                const autoBtn = document.getElementById('wpAuto');
+                if (autoBtn) {
+                    if (isAutoCycle) autoBtn.classList.add('active');
+                    else autoBtn.classList.remove('active');
+                }
+            };
+
+            const modes = ['sunrise', 'sunshine', 'autumn', 'snow', 'rain'];
+            let modeIdx = modes.indexOf(currentMode);
+            if (modeIdx === -1) modeIdx = 0;
+
+            setInterval(() => {
+                if (isAutoCycle) {
+                    modeIdx = (modeIdx + 1) % modes.length;
+                    window.setWeatherMode(modes[modeIdx], false);
+                }
+            }, 25000);
+
+            window.setWeatherMode(currentMode, false);
+            if (isAutoCycle) {
+                const autoBtn = document.getElementById('wpAuto');
+                if (autoBtn) autoBtn.classList.add('active');
+            }
+            animId = requestAnimationFrame(render);
+        })();
     </script>
 </body>
 
