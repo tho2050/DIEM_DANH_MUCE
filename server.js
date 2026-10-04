@@ -1032,7 +1032,7 @@ async function dbGetGoogleClientId() {
             if (cfg.googleClientId) return cfg.googleClientId.trim();
         } catch (e) {}
     }
-    return '';
+    return '675863164420-46klpnrb8bg631r1qs2eaq32pbrsngs8.apps.googleusercontent.com';
 }
 
 async function dbSetGoogleClientId(newId) {

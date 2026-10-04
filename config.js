@@ -10,7 +10,7 @@ const CONFIG = {
     googleScriptUrl: "/api",
 
     // Google OAuth 2.0 Client ID để mở cửa sổ đăng nhập Google thật
-    googleClientId: "",
+    googleClientId: "675863164420-46klpnrb8bg631r1qs2eaq32pbrsngs8.apps.googleusercontent.com",
 
     // 2. DANH SÁCH CÁC SỰ KIỆN / HOẠT ĐỘNG MẶC ĐỊNH
     activities: []
