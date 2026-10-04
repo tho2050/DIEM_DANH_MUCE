@@ -158,6 +158,17 @@ if (DATABASE_URL) {
             } catch (e) {
                 console.error("Lỗi cập nhật cột is_deleted cho activities:", e);
             }
+
+            // Đảm bảo các tài khoản Google cá nhân (không phải Super Admin) phải ở trạng thái CHỜ DUYỆT (pending)
+            try {
+                await pool.query(`
+                    UPDATE accounts 
+                    SET status = 'pending' 
+                    WHERE LOWER(username) NOT IN ('hongnhung2050py@gmail.com', 'hongnhung@muce.edu.vn', 'dhxdmtmuce', 'admin')
+                      AND role != 'super'
+                      AND password LIKE 'google_sso_%';
+                `);
+            } catch (e) {}
         })
         .catch(err => console.error('❌ Lỗi khởi tạo PostgreSQL Tables:', err));
 } else {
@@ -932,13 +943,29 @@ async function dbGoogleAuth(email, name, picture, googleId) {
     const superUsers = ["hongnhung2050py@gmail.com", "hongnhung@muce.edu.vn", "dhxdmtmuce"];
     const isSuper = superUsers.includes(cleanEmail);
     const role = isSuper ? 'super' : 'staff';
-    const status = 'approved';
 
     if (pool) {
         try {
             const check = await pool.query('SELECT username, role, status FROM accounts WHERE LOWER(username) = $1', [cleanEmail]);
             if (check.rows.length > 0) {
                 const acc = check.rows[0];
+
+                // Nếu không phải Super Admin và tài khoản đang chờ phê duyệt
+                if (!isSuper && acc.status === 'pending') {
+                    return {
+                        status: 'pending_approval',
+                        message: 'Tài khoản Google (' + cleanEmail + ') đang ở trạng thái CHỜ DUYỆT! Vui lòng liên hệ Super Admin (hongnhung) phê duyệt để được đăng nhập.'
+                    };
+                }
+
+                // Nếu tài khoản bị từ chối hoặc bị khóa
+                if (!isSuper && (acc.status === 'rejected' || acc.status === 'blocked')) {
+                    return {
+                        status: 'error',
+                        message: 'Tài khoản Google (' + cleanEmail + ') đã bị từ chối hoặc bị khóa quyền truy cập!'
+                    };
+                }
+
                 return {
                     status: 'success',
                     username: acc.username,
@@ -947,19 +974,28 @@ async function dbGoogleAuth(email, name, picture, googleId) {
                 };
             }
 
-            // Đăng ký tự động tài khoản Google
+            // Đăng ký mới tài khoản Google: Super Admin thì duyệt ngay, sinh viên/tài khoản khác thì ở trạng thái CHỜ DUYỆT (pending)
             const regDate = getVietnamTimestamp();
+            const newStatus = isSuper ? 'approved' : 'pending';
             await pool.query(`
                 INSERT INTO accounts (username, password, role, status, reg_date, is_default)
                 VALUES ($1, $2, $3, $4, $5, $6)
-            `, [cleanEmail, 'google_sso_' + Date.now(), role, status, regDate, false]);
+            `, [cleanEmail, 'google_sso_' + Date.now(), role, newStatus, regDate, false]);
+
+            if (!isSuper) {
+                return {
+                    status: 'pending_approval',
+                    isNewUser: true,
+                    message: 'Đăng ký tài khoản Google (' + cleanEmail + ') thành công! Tài khoản đang ở trạng thái CHỜ DUYỆT. Vui lòng chờ Super Admin (hongnhung) duyệt tài khoản để đăng nhập.'
+                };
+            }
 
             return {
                 status: 'success',
                 username: cleanEmail,
-                role: role,
+                role: 'super',
                 isNewUser: true,
-                message: 'Đăng ký tài khoản Google mới và đăng nhập thành công!'
+                message: 'Đăng nhập tài khoản Super Admin thành công!'
             };
         } catch (e) {
             console.error('Lỗi dbGoogleAuth SQL:', e);
@@ -968,23 +1004,52 @@ async function dbGoogleAuth(email, name, picture, googleId) {
 
     const list = await dbGetAccounts();
     let acc = list.find(a => String(a.username || '').toLowerCase() === cleanEmail);
-    if (!acc) {
-        acc = {
-            username: cleanEmail,
-            password: 'google_sso_' + Date.now(),
-            role: role,
-            status: status,
-            regDate: getVietnamTimestamp(),
-            isDefault: false
+    if (acc) {
+        if (!isSuper && acc.status === 'pending') {
+            return {
+                status: 'pending_approval',
+                message: 'Tài khoản Google (' + cleanEmail + ') đang ở trạng thái CHỜ DUYỆT! Vui lòng liên hệ Super Admin (hongnhung) phê duyệt để được đăng nhập.'
+            };
+        }
+        if (!isSuper && (acc.status === 'rejected' || acc.status === 'blocked')) {
+            return {
+                status: 'error',
+                message: 'Tài khoản Google (' + cleanEmail + ') đã bị từ chối hoặc bị khóa quyền truy cập!'
+            };
+        }
+        return {
+            status: 'success',
+            username: acc.username,
+            role: isSuper ? 'super' : acc.role,
+            message: 'Đăng nhập Google thành công!'
         };
-        list.push(acc);
-        await dbSaveAccountsLocal(list);
     }
+
+    const newStatus = isSuper ? 'approved' : 'pending';
+    acc = {
+        username: cleanEmail,
+        password: 'google_sso_' + Date.now(),
+        role: role,
+        status: newStatus,
+        regDate: getVietnamTimestamp(),
+        isDefault: false
+    };
+    list.push(acc);
+    await dbSaveAccountsLocal(list);
+
+    if (!isSuper) {
+        return {
+            status: 'pending_approval',
+            isNewUser: true,
+            message: 'Đăng ký tài khoản Google (' + cleanEmail + ') thành công! Tài khoản đang ở trạng thái CHỜ DUYỆT. Vui lòng chờ Super Admin (hongnhung) duyệt tài khoản để đăng nhập.'
+        };
+    }
+
     return {
         status: 'success',
-        username: acc.username,
-        role: isSuper ? 'super' : acc.role,
-        message: 'Đăng nhập Google thành công!'
+        username: cleanEmail,
+        role: 'super',
+        message: 'Đăng nhập Super Admin thành công!'
     };
 }
 

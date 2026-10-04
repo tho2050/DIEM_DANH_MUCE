@@ -2629,8 +2629,24 @@
                     sessionStorage.setItem("admin_user", result.username || email);
 
                     showDashboard();
+                } else if (result.status === 'pending_approval') {
+                    const msg = result.message || ("Tài khoản Google (" + email + ") đang ở trạng thái CHỜ DUYỆT! Vui lòng liên hệ Super Admin để được phê duyệt truy cập.");
+                    alert("⏳ THÔNG BÁO:\n\n" + msg);
+                    const errEl = document.getElementById('loginError');
+                    if (errEl) {
+                        errEl.className = "alert alert-warning mt-3 py-2 small";
+                        errEl.innerHTML = '<i class="fa-solid fa-clock-rotate-left me-2"></i>' + msg;
+                        errEl.classList.remove('d-none');
+                    }
                 } else {
-                    alert(result.message || "Đăng nhập Google thất bại!");
+                    const msg = result.message || "Tài khoản chưa được phê duyệt hoặc đăng nhập Google thất bại!";
+                    alert("⚠️ THÔNG BÁO:\n\n" + msg);
+                    const errEl = document.getElementById('loginError');
+                    if (errEl) {
+                        errEl.className = "alert alert-danger mt-3 py-2 small";
+                        errEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation me-2"></i>' + msg;
+                        errEl.classList.remove('d-none');
+                    }
                 }
             } catch (err) {
                 console.error("Lỗi kết nối submitGoogleAuth:", err);
