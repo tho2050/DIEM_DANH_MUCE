@@ -732,6 +732,63 @@
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.16);
             transform: scale(1.12);
         }
+
+        /* ===== Ô THỜI TIẾT GPS THỰC TẾ TẠI SỰ KIỆN ===== */
+        .weather-realtime-card {
+            background: rgba(255, 255, 255, 0.25) !important;
+            backdrop-filter: blur(8px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(8px) saturate(180%) !important;
+            border: 1.5px solid rgba(255, 255, 255, 0.5) !important;
+            border-radius: 12px;
+            padding: 3px 10px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04), inset 0 1px 2px rgba(255, 255, 255, 0.6) !important;
+            font-size: 0.8rem;
+            color: #ffffff;
+            transition: all 0.25s ease;
+        }
+        .weather-realtime-card:hover {
+            background: rgba(255, 255, 255, 0.38) !important;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12) !important;
+        }
+        .weather-temp-badge {
+            font-size: 1rem;
+            font-weight: 800;
+            color: #ffffff;
+            white-space: nowrap;
+        }
+        .weather-condition-text {
+            font-weight: 700;
+            font-size: 0.76rem;
+            line-height: 1.2;
+            color: #ffffff;
+        }
+        .weather-rain-text {
+            font-size: 0.7rem;
+            line-height: 1.2;
+            color: #e0f2fe;
+            white-space: nowrap;
+        }
+        .btn-refresh-weather {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            color: #ffffff;
+            border-radius: 50%;
+            width: 22px;
+            height: 22px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.68rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            padding: 0;
+            margin-left: 2px;
+        }
+        .btn-refresh-weather:hover {
+            background: #ffffff;
+            color: #0284c7;
+            transform: rotate(180deg);
+        }
     </style>
 </head>
 <body>
@@ -751,12 +808,25 @@
     </div>
     <div class="sub-bar py-2">
         <div class="container d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <span class="small text-white-50"><i class="fa-solid fa-info-circle me-1"></i> Xác thực định vị GPS trong bán kính (<span id="subBarRadius">50</span>m) để mở khóa form.</span>
+            <!-- Ô thời tiết GPS thực tế tại sự kiện -->
+            <div class="weather-realtime-card text-white" id="realtimeWeatherCard" title="Thời tiết thực tế tại tọa độ sự kiện GPS (Open-Meteo)">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="weather-temp-badge" id="weatherTempBadge"><i class="fa-solid fa-spinner fa-spin text-white me-1"></i>--°C</span>
+                    <div class="weather-desc-wrap text-start">
+                        <div class="weather-condition-text" id="weatherConditionText">Đang tải thời tiết GPS...</div>
+                        <div class="weather-rain-text" id="weatherRainText">Hôm nay: --</div>
+                    </div>
+                    <button type="button" class="btn-refresh-weather" onclick="syncLiveGpsWeather(true)" title="Cập nhật thời tiết theo vị trí GPS sự kiện">
+                        <i class="fa-solid fa-arrows-rotate" id="weatherRefreshIcon"></i>
+                    </button>
+                </div>
+            </div>
             
             <!-- Bộ điều khiển hiệu ứng thời tiết động -->
             <div class="weather-selector-wrap d-inline-flex align-items-center gap-1">
-                <span class="small text-white-50 d-none d-sm-inline me-1" style="font-size: 0.75rem;"><i class="fa-solid fa-cloud-sun me-1"></i>Nền động:</span>
+                <span class="small text-white-50 d-none d-sm-inline me-1" style="font-size: 0.75rem;"><i class="fa-solid fa-cloud-sun me-1"></i>4 Mùa:</span>
                 <div class="weather-pill-group d-flex" id="weatherPills">
+                    <button type="button" class="weather-pill-btn" id="wpLive" onclick="enableLiveGpsMode()" title="Chế độ Tự động theo thời tiết thực tế (GPS)">⚡ Real</button>
                     <button type="button" class="weather-pill-btn active" id="wpSunrise" onclick="setWeatherMode('sunrise')" title="Mùa Xuân (Bình minh & Hoa anh đào)">🌸</button>
                     <button type="button" class="weather-pill-btn" id="wpSunshine" onclick="setWeatherMode('sunshine')" title="Mùa Hạ (Nắng vàng rực rỡ & Lens flare)">☀️</button>
                     <button type="button" class="weather-pill-btn" id="wpAutumn" onclick="setWeatherMode('autumn')" title="Mùa Thu (Lá vàng chao liệng trong gió)">🍂</button>
@@ -1154,6 +1224,12 @@
         const targetLat = activity.latitude;
         const targetLng = activity.longitude;
         const radiusMeters = activity.radiusMeters;
+
+        window.currentEventLat = targetLat;
+        window.currentEventLng = targetLng;
+        if (typeof window.syncLiveGpsWeather === 'function') {
+            window.syncLiveGpsWeather(false, targetLat, targetLng);
+        }
 
         let userLat = 0, userLng = 0;
         let gpsValid = false;
@@ -2289,6 +2365,10 @@
                 currentMode = mode;
                 if (save) {
                     localStorage.setItem('muce_weather_mode', mode);
+                    localStorage.setItem('muce_weather_is_real_gps', 'false');
+                    const liveBtn = document.getElementById('wpLive');
+                    if (liveBtn) liveBtn.classList.remove('active');
+
                     if (isAutoCycle && mode !== 'auto') {
                         isAutoCycle = false;
                         localStorage.setItem('muce_weather_auto', 'false');
@@ -2302,7 +2382,9 @@
                     document.body.classList.add('weather-bg-' + mode);
                 }
 
-                document.querySelectorAll('.weather-pill-btn').forEach(btn => btn.classList.remove('active'));
+                document.querySelectorAll('.weather-pill-btn').forEach(btn => {
+                    if (btn.id !== 'wpLive') btn.classList.remove('active');
+                });
                 const btnIdMap = {
                     'sunrise': 'wpSunrise',
                     'sunshine': 'wpSunshine',
@@ -2311,7 +2393,7 @@
                     'rain': 'wpRain'
                 };
                 const activeBtn = document.getElementById(btnIdMap[mode]);
-                if (activeBtn) activeBtn.classList.add('active');
+                if (activeBtn && localStorage.getItem('muce_weather_is_real_gps') !== 'true') activeBtn.classList.add('active');
 
                 if (mode === 'off') {
                     canvas.style.display = 'none';
@@ -2320,9 +2402,150 @@
                 }
             };
 
+            window.enableLiveGpsMode = function() {
+                localStorage.setItem('muce_weather_is_real_gps', 'true');
+                document.querySelectorAll('.weather-pill-btn').forEach(b => b.classList.remove('active'));
+                const liveBtn = document.getElementById('wpLive');
+                if (liveBtn) liveBtn.classList.add('active');
+                syncLiveGpsWeather(true, window.currentEventLat, window.currentEventLng);
+            };
+
+            const DEFAULT_LAT = 13.0882;
+            const DEFAULT_LNG = 109.3087;
+
+            window.syncLiveGpsWeather = async function(manual = false, customLat = null, customLng = null) {
+                const refreshIcon = document.getElementById('weatherRefreshIcon');
+                if (refreshIcon) refreshIcon.classList.add('fa-spin');
+
+                let lat = customLat || window.currentEventLat;
+                let lng = customLng || window.currentEventLng;
+
+                if (!lat || !lng) {
+                    lat = DEFAULT_LAT;
+                    lng = DEFAULT_LNG;
+                }
+
+                try {
+                    const cacheKey = `muce_weather_${lat.toFixed(2)}_${lng.toFixed(2)}`;
+                    let data = null;
+                    const cached = sessionStorage.getItem(cacheKey);
+                    if (cached && !manual) {
+                        const parsed = JSON.parse(cached);
+                        if (Date.now() - parsed.timestamp < 10 * 60 * 1000) {
+                            data = parsed.data;
+                        }
+                    }
+
+                    if (!data) {
+                        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,is_day,precipitation,rain,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max&timezone=auto`;
+                        const res = await fetch(url);
+                        if (!res.ok) throw new Error('Weather API error');
+                        data = await res.json();
+                        sessionStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), data }));
+                    }
+
+                    const current = data.current || {};
+                    const daily = data.daily || {};
+                    const temp = Math.round(current.temperature_2m);
+                    const wmo = current.weather_code || 0;
+                    const isDay = current.is_day === 1;
+                    const rainCurrent = current.rain || current.precipitation || 0;
+                    const rainSumToday = (daily.precipitation_sum && daily.precipitation_sum[0] !== undefined) ? daily.precipitation_sum[0] : 0;
+                    const rainProbToday = (daily.precipitation_probability_max && daily.precipitation_probability_max[0] !== undefined) ? daily.precipitation_probability_max[0] : 0;
+
+                    let conditionText = 'Trời quang đãng';
+                    let conditionIcon = '☀️';
+                    let detectedSeason = 'sunshine';
+
+                    if (wmo >= 95) {
+                        conditionText = 'Dông bão & sấm sét';
+                        conditionIcon = '⛈️';
+                        detectedSeason = 'rain';
+                    } else if (wmo >= 51 && wmo <= 82) {
+                        conditionText = 'Có mưa rào';
+                        conditionIcon = '🌧️';
+                        detectedSeason = 'rain';
+                    } else if (wmo >= 71 && wmo <= 86) {
+                        conditionText = 'Có tuyết rơi';
+                        conditionIcon = '❄️';
+                        detectedSeason = 'snow';
+                    } else if (wmo === 1 || wmo === 2) {
+                        conditionText = isDay ? 'Trời có mây nhẹ' : 'Đêm có mây';
+                        conditionIcon = isDay ? '🌤️' : '🌙';
+                    } else if (wmo === 3) {
+                        conditionText = 'Trời nhiều mây';
+                        conditionIcon = '☁️';
+                    } else if (wmo >= 45 && wmo <= 48) {
+                        conditionText = 'Có sương mù';
+                        conditionIcon = '🌫️';
+                    } else {
+                        conditionText = isDay ? 'Trời nắng quang đãng' : 'Trời quang về đêm';
+                        conditionIcon = isDay ? '☀️' : '⭐';
+                    }
+
+                    if (detectedSeason !== 'rain' && detectedSeason !== 'snow') {
+                        const now = new Date();
+                        const hour = now.getHours();
+                        const month = now.getMonth() + 1;
+
+                        if (hour >= 5 && hour < 8) {
+                            detectedSeason = 'sunrise';
+                        } else if (hour >= 8 && hour < 16) {
+                            detectedSeason = 'sunshine';
+                        } else if (hour >= 16 && hour <= 19) {
+                            detectedSeason = 'autumn';
+                        } else {
+                            if (month >= 2 && month <= 4) detectedSeason = 'sunrise';
+                            else if (month >= 5 && month <= 7) detectedSeason = 'sunshine';
+                            else if (month >= 8 && month <= 11) detectedSeason = 'autumn';
+                            else detectedSeason = 'snow';
+                        }
+                    }
+
+                    let rainDesc = '';
+                    if (rainCurrent > 0) {
+                        rainDesc = `🌧️ Đang có mưa (${rainCurrent}mm)`;
+                    } else if (rainSumToday > 0) {
+                        rainDesc = `🌧️ Hôm nay có mưa (${rainSumToday}mm)`;
+                    } else if (rainProbToday >= 40) {
+                        rainDesc = `⛅ Khả năng mưa: ${rainProbToday}%`;
+                    } else {
+                        rainDesc = `☀️ Hôm nay không mưa (0mm)`;
+                    }
+
+                    const tempEl = document.getElementById('weatherTempBadge');
+                    if (tempEl) tempEl.innerHTML = `${conditionIcon} ${temp}°C`;
+
+                    const condEl = document.getElementById('weatherConditionText');
+                    if (condEl) condEl.textContent = conditionText;
+
+                    const rainEl = document.getElementById('weatherRainText');
+                    if (rainEl) rainEl.textContent = rainDesc;
+
+                    const isRealGpsMode = localStorage.getItem('muce_weather_is_real_gps') === 'true';
+                    if (isRealGpsMode || manual) {
+                        window.setWeatherMode(detectedSeason, false);
+                    }
+                } catch (err) {
+                    console.warn('Lỗi lấy thời tiết Open-Meteo:', err);
+                    const condEl = document.getElementById('weatherConditionText');
+                    if (condEl) condEl.textContent = 'Thời tiết vị trí MUCE';
+                    const rainEl = document.getElementById('weatherRainText');
+                    if (rainEl) rainEl.textContent = 'Hôm nay: Không mưa';
+                } finally {
+                    if (refreshIcon) {
+                        setTimeout(() => refreshIcon.classList.remove('fa-spin'), 600);
+                    }
+                }
+            };
+
             window.toggleWeatherAuto = function() {
                 isAutoCycle = !isAutoCycle;
                 localStorage.setItem('muce_weather_auto', isAutoCycle ? 'true' : 'false');
+                localStorage.setItem('muce_weather_is_real_gps', 'false');
+                const liveBtn = document.getElementById('wpLive');
+                if (liveBtn) liveBtn.classList.remove('active');
+
                 const autoBtn = document.getElementById('wpAuto');
                 if (autoBtn) {
                     if (isAutoCycle) {
@@ -2350,11 +2573,19 @@
                 }
             }, 25000);
 
-            window.setWeatherMode(currentMode, false);
+            const isRealGpsInitially = localStorage.getItem('muce_weather_is_real_gps') === 'true';
+            if (isRealGpsInitially) {
+                const liveBtn = document.getElementById('wpLive');
+                if (liveBtn) liveBtn.classList.add('active');
+            } else {
+                window.setWeatherMode(currentMode, false);
+            }
             if (isAutoCycle) {
                 const autoBtn = document.getElementById('wpAuto');
                 if (autoBtn) autoBtn.classList.add('active');
             }
+
+            syncLiveGpsWeather(false);
             animId = requestAnimationFrame(render);
         })();
     </script>
