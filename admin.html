@@ -1715,11 +1715,11 @@
                             <div class="col-md-6">
                                 <label class="form-label fw-bold small">Họ và Tên Sinh Viên:</label>
                                 <input type="text" class="form-control fw-bold" id="mcName"
-                                    placeholder="VD: Nguyễn Văn A" required />
+                                    placeholder="Nhập họ và tên" required />
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold small">Lớp:</label>
-                                <input type="text" class="form-control" id="mcClassName" placeholder="VD: D23CTC1, D22XDK2, D20KTR1..."
+                                <input type="text" class="form-control" id="mcClassName" placeholder="VD: D23CTC1"
                                     required oninput="autoDetectManualFaculty(this.value)" />
                             </div>
                         </div>
@@ -1728,7 +1728,7 @@
                                 <div class="d-flex justify-content-between align-items-center mb-1">
                                     <label class="form-label fw-bold small mb-0">Khoa:</label>
                                     <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-0 d-none" id="mcFacultyAutoBadge" style="font-size: 0.72rem; font-weight: 500;">
-                                        <i class="fa-solid fa-wand-magic-sparkles me-1"></i>Tự chọn
+                                        <i class="fa-solid fa-check me-1"></i>Tự chọn
                                     </span>
                                 </div>
                                 <select class="form-select fw-bold" id="mcFaculty" required onchange="handleManualFacultyChange()">
@@ -3764,7 +3764,7 @@
                 if (detected) {
                     facultySelect.value = detected;
                     if (badge) {
-                        badge.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles me-1"></i>Tự chọn: <strong>${detected.replace('Khoa ', '')}</strong>`;
+                        badge.innerHTML = `<i class="fa-solid fa-check me-1"></i>Tự chọn: <strong>${detected.replace('Khoa ', '')}</strong>`;
                         badge.classList.remove('d-none');
                     }
                     return;

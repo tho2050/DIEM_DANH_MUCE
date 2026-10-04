@@ -602,23 +602,14 @@
                             <div class="mb-3">
                                 <label>Mã số sinh viên (MSSV) <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="studentCode" placeholder="Ví dụ: 23Q748020..." disabled />
-                                <div class="quick-samples">
-                                    <span class="small text-muted">Chọn mẫu:</span>
-                                    <button type="button" class="quick-sample-btn" onclick="fillSample('23Q748020101', 'Nguyễn Văn An', 'D23CTC1')">An (CNTT)</button>
-                                    <button type="button" class="quick-sample-btn" onclick="fillSample('23Q748020102', 'Trần Thị Bình', 'D22XDK2')">Bình (Xây dựng)</button>
-                                    <button type="button" class="quick-sample-btn" onclick="fillSample('23Q748020103', 'Lê Văn Nam', 'D20KTR1')">Nam (Kiến trúc)</button>
-                                </div>
                             </div>
                             <div class="mb-3">
                                 <label>Họ và Tên <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="fullName" placeholder="Nguyễn Văn An" disabled />
+                                <input type="text" class="form-control" id="fullName" placeholder="Nhập họ và tên" disabled />
                             </div>
                             <div class="mb-3">
                                 <label>Lớp</label>
-                                <input type="text" class="form-control" id="className" placeholder="Ví dụ: D23CTC1, D22XDK2, D20KTR1, D24QHC1..." disabled oninput="handleClassInput(this.value)" />
-                                <div class="small text-muted mt-1" style="font-size: 0.76rem;">
-                                    <i class="fa-solid fa-wand-magic-sparkles text-primary me-1"></i>Nhập mã lớp sẽ <strong>tự động nhận diện Khoa</strong> tương ứng (bạn vẫn có thể tự chọn lại thủ công bên dưới).
-                                </div>
+                                <input type="text" class="form-control" id="className" placeholder="Ví dụ: D23CTC1" disabled oninput="handleClassInput(this.value)" />
                             </div>
                             <div class="mb-3">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
@@ -1063,7 +1054,7 @@
                 if (detected) {
                     facultySelect.value = detected;
                     if (badge) {
-                        badge.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles me-1"></i>Đã tự chọn: <strong>${detected.replace('Khoa ', '')}</strong>`;
+                        badge.innerHTML = `<i class="fa-solid fa-check me-1"></i>Đã tự chọn: <strong>${detected.replace('Khoa ', '')}</strong>`;
                         badge.classList.remove('d-none');
                     }
                     return;
