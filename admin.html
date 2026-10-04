@@ -107,14 +107,14 @@
             gap: 10px;
             background: #ffffff;
             color: #3c4043;
-            border: 1.5px solid #dadce0;
-            border-radius: 10px;
-            padding: 10px 16px;
-            font-size: 0.92rem;
-            font-weight: 600;
+            border: 1px solid #dadce0;
+            border-radius: 6px;
+            padding: 9px 16px;
+            font-size: 0.95rem;
+            font-weight: 500;
             cursor: pointer;
             transition: all 0.2s ease;
-            box-shadow: 0 1px 3px rgba(60, 64, 67, 0.08);
+            box-shadow: 0 1px 2px rgba(60, 64, 67, 0.08);
             position: relative;
             text-decoration: none;
             width: 100%;
@@ -122,15 +122,14 @@
 
         .btn-google:hover {
             background: #f8fafd;
-            border-color: #4285F4;
-            color: #1a73e8;
-            box-shadow: 0 2px 8px rgba(66, 133, 244, 0.2);
-            transform: translateY(-1px);
+            border-color: #c2c8d0;
+            color: #202124;
+            box-shadow: 0 1px 3px rgba(60, 64, 67, 0.15);
         }
 
         .btn-google:active {
-            transform: translateY(0);
-            box-shadow: 0 1px 2px rgba(66, 133, 244, 0.2);
+            background: #f1f3f4;
+            box-shadow: none;
         }
 
         .btn-google-game {
@@ -1219,10 +1218,7 @@
                         <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
                         <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
                     </svg>
-                    <span>Đăng nhập với Google</span>
-                    <span class="badge bg-success text-white ms-auto d-inline-flex align-items-center gap-1" style="font-size:0.68rem; border-radius: 6px;">
-                        <i class="fa-solid fa-gamepad"></i> Game
-                    </span>
+                    <span>Google</span>
                 </button>
 
                 <div class="login-divider">HOẶC ĐĂNG NHẬP VỚI MẬT KHẨU</div>
@@ -1296,7 +1292,7 @@
             <div id="registerFormContainer" class="d-none">
                 <div class="text-center mb-3">
                     <h5 class="fw-bold"><i class="fa-solid fa-user-plus text-success me-2"></i>Đăng Ký Tài Khoản</h5>
-                    <p class="text-muted small">Tạo tài khoản quản trị viên mới</p>
+                    <p class="text-muted small">Đăng ký tài khoản cho sinh viên / cán bộ</p>
                 </div>
 
                 <!-- NÚT ĐĂNG KÝ GOOGLE GIS & POPUP THẬT -->
@@ -1308,10 +1304,7 @@
                         <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
                         <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
                     </svg>
-                    <span>Đăng ký nhanh bằng Google</span>
-                    <span class="badge bg-primary text-white ms-auto d-inline-flex align-items-center gap-1" style="font-size:0.68rem; border-radius: 6px;">
-                        <i class="fa-solid fa-bolt"></i> Tự động
-                    </span>
+                    <span>Google</span>
                 </button>
 
                 <div class="login-divider">HOẶC ĐĂNG KÝ THỦ CÔNG</div>
