@@ -2542,7 +2542,7 @@
 
             container.innerHTML = list.map((item, idx) => {
                 const actCount = (attendanceData || []).filter(r => String(r.code || '').trim().toUpperCase() === String(item.code || '').trim().toUpperCase()).length;
-                const rawCreator = item.createdBy || sessionStorage.getItem("admin_user") || "hongnhung2050py@gmail.com";
+                const rawCreator = item.createdBy || "hongnhung";
                 const displayCreator = typeof formatCreatorName === 'function' ? formatCreatorName(rawCreator) : (rawCreator.toLowerCase().includes('hongnhung2050') ? 'hongnhung' : rawCreator);
                 return `
                 <div class="activity-item-row d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -2791,7 +2791,7 @@
                                             <i class="fa-solid fa-location-dot me-1"></i>${item.locationAddress || 'Chưa có địa chỉ'} (Bán kính: ${item.radiusMeters || 50}m)
                                         </span>
                                         <span class="small text-secondary d-block mt-1" style="font-size: 0.78rem;">
-                                            <i class="fa-solid fa-user-pen text-primary me-1"></i>Tài khoản tạo: <strong class="text-dark">${typeof formatCreatorName === 'function' ? formatCreatorName(item.createdBy || sessionStorage.getItem("admin_user")) : (String(item.createdBy || '').toLowerCase().includes('hongnhung2050') ? 'hongnhung' : (item.createdBy || 'hongnhung'))}</strong>
+                                            <i class="fa-solid fa-user-pen text-primary me-1"></i>Tài khoản tạo: <strong class="text-dark">${typeof formatCreatorName === 'function' ? formatCreatorName(item.createdBy || "hongnhung") : (String(item.createdBy || '').toLowerCase().includes('hongnhung2050') ? 'hongnhung' : (item.createdBy || 'hongnhung'))}</strong>
                                         </span>
                                     </td>
                                     <td>

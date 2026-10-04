@@ -173,12 +173,15 @@ function getLocalIp() {
 async function dbGetActivities() {
     if (pool) {
         try {
-            const res = await pool.query('SELECT code, title, description, location_address as "locationAddress", latitude, longitude, radius_meters as "radiusMeters", start_time as "startTime", end_time as "endTime", created_by as "createdBy" FROM activities WHERE is_deleted IS NOT TRUE ORDER BY created_at DESC');
+            const res = await pool.query('SELECT code, title, description, location_address as "locationAddress", latitude, longitude, radius_meters as "radiusMeters", start_time as "startTime", end_time as "endTime", COALESCE(NULLIF(created_by, \'\'), \'hongnhung\') as "createdBy" FROM activities WHERE is_deleted IS NOT TRUE ORDER BY created_at DESC');
             return res.rows;
         } catch (e) { console.error('Lỗi đọc activities từ SQL:', e); }
     }
     if (fs.existsSync(ACTIVITIES_FILE)) {
-        try { return JSON.parse(fs.readFileSync(ACTIVITIES_FILE, 'utf8')); } catch (e) {}
+        try { 
+            const list = JSON.parse(fs.readFileSync(ACTIVITIES_FILE, 'utf8'));
+            if (Array.isArray(list)) return list.map(a => ({ ...a, createdBy: a.createdBy || 'hongnhung' }));
+        } catch (e) {}
     }
     return [];
 }
@@ -186,12 +189,15 @@ async function dbGetActivities() {
 async function dbGetDeletedActivities() {
     if (pool) {
         try {
-            const res = await pool.query('SELECT code, title, description, location_address as "locationAddress", latitude, longitude, radius_meters as "radiusMeters", start_time as "startTime", end_time as "endTime", created_by as "createdBy", deleted_at as "deletedAt" FROM activities WHERE is_deleted = TRUE ORDER BY deleted_at DESC');
+            const res = await pool.query('SELECT code, title, description, location_address as "locationAddress", latitude, longitude, radius_meters as "radiusMeters", start_time as "startTime", end_time as "endTime", COALESCE(NULLIF(created_by, \'\'), \'hongnhung\') as "createdBy", deleted_at as "deletedAt" FROM activities WHERE is_deleted = TRUE ORDER BY deleted_at DESC');
             return res.rows;
         } catch (e) { console.error('Lỗi đọc deleted activities từ SQL:', e); }
     }
     if (fs.existsSync(DELETED_ACTIVITIES_FILE)) {
-        try { return JSON.parse(fs.readFileSync(DELETED_ACTIVITIES_FILE, 'utf8')); } catch (e) {}
+        try { 
+            const list = JSON.parse(fs.readFileSync(DELETED_ACTIVITIES_FILE, 'utf8'));
+            if (Array.isArray(list)) return list.map(a => ({ ...a, createdBy: a.createdBy || 'hongnhung' }));
+        } catch (e) {}
     }
     return [];
 }
@@ -229,7 +235,7 @@ async function dbSaveActivities(activitiesList) {
                     act.code, act.title || '', act.description || '', act.locationAddress || '',
                     parseFloat(act.latitude) || 0, parseFloat(act.longitude) || 0,
                     parseInt(act.radiusMeters) || 50, act.startTime || '', act.endTime || '',
-                    act.createdBy || ''
+                    act.createdBy || 'hongnhung'
                 ]);
             }
             return true;

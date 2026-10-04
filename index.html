@@ -1146,7 +1146,7 @@
                                     </div>
                                     <div class="info-row">
                                         <i class="fa-solid fa-user-pen" style="color: #0284c7;"></i>
-                                        <span>Tài khoản tạo: <strong class="text-dark">${typeof formatCreatorName === 'function' ? formatCreatorName(item.createdBy) : (String(item.createdBy || '').toLowerCase().includes('hongnhung2050') ? 'hongnhung' : (item.createdBy || 'hongnhung'))}</strong></span>
+                                        <span>Tài khoản tạo: <strong class="text-dark">${typeof formatCreatorName === 'function' ? formatCreatorName(item.createdBy || 'hongnhung') : (String(item.createdBy || 'hongnhung').toLowerCase().includes('hongnhung2050') ? 'hongnhung' : (item.createdBy || 'hongnhung'))}</strong></span>
                                     </div>
                                     <div class="info-row">
                                         <i class="fa-solid fa-user-check" style="color: #0284c7;"></i>

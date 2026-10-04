@@ -32,11 +32,17 @@ function getActivities() {
             if (Array.isArray(parsed)) {
                 // Tự động xóa bỏ 3 sự kiện mẫu cũ nếu còn dính trong LocalStorage của máy
                 const filtered = parsed.filter(a => a && a.code !== "SVTN2026" && a.code !== "WORKSHOP-AI" && a.code !== "TINHOC-ABC");
-                if (filtered.length !== parsed.length) {
+                let hasChanges = false;
+                filtered.forEach(a => {
+                    if (!a.createdBy) {
+                        a.createdBy = "hongnhung";
+                        hasChanges = true;
+                    }
+                });
+                if (hasChanges || filtered.length !== parsed.length) {
                     localStorage.setItem("gps_attendance_activities", JSON.stringify(filtered));
-                    return filtered;
                 }
-                return parsed;
+                return filtered;
             }
         } catch (e) {
             console.error("Lỗi parse dữ liệu activities từ localStorage, tiến hành reset", e);
@@ -48,7 +54,10 @@ function getActivities() {
 
 // Hàm lưu danh sách hoạt động mới vào localStorage và đồng bộ lên Google Sheet cloud
 function saveActivities(list) {
-    const cleanList = (list || []).filter(a => a && a.code !== "SVTN2026" && a.code !== "WORKSHOP-AI" && a.code !== "TINHOC-ABC");
+    const cleanList = (list || []).filter(a => a && a.code !== "SVTN2026" && a.code !== "WORKSHOP-AI" && a.code !== "TINHOC-ABC").map(a => {
+        if (!a.createdBy) a.createdBy = "hongnhung";
+        return a;
+    });
     localStorage.setItem("gps_attendance_activities", JSON.stringify(cleanList));
     
     if (CONFIG.googleScriptUrl) {
@@ -75,7 +84,10 @@ function syncActivitiesFromCloud(callback) {
         .then(res => res.json())
         .then(data => {
             if (Array.isArray(data)) {
-                const cleanData = data.filter(a => a && a.code !== "SVTN2026" && a.code !== "WORKSHOP-AI" && a.code !== "TINHOC-ABC");
+                const cleanData = data.filter(a => a && a.code !== "SVTN2026" && a.code !== "WORKSHOP-AI" && a.code !== "TINHOC-ABC").map(a => {
+                    if (!a.createdBy) a.createdBy = "hongnhung";
+                    return a;
+                });
                 localStorage.setItem("gps_attendance_activities", JSON.stringify(cleanData));
                 if (callback) callback(cleanData);
             }
