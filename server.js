@@ -176,7 +176,7 @@ if (DATABASE_URL) {
                     INSERT INTO system_config (key_name, value_text) 
                     VALUES ('smtp_config', $1)
                     ON CONFLICT (key_name) DO UPDATE SET value_text = EXCLUDED.value_text;
-                `, [JSON.stringify({ user: 'diemdanhmuce@gmail.com', pass: 'nqeqyynpqjdngkwb', host: 'smtp.gmail.com', port: 465 })]);
+                `, [JSON.stringify({ user: 'diemdanhmuce@gmail.com', pass: 'nqeqyynpqjdngkwb', host: 'smtp.gmail.com', port: 587 })]);
             } catch (e) {}
         })
         .catch(err => console.error('❌ Lỗi khởi tạo PostgreSQL Tables:', err));
@@ -736,7 +736,7 @@ async function dbUpdateAccount(username, password, role, status) {
 // Cấu hình SMTP gửi mail Gmail thực tế
 async function dbGetSmtpConfig() {
     let host = process.env.SMTP_HOST || 'smtp.gmail.com';
-    let port = parseInt(process.env.SMTP_PORT) || 465;
+    let port = parseInt(process.env.SMTP_PORT) || 587;
     let user = process.env.GMAIL_USER || process.env.SMTP_USER || 'diemdanhmuce@gmail.com';
     let pass = process.env.GMAIL_PASS || process.env.SMTP_PASS || 'nqeqyynpqjdngkwb';
 
@@ -748,7 +748,7 @@ async function dbGetSmtpConfig() {
                 if (parsed.user) user = parsed.user;
                 if (parsed.pass) pass = parsed.pass;
                 if (parsed.host) host = parsed.host;
-                if (parsed.port) port = parseInt(parsed.port) || 465;
+                if (parsed.port) port = parseInt(parsed.port) || 587;
             }
         } catch (e) {}
     }
@@ -759,14 +759,14 @@ async function dbGetSmtpConfig() {
                 if (cfg.smtp.user) user = cfg.smtp.user;
                 if (cfg.smtp.pass) pass = cfg.smtp.pass;
                 if (cfg.smtp.host) host = cfg.smtp.host;
-                if (cfg.smtp.port) port = parseInt(cfg.smtp.port) || 465;
+                if (cfg.smtp.port) port = parseInt(cfg.smtp.port) || 587;
             }
         } catch (e) {}
     }
     return { host, port, user, pass };
 }
 
-async function dbSaveSmtpConfig(user, pass, host = 'smtp.gmail.com', port = 465) {
+async function dbSaveSmtpConfig(user, pass, host = 'smtp.gmail.com', port = 587) {
     const configData = JSON.stringify({ user: (user || '').trim(), pass: (pass || '').trim().replace(/\s+/g, ''), host, port });
     if (pool) {
         try {
@@ -796,59 +796,101 @@ async function sendRealOtpEmail(recipientEmail, otpCode, username) {
         return { sent: false, needConfig: true, reason: 'Chưa thiết lập tài khoản Gmail gửi mã (App Password)' };
     }
 
-    try {
-        const transporter = nodemailer.createTransport({
-            host: host,
-            port: port,
-            secure: port === 465,
-            auth: { user, pass },
-            tls: { rejectUnauthorized: false }
-        });
-
-        const mailOptions = {
-            from: `"Điểm Danh GPS MUCE" <${user}>`,
-            to: recipientEmail,
-            subject: `[MUCE] Mã OTP khôi phục mật khẩu tài khoản: ${otpCode}`,
-            html: `
-                <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 580px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
-                    <div style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); padding: 24px 20px; text-align: center; color: #ffffff;">
-                        <h2 style="margin: 0; font-size: 20px; font-weight: 700;">HỆ THỐNG ĐIỂM DANH GPS - MUCE</h2>
-                        <p style="margin: 6px 0 0; opacity: 0.9; font-size: 13px;">Xác thực khôi phục mật khẩu tài khoản</p>
-                    </div>
-                    <div style="padding: 28px 24px;">
-                        <p style="font-size: 15px; color: #1e293b; margin: 0 0 12px;">Xin chào <strong>${username || recipientEmail}</strong>,</p>
-                        <p style="font-size: 14px; color: #475569; line-height: 1.6; margin: 0 0 20px;">
-                            Bạn vừa yêu cầu mã xác nhận để lấy lại mật khẩu trên hệ thống Điểm Danh GPS. Vui lòng sử dụng mã OTP 6 chữ số dưới đây:
-                        </p>
-                        <div style="text-align: center; margin: 24px 0;">
-                            <div style="display: inline-block; background: #f0f9ff; border: 2px dashed #0284c7; border-radius: 12px; padding: 14px 32px;">
-                                <div style="font-size: 11px; font-weight: 700; color: #0369a1; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">MÃ OTP XÁC THỰC</div>
-                                <span style="font-family: monospace; font-size: 36px; font-weight: 800; color: #0284c7; letter-spacing: 8px;">${otpCode}</span>
-                            </div>
-                        </div>
-                        <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px;">
-                            <p style="margin: 0; font-size: 13px; color: #991b1b; line-height: 1.5;">
-                                ⚠️ <strong>Lưu ý:</strong> Mã xác thực có hiệu lực trong <strong>10 phút</strong>. Tuyệt đối không cung cấp mã này cho người khác.
-                            </p>
-                        </div>
-                        <p style="font-size: 13px; color: #64748b; margin: 0;">
-                            Nếu không phải bạn gửi yêu cầu, vui lòng bỏ qua email này.
-                        </p>
-                    </div>
-                    <div style="background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 14px 20px; text-align: center; font-size: 12px; color: #94a3b8;">
-                        <p style="margin: 0;">Trường Đại học Xây dựng Miền Trung (MUCE)</p>
-                    </div>
+    const mailOptions = {
+        from: `"Điểm Danh GPS MUCE" <${user}>`,
+        to: recipientEmail,
+        subject: `[MUCE] Mã OTP khôi phục mật khẩu tài khoản: ${otpCode}`,
+        html: `
+            <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 580px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
+                <div style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); padding: 24px 20px; text-align: center; color: #ffffff;">
+                    <h2 style="margin: 0; font-size: 20px; font-weight: 700;">HỆ THỐNG ĐIỂM DANH GPS - MUCE</h2>
+                    <p style="margin: 6px 0 0; opacity: 0.9; font-size: 13px;">Xác thực khôi phục mật khẩu tài khoản</p>
                 </div>
-            `
-        };
+                <div style="padding: 28px 24px;">
+                    <p style="font-size: 15px; color: #1e293b; margin: 0 0 12px;">Xin chào <strong>${username || recipientEmail}</strong>,</p>
+                    <p style="font-size: 14px; color: #475569; line-height: 1.6; margin: 0 0 20px;">
+                        Bạn vừa yêu cầu mã xác nhận để lấy lại mật khẩu trên hệ thống Điểm Danh GPS. Vui lòng sử dụng mã OTP 6 chữ số dưới đây:
+                    </p>
+                    <div style="text-align: center; margin: 24px 0;">
+                        <div style="display: inline-block; background: #f0f9ff; border: 2px dashed #0284c7; border-radius: 12px; padding: 14px 32px;">
+                            <div style="font-size: 11px; font-weight: 700; color: #0369a1; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">MÃ OTP XÁC THỰC</div>
+                            <span style="font-family: monospace; font-size: 36px; font-weight: 800; color: #0284c7; letter-spacing: 8px;">${otpCode}</span>
+                        </div>
+                    </div>
+                    <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px;">
+                        <p style="margin: 0; font-size: 13px; color: #991b1b; line-height: 1.5;">
+                            ⚠️ <strong>Lưu ý:</strong> Mã xác thực có hiệu lực trong <strong>10 phút</strong>. Tuyệt đối không cung cấp mã này cho người khác.
+                        </p>
+                    </div>
+                    <p style="font-size: 13px; color: #64748b; margin: 0;">
+                        Nếu không phải bạn gửi yêu cầu, vui lòng bỏ qua email này.
+                    </p>
+                </div>
+                <div style="background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 14px 20px; text-align: center; font-size: 12px; color: #94a3b8;">
+                    <p style="margin: 0;">Trường Đại học Xây dựng Miền Trung (MUCE)</p>
+                </div>
+            </div>
+        `
+    };
 
-        const info = await transporter.sendMail(mailOptions);
-        console.log(`✅ Đã gửi email OTP tới ${recipientEmail}:`, info.messageId);
-        return { sent: true, messageId: info.messageId };
-    } catch (err) {
-        console.error('❌ Lỗi gửi email SMTP:', err);
-        return { sent: false, error: err.message };
+    // Render.com chặn cổng 465 (Connection timeout), chỉ cho phép cổng 587 (STARTTLS).
+    // Thử tuần tự các chiến lược kết nối để luôn đảm bảo gửi thành công trong mọi môi trường hosting:
+    const transportStrategies = [
+        {
+            name: 'Gmail Port 587 (STARTTLS)',
+            config: {
+                host: 'smtp.gmail.com',
+                port: 587,
+                secure: false,
+                requireTLS: true,
+                auth: { user, pass },
+                connectionTimeout: 8000,
+                greetingTimeout: 6000,
+                socketTimeout: 10000,
+                tls: { rejectUnauthorized: false }
+            }
+        },
+        {
+            name: 'Gmail Service',
+            config: {
+                service: 'gmail',
+                auth: { user, pass },
+                connectionTimeout: 8000,
+                greetingTimeout: 6000,
+                socketTimeout: 10000
+            }
+        },
+        {
+            name: 'Gmail Port 465 (SSL)',
+            config: {
+                host: 'smtp.gmail.com',
+                port: 465,
+                secure: true,
+                auth: { user, pass },
+                connectionTimeout: 6000,
+                greetingTimeout: 5000,
+                socketTimeout: 8000,
+                tls: { rejectUnauthorized: false }
+            }
+        }
+    ];
+
+    let lastError = null;
+    for (const strategy of transportStrategies) {
+        try {
+            console.log(`📡 Đang gửi email OTP qua chiến lược [${strategy.name}]...`);
+            const transporter = nodemailer.createTransport(strategy.config);
+            const info = await transporter.sendMail(mailOptions);
+            console.log(`✅ Đã gửi email OTP thành công tới ${recipientEmail} qua [${strategy.name}]:`, info.messageId);
+            return { sent: true, messageId: info.messageId };
+        } catch (err) {
+            console.warn(`⚠️ Chiến lược [${strategy.name}] không thành công (${err.message}). Đang chuyển phương án tiếp theo...`);
+            lastError = err;
+        }
     }
+
+    console.error('❌ Tất cả phương thức gửi email OTP đều thất bại:', lastError);
+    return { sent: false, error: lastError ? lastError.message : 'Connection timeout' };
 }
 
 async function dbSendOtp(emailOrUsername) {
