@@ -503,10 +503,46 @@
                 border-radius: 9px;
                 min-height: 42px;
             }
-            .result-box {
-                border-radius: 10px;
-                padding: 0.8rem 0.9rem;
-                font-size: 0.82rem;
+            .voice-alert-toast {
+                position: fixed;
+                top: 15px;
+                left: 50%;
+                transform: translateX(-50%);
+                z-index: 999999;
+                background: #ffffff;
+                border-left: 5px solid #f59e0b;
+                color: #1e293b;
+                padding: 12px 18px;
+                border-radius: 12px;
+                box-shadow: 0 12px 30px rgba(0, 0, 0, 0.22);
+                max-width: 92%;
+                width: 460px;
+                animation: slideDownVoiceToast 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+                transition: all 0.25s ease;
+            }
+            .voice-alert-toast.success-toast {
+                border-left-color: #10b981;
+            }
+            @keyframes slideDownVoiceToast {
+                from { opacity: 0; transform: translate(-50%, -20px); }
+                to { opacity: 1; transform: translate(-50%, 0); }
+            }
+            @keyframes pulseVoiceIcon {
+                0%, 100% { transform: scale(1); }
+                50% { transform: scale(1.22); }
+            }
+            .pulse-icon {
+                animation: pulseVoiceIcon 1.2s infinite ease-in-out;
+            }
+            .field-error-highlight {
+                border-color: #ef4444 !important;
+                box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.22) !important;
+                animation: shakeInput 0.4s ease;
+            }
+            @keyframes shakeInput {
+                0%, 100% { transform: translateX(0); }
+                20%, 60% { transform: translateX(-5px); }
+                40%, 80% { transform: translateX(5px); }
             }
         }
     </style>
@@ -526,6 +562,15 @@
     <div class="sub-bar py-2">
         <div class="container">
             <span class="small text-white-50"><i class="fa-solid fa-info-circle me-1"></i> Xác thực định vị GPS trong bán kính quy định (<span id="subBarRadius">50</span>m) để mở khóa form và điểm danh.</span>
+        </div>
+    </div>
+
+    <!-- Voice Alert Floating Toast Notification -->
+    <div id="voiceAlertToast" class="voice-alert-toast d-none">
+        <div class="d-flex align-items-center">
+            <i class="fa-solid fa-volume-high text-warning fs-5 me-2 pulse-icon" id="voiceToastIcon"></i>
+            <div id="voiceAlertToastText" class="small fw-semibold flex-grow-1"></div>
+            <button type="button" class="btn-close ms-2" onclick="hideVoiceToast()" aria-label="Close"></button>
         </div>
     </div>
 
@@ -608,7 +653,7 @@
                                 <input type="text" class="form-control" id="fullName" placeholder="Nhập họ và tên" disabled />
                             </div>
                             <div class="mb-3">
-                                <label>Lớp</label>
+                                <label>Lớp <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="className" placeholder="Ví dụ: D23CTC1" disabled oninput="handleClassInput(this.value)" />
                             </div>
                             <div class="mb-3">
@@ -1076,6 +1121,103 @@
             }
         }
 
+        // ===== HỆ THỐNG TRỢ LÝ GIỌNG NÓI NỮ AI (TTS) =====
+        let vietnameseFemaleVoice = null;
+        let voiceToastTimer = null;
+
+        function loadVietnameseVoice() {
+            if (!('speechSynthesis' in window)) return;
+            const voices = window.speechSynthesis.getVoices();
+            // Lọc ưu tiên các giọng nữ tiếng Việt (Hoài My, Linh, Mai, Google tiếng Việt, Natural...)
+            vietnameseFemaleVoice = voices.find(v => {
+                const lang = (v.lang || '').toLowerCase();
+                const name = (v.name || '').toLowerCase();
+                const isVi = lang.startsWith('vi');
+                const isFemale = name.includes('female') || name.includes('nữ') || 
+                                 name.includes('hoaimy') || name.includes('linh') || 
+                                 name.includes('mai') || name.includes('google') ||
+                                 name.includes('natural');
+                return isVi && isFemale;
+            }) || voices.find(v => (v.lang || '').toLowerCase().startsWith('vi')) || null;
+        }
+
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.onvoiceschanged = loadVietnameseVoice;
+            loadVietnameseVoice();
+        }
+
+        function speakFemaleVoice(text) {
+            if (!('speechSynthesis' in window)) return;
+            try {
+                window.speechSynthesis.cancel(); // Dừng câu trước đó nếu đang nói
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'vi-VN';
+                utterance.rate = 0.95;  // Tốc độ chuẩn, phát âm rõ ràng
+                utterance.pitch = 1.15; // Tông giọng nữ trong trẻo, tự nhiên
+
+                if (!vietnameseFemaleVoice) {
+                    loadVietnameseVoice();
+                }
+                if (vietnameseFemaleVoice) {
+                    utterance.voice = vietnameseFemaleVoice;
+                }
+                window.speechSynthesis.speak(utterance);
+            } catch (e) {
+                console.warn('Lỗi đọc giọng nói AI:', e);
+            }
+        }
+
+        function showVoiceToast(message, type = 'warning') {
+            const toast = document.getElementById('voiceAlertToast');
+            const textEl = document.getElementById('voiceAlertToastText');
+            const icon = document.getElementById('voiceToastIcon');
+            if (!toast || !textEl) return;
+
+            textEl.textContent = message;
+            toast.classList.remove('d-none');
+            if (type === 'success') {
+                toast.classList.add('success-toast');
+                if (icon) {
+                    icon.className = 'fa-solid fa-circle-check text-success fs-5 me-2 pulse-icon';
+                }
+            } else {
+                toast.classList.remove('success-toast');
+                if (icon) {
+                    icon.className = 'fa-solid fa-volume-high text-warning fs-5 me-2 pulse-icon';
+                }
+            }
+
+            if (voiceToastTimer) clearTimeout(voiceToastTimer);
+            voiceToastTimer = setTimeout(() => {
+                hideVoiceToast();
+            }, 6500);
+        }
+
+        function hideVoiceToast() {
+            const toast = document.getElementById('voiceAlertToast');
+            if (toast) toast.classList.add('d-none');
+            if (voiceToastTimer) {
+                clearTimeout(voiceToastTimer);
+                voiceToastTimer = null;
+            }
+        }
+
+        function showRequiredVoiceAlert(fieldId, displayMessage) {
+            const el = document.getElementById(fieldId);
+            if (el) {
+                el.focus();
+                el.classList.add('field-error-highlight');
+                setTimeout(() => el.classList.remove('field-error-highlight'), 3500);
+            }
+
+            // Hiển thị thông báo trên giao diện có loa phát
+            showVoiceToast(displayMessage, 'warning');
+
+            // Đọc bằng giọng nữ AI (bỏ icon ⚠️ trước khi đọc)
+            const textToSpeak = displayMessage.replace(/^[⚠️!*]\s*/g, '');
+            speakFemaleVoice(textToSpeak);
+        }
+
         function getVietnamTimestamp(d = new Date()) {
             try {
                 const parts = new Intl.DateTimeFormat('en-GB', {
@@ -1119,24 +1261,57 @@
             resultBox.style.display = 'block';
             resultBox.className = 'result-box success';
             resultBox.innerHTML = `<h5>🎉 Điểm danh THÀNH CÔNG!</h5>
-                <p class="mb-0">Dữ liệu của sinh viên <strong>${fullName} (${studentCode})</strong> đã được ghi nhận trực tiếp vào Hệ thống của Ban tổ chức.</p>`;
+                <p class="mb-2">Dữ liệu của sinh viên <strong>${fullName} (${studentCode})</strong> đã được ghi nhận trực tiếp vào Hệ thống của Ban tổ chức.</p>
+                <div class="small text-success mt-2 fw-semibold"><i class="fa-solid fa-volume-high me-1"></i><em>"Điểm danh thành công! Cảm ơn bạn đã tham gia hoạt động. Chúc bạn một ngày tốt lành!"</em></div>`;
             
             btn.innerHTML = '<i class="fa-solid fa-check-double"></i> ĐÃ HOÀN TẤT ĐIỂM DANH';
             document.querySelectorAll('#studentForm .form-control').forEach(el => el.disabled = true);
+
+            // Giọng nữ AI đọc thông báo thành công
+            const successVoiceText = 'Điểm danh thành công! Cảm ơn bạn đã tham gia hoạt động. Chúc bạn một ngày tốt lành!';
+            speakFemaleVoice(successVoiceText);
+            showVoiceToast('🎉 ' + successVoiceText, 'success');
         }
 
         async function submitCheckIn() {
+            // Khơi tạo lại engine speech trong context user click để mobile (iOS/Android) cho phép phát âm thanh
+            if ('speechSynthesis' in window && window.speechSynthesis.paused) {
+                window.speechSynthesis.resume();
+            }
+
             // Kiểm tra xem máy này đã điểm danh sự kiện này chưa (Client-side fast prevention)
             if (localStorage.getItem("checked_in_" + activity.code) === "true") {
-                alert("Thiết bị này đã thực hiện điểm danh cho sự kiện này rồi!");
+                const msg = "Thiết bị này đã thực hiện điểm danh cho sự kiện này rồi!";
+                showVoiceToast(msg, 'warning');
+                speakFemaleVoice(msg);
                 return;
             }
 
+            // 1. Kiểm tra MSSV
             const studentCode = document.getElementById('studentCode').value.trim();
-            const fullName = document.getElementById('fullName').value.trim();
+            if (!studentCode) {
+                showRequiredVoiceAlert('studentCode', '⚠️ Bạn chưa nhập Mã số sinh viên. Vui lòng nhập MSSV để tiếp tục nhé!');
+                return;
+            }
 
-            if (!studentCode || !fullName) {
-                alert('Vui lòng điền MSSV và Họ tên đầy đủ.');
+            // 2. Kiểm tra Họ và Tên
+            const fullName = document.getElementById('fullName').value.trim();
+            if (!fullName) {
+                showRequiredVoiceAlert('fullName', '⚠️ Bạn chưa nhập Họ và Tên. Vui lòng điền đầy đủ họ tên của bạn!');
+                return;
+            }
+
+            // 3. Kiểm tra Lớp
+            const className = document.getElementById('className').value.trim();
+            if (!className) {
+                showRequiredVoiceAlert('className', '⚠️ Bạn chưa nhập Lớp. Vui lòng nhập tên lớp, ví dụ: D23CTC1.');
+                return;
+            }
+
+            // 4. Kiểm tra Khoa
+            const faculty = document.getElementById('faculty').value.trim();
+            if (!faculty) {
+                showRequiredVoiceAlert('faculty', '⚠️ Bạn chưa chọn Khoa. Vui lòng chọn khoa của bạn trong danh sách!');
                 return;
             }
 
@@ -1159,8 +1334,8 @@
                 title: activity.title || '', // Gửi kèm tên sự kiện
                 studentCode: studentCode,
                 name: fullName,
-                className: document.getElementById('className').value || '',
-                faculty: document.getElementById('faculty').value || '',
+                className: className,
+                faculty: faculty,
                 phoneNumber: document.getElementById('phoneNumber').value || '',
                 email: document.getElementById('email').value || '',
                 coords: `${userLat.toFixed(6)}, ${userLng.toFixed(6)}`,
