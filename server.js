@@ -64,8 +64,17 @@ if (DATABASE_URL) {
             end_time TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             is_deleted BOOLEAN DEFAULT FALSE,
-            deleted_at TEXT
+            deleted_at TEXT,
+            created_by TEXT
         );
+
+        -- Tự động thêm cột created_by nếu bảng đã tạo từ trước
+        DO $$ 
+        BEGIN 
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='activities' AND column_name='created_by') THEN
+                ALTER TABLE activities ADD COLUMN created_by TEXT;
+            END IF;
+        END $$;
 
         CREATE TABLE IF NOT EXISTS checkins (
             id SERIAL PRIMARY KEY,
@@ -164,7 +173,7 @@ function getLocalIp() {
 async function dbGetActivities() {
     if (pool) {
         try {
-            const res = await pool.query('SELECT code, title, description, location_address as "locationAddress", latitude, longitude, radius_meters as "radiusMeters", start_time as "startTime", end_time as "endTime" FROM activities WHERE is_deleted IS NOT TRUE ORDER BY created_at DESC');
+            const res = await pool.query('SELECT code, title, description, location_address as "locationAddress", latitude, longitude, radius_meters as "radiusMeters", start_time as "startTime", end_time as "endTime", created_by as "createdBy" FROM activities WHERE is_deleted IS NOT TRUE ORDER BY created_at DESC');
             return res.rows;
         } catch (e) { console.error('Lỗi đọc activities từ SQL:', e); }
     }
@@ -177,7 +186,7 @@ async function dbGetActivities() {
 async function dbGetDeletedActivities() {
     if (pool) {
         try {
-            const res = await pool.query('SELECT code, title, description, location_address as "locationAddress", latitude, longitude, radius_meters as "radiusMeters", start_time as "startTime", end_time as "endTime", deleted_at as "deletedAt" FROM activities WHERE is_deleted = TRUE ORDER BY deleted_at DESC');
+            const res = await pool.query('SELECT code, title, description, location_address as "locationAddress", latitude, longitude, radius_meters as "radiusMeters", start_time as "startTime", end_time as "endTime", created_by as "createdBy", deleted_at as "deletedAt" FROM activities WHERE is_deleted = TRUE ORDER BY deleted_at DESC');
             return res.rows;
         } catch (e) { console.error('Lỗi đọc deleted activities từ SQL:', e); }
     }
@@ -202,8 +211,8 @@ async function dbSaveActivities(activitiesList) {
             for (const act of activitiesList) {
                 if (!act || !act.code) continue;
                 await pool.query(`
-                    INSERT INTO activities (code, title, description, location_address, latitude, longitude, radius_meters, start_time, end_time, is_deleted, deleted_at)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, FALSE, NULL)
+                    INSERT INTO activities (code, title, description, location_address, latitude, longitude, radius_meters, start_time, end_time, created_by, is_deleted, deleted_at)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, FALSE, NULL)
                     ON CONFLICT (code) DO UPDATE SET
                         title = EXCLUDED.title,
                         description = EXCLUDED.description,
@@ -213,12 +222,14 @@ async function dbSaveActivities(activitiesList) {
                         radius_meters = EXCLUDED.radius_meters,
                         start_time = EXCLUDED.start_time,
                         end_time = EXCLUDED.end_time,
+                        created_by = COALESCE(NULLIF(EXCLUDED.created_by, ''), activities.created_by),
                         is_deleted = FALSE,
                         deleted_at = NULL;
                 `, [
                     act.code, act.title || '', act.description || '', act.locationAddress || '',
                     parseFloat(act.latitude) || 0, parseFloat(act.longitude) || 0,
-                    parseInt(act.radiusMeters) || 50, act.startTime || '', act.endTime || ''
+                    parseInt(act.radiusMeters) || 50, act.startTime || '', act.endTime || '',
+                    act.createdBy || ''
                 ]);
             }
             return true;

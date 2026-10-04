@@ -1451,10 +1451,15 @@
                                 <input type="text" class="form-control" id="newCode" placeholder="VD: SVTN2026" required
                                     style="text-transform: uppercase;" />
                             </div>
-                            <div class="col-md-8">
+                            <div class="col-md-4">
                                 <label class="form-label fw-bold small">Tên hoạt động / Sự kiện:</label>
                                 <input type="text" class="form-control" id="newTitle"
                                     placeholder="VD: Gặp gỡ tân sinh viên" required />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold small"><i class="fa-solid fa-user-pen text-primary me-1"></i>Tài khoản tạo sự kiện:</label>
+                                <input type="text" class="form-control" id="newCreatedBy"
+                                    placeholder="VD: hongnhung2050py@gmail.com" />
                             </div>
                         </div>
 
@@ -2537,6 +2542,7 @@
 
             container.innerHTML = list.map((item, idx) => {
                 const actCount = (attendanceData || []).filter(r => String(r.code || '').trim().toUpperCase() === String(item.code || '').trim().toUpperCase()).length;
+                const creator = item.createdBy || sessionStorage.getItem("admin_user") || "hongnhung2050py@gmail.com";
                 return `
                 <div class="activity-item-row d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <div style="cursor: pointer;" onclick="viewActivityAttendance('${item.code}')" title="Nhấn vào để xem danh sách ${actCount} sinh viên điểm danh sự kiện này">
@@ -2545,9 +2551,15 @@
                             <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill fw-bold" id="act-count-badge-${item.code}">
                                 <i class="fa-solid fa-users me-1"></i><span id="act-count-${item.code}">${actCount}</span> SV
                             </span>
+                            <span class="badge bg-info-subtle text-primary border border-info-subtle rounded-pill fw-semibold ms-1" style="font-size: 0.76rem;" title="Tài khoản đã tạo sự kiện này">
+                                <i class="fa-solid fa-user-tie me-1"></i>${creator}
+                            </span>
                         </div>
                         <strong class="d-block mt-1 text-primary">${item.title}</strong>
                         <span class="small text-muted d-block"><i class="fa-solid fa-location-dot"></i> ${item.locationAddress} (Bán kính: ${item.radiusMeters}m)</span>
+                        <span class="small text-secondary d-block mt-1" style="font-size: 0.8rem;">
+                            <i class="fa-solid fa-user-pen text-primary me-1"></i>Tài khoản tạo: <strong class="text-dark">${creator}</strong>
+                        </span>
                     </div>
                     <div class="d-flex gap-2">
                         <button class="btn btn-sm btn-primary fw-semibold" onclick="viewActivityAttendance('${item.code}')" title="Xem danh sách ${actCount} sinh viên sự kiện này"><i class="fa-solid fa-users-viewfinder me-1"></i>Xem DS (${actCount} SV)</button>
@@ -2601,6 +2613,10 @@
             e.preventDefault();
             const list = getActivities();
 
+            const creatorInput = document.getElementById('newCreatedBy');
+            const defaultAdmin = sessionStorage.getItem("admin_user") || "hongnhung2050py@gmail.com";
+            const creatorVal = (creatorInput && creatorInput.value.trim()) ? creatorInput.value.trim() : defaultAdmin;
+
             const newAct = {
                 code: document.getElementById('newCode').value.trim().toUpperCase(),
                 title: document.getElementById('newTitle').value.trim(),
@@ -2610,7 +2626,8 @@
                 startTime: formatDateTimeLocalToFriendly(document.getElementById('newStart').value),
                 endTime: formatDateTimeLocalToFriendly(document.getElementById('newEnd').value),
                 latitude: parseFloat(document.getElementById('newLat').value),
-                longitude: parseFloat(document.getElementById('newLng').value)
+                longitude: parseFloat(document.getElementById('newLng').value),
+                createdBy: creatorVal
             };
 
             if (editingIndex === -1) {
@@ -2775,6 +2792,9 @@
                                         <span class="text-muted small d-block">
                                             <i class="fa-solid fa-location-dot me-1"></i>${item.locationAddress || 'Chưa có địa chỉ'} (Bán kính: ${item.radiusMeters || 50}m)
                                         </span>
+                                        <span class="small text-secondary d-block mt-1" style="font-size: 0.78rem;">
+                                            <i class="fa-solid fa-user-pen text-primary me-1"></i>Tài khoản tạo: <strong class="text-dark">${item.createdBy || sessionStorage.getItem("admin_user") || 'hongnhung2050py@gmail.com'}</strong>
+                                        </span>
                                     </td>
                                     <td>
                                         <span class="text-danger fw-semibold">
@@ -2932,6 +2952,10 @@
             document.getElementById('newStart').value = parseFriendlyToDateTimeLocal(act.startTime);
             document.getElementById('newEnd').value = parseFriendlyToDateTimeLocal(act.endTime);
 
+            const creator = act.createdBy || sessionStorage.getItem('admin_user') || 'hongnhung2050py@gmail.com';
+            const creatorEl = document.getElementById('newCreatedBy');
+            if (creatorEl) creatorEl.value = creator;
+
             const lat = parseFloat(act.latitude) || 0;
             const lng = parseFloat(act.longitude) || 0;
             document.getElementById('newLat').value = lat.toFixed(6);
@@ -3087,6 +3111,8 @@
                 if (editingIndex === -1) {
                     document.getElementById('addTabHeader').innerHTML = '<i class="fa-solid fa-plus-circle me-2 text-primary"></i>Tạo sự kiện điểm danh mới';
                     document.getElementById('btnSubmitEvent').innerHTML = '<i class="fa-solid fa-save me-2"></i>Tạo Sự Kiện Điểm Danh';
+                    const creatorEl = document.getElementById('newCreatedBy');
+                    if (creatorEl) creatorEl.value = sessionStorage.getItem("admin_user") || "hongnhung2050py@gmail.com";
                 }
 
                 initSelectMap();

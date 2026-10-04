@@ -857,6 +857,7 @@
                     <div class="activity-meta">
                         <span class="meta-item location"><i class="fa-solid fa-location-dot"></i> Địa điểm: <strong id="actLocation">---</strong></span>
                         <span class="meta-item"><i class="fa-solid fa-bullseye"></i> Bán kính cho phép: <strong id="actRadius">---</strong></span>
+                        <span class="meta-item"><i class="fa-solid fa-user-pen"></i> Tài khoản tạo: <strong id="actCreatedBy">---</strong></span>
                     </div>
                 </div>
                 <a href="index.html" class="btn btn-outline-secondary btn-sm" id="btnBackList"><i class="fa-solid fa-arrow-left"></i> Danh Sách Sự Kiện</a>
@@ -1214,6 +1215,9 @@
         document.getElementById('actTitle').textContent = activity.title;
         document.getElementById('actLocation').textContent = activity.locationAddress;
         document.getElementById('actRadius').textContent = activity.radiusMeters + ' mét';
+        if (document.getElementById('actCreatedBy')) {
+            document.getElementById('actCreatedBy').textContent = activity.createdBy || 'hongnhung2050py@gmail.com';
+        }
         if (document.getElementById('subBarRadius')) {
             document.getElementById('subBarRadius').textContent = activity.radiusMeters;
         }
