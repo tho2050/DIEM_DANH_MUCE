@@ -169,6 +169,15 @@ if (DATABASE_URL) {
                       AND password LIKE 'google_sso_%';
                 `);
             } catch (e) {}
+
+            // Lưu cấu hình Gmail SMTP cố định
+            try {
+                await pool.query(`
+                    INSERT INTO system_config (key_name, value_text) 
+                    VALUES ('smtp_config', $1)
+                    ON CONFLICT (key_name) DO UPDATE SET value_text = EXCLUDED.value_text;
+                `, [JSON.stringify({ user: 'diemdanhmuce@gmail.com', pass: 'nqeqyynpqjdngkwb', host: 'smtp.gmail.com', port: 465 })]);
+            } catch (e) {}
         })
         .catch(err => console.error('❌ Lỗi khởi tạo PostgreSQL Tables:', err));
 } else {
@@ -728,8 +737,8 @@ async function dbUpdateAccount(username, password, role, status) {
 async function dbGetSmtpConfig() {
     let host = process.env.SMTP_HOST || 'smtp.gmail.com';
     let port = parseInt(process.env.SMTP_PORT) || 465;
-    let user = process.env.GMAIL_USER || process.env.SMTP_USER || '';
-    let pass = process.env.GMAIL_PASS || process.env.SMTP_PASS || '';
+    let user = process.env.GMAIL_USER || process.env.SMTP_USER || 'diemdanhmuce@gmail.com';
+    let pass = process.env.GMAIL_PASS || process.env.SMTP_PASS || 'nqeqyynpqjdngkwb';
 
     if (pool) {
         try {
