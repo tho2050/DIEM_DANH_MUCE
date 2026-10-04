@@ -544,10 +544,79 @@
                 20%, 60% { transform: translateX(-5px); }
                 40%, 80% { transform: translateX(5px); }
             }
+
+            /* ===== HIỆU ỨNG HÌNH NỀN THỜI TIẾT ĐỘNG (NỀN TRẮNG SÁNG) ===== */
+            #weatherCanvas {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                pointer-events: none;
+                z-index: 0;
+            }
+            body {
+                position: relative;
+                background: #f8fafc;
+                transition: background 0.8s ease;
+            }
+            body.weather-bg-sunrise {
+                background: linear-gradient(180deg, #fff7ed 0%, #fef2f2 35%, #f8fafc 100%) !important;
+            }
+            body.weather-bg-sunshine {
+                background: linear-gradient(180deg, #fefce8 0%, #fffbeb 40%, #f8fafc 100%) !important;
+            }
+            body.weather-bg-snow {
+                background: linear-gradient(180deg, #f0f9ff 0%, #f8fafc 50%, #ffffff 100%) !important;
+            }
+            body.weather-bg-rain {
+                background: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 60%, #f8fafc 100%) !important;
+            }
+            .top-bar, .sub-bar, .container, .muce-footer {
+                position: relative;
+                z-index: 1;
+            }
+            .activity-header, .panel-card {
+                background: rgba(255, 255, 255, 0.94) !important;
+                backdrop-filter: blur(10px);
+                border: 1px solid rgba(226, 232, 240, 0.85);
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+            }
+            .weather-pill-group {
+                background: rgba(255, 255, 255, 0.22);
+                backdrop-filter: blur(8px);
+                border-radius: 20px;
+                padding: 2px 4px;
+                border: 1px solid rgba(255, 255, 255, 0.35);
+            }
+            .weather-pill-btn {
+                background: transparent;
+                border: none;
+                font-size: 0.82rem;
+                line-height: 1;
+                padding: 3px 6px;
+                border-radius: 12px;
+                cursor: pointer;
+                transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+                opacity: 0.78;
+            }
+            .weather-pill-btn:hover {
+                opacity: 1;
+                transform: scale(1.18);
+            }
+            .weather-pill-btn.active {
+                background: #ffffff;
+                opacity: 1;
+                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.16);
+                transform: scale(1.12);
+            }
         }
     </style>
 </head>
 <body>
+    <!-- Canvas Hiệu Ứng Thời Tiết Động Nền Trắng Sáng -->
+    <canvas id="weatherCanvas"></canvas>
+
     <div class="top-bar">
         <div class="container d-flex justify-content-between align-items-center">
             <a href="index.html" class="d-flex align-items-center text-decoration-none me-2" style="max-width: 68%;">
@@ -560,8 +629,20 @@
         </div>
     </div>
     <div class="sub-bar py-2">
-        <div class="container">
-            <span class="small text-white-50"><i class="fa-solid fa-info-circle me-1"></i> Xác thực định vị GPS trong bán kính quy định (<span id="subBarRadius">50</span>m) để mở khóa form và điểm danh.</span>
+        <div class="container d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <span class="small text-white-50"><i class="fa-solid fa-info-circle me-1"></i> Xác thực định vị GPS trong bán kính (<span id="subBarRadius">50</span>m) để mở khóa form.</span>
+            
+            <!-- Bộ điều khiển hiệu ứng thời tiết động -->
+            <div class="weather-selector-wrap d-inline-flex align-items-center gap-1">
+                <span class="small text-white-50 d-none d-sm-inline me-1" style="font-size: 0.75rem;"><i class="fa-solid fa-cloud-sun me-1"></i>Nền động:</span>
+                <div class="weather-pill-group d-flex" id="weatherPills">
+                    <button type="button" class="weather-pill-btn active" id="wpSunrise" onclick="setWeatherMode('sunrise')" title="Bình minh rạng rỡ">🌅</button>
+                    <button type="button" class="weather-pill-btn" id="wpSunshine" onclick="setWeatherMode('sunshine')" title="Nắng mặt trời">☀️</button>
+                    <button type="button" class="weather-pill-btn" id="wpSnow" onclick="setWeatherMode('snow')" title="Tuyết rơi">❄️</button>
+                    <button type="button" class="weather-pill-btn" id="wpRain" onclick="setWeatherMode('rain')" title="Mưa rơi & Sấm sét">🌧️</button>
+                    <button type="button" class="weather-pill-btn" id="wpAuto" onclick="toggleWeatherAuto()" title="Tự động luân chuyển">🔄</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1365,6 +1446,408 @@
                 saveLocalAndShowSuccess(studentCode, fullName, dist);
             }
         }
+
+        // ===== HỆ THỐNG HIỆU ỨNG THỜI TIẾT ĐỘNG (CANVAS 60FPS) =====
+        // Hỗ trợ: Tuyết rơi, Mưa rơi & sấm sét, Nắng mặt trời, Bình minh trên nền trắng sáng
+        (function() {
+            const canvas = document.getElementById('weatherCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            let width = 0, height = 0;
+            let currentMode = localStorage.getItem('muce_weather_mode') || 'sunrise';
+            let isAutoCycle = localStorage.getItem('muce_weather_auto') === 'true';
+            let animId = null;
+            let lastTime = performance.now();
+
+            // 1. Tuyết rơi
+            const snowFlakes = [];
+            const MAX_SNOW = window.innerWidth < 768 ? 45 : 85;
+
+            // 2. Mưa & Sấm sét
+            const rainDrops = [];
+            const splashes = [];
+            const MAX_RAIN = window.innerWidth < 768 ? 65 : 130;
+            let lightning = { active: false, opacity: 0, bolt: null, nextTime: performance.now() + 3000 };
+
+            // 3. Bình minh & Nắng mặt trời
+            const sunRays = { rotation: 0 };
+            const dustMotes = [];
+            const MAX_MOTES = window.innerWidth < 768 ? 25 : 45;
+
+            function resize() {
+                const dpr = Math.min(window.devicePixelRatio || 1, 2);
+                width = window.innerWidth;
+                height = window.innerHeight;
+                canvas.width = width * dpr;
+                canvas.height = height * dpr;
+                ctx.scale(dpr, dpr);
+            }
+            window.addEventListener('resize', resize);
+            resize();
+
+            // Khởi tạo hạt Tuyết
+            for (let i = 0; i < MAX_SNOW; i++) {
+                snowFlakes.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    radius: Math.random() * 2.8 + 1.2,
+                    speedY: Math.random() * 1.1 + 0.5,
+                    speedX: Math.random() * 0.6 - 0.3,
+                    swaySpeed: Math.random() * 0.02 + 0.01,
+                    swayAngle: Math.random() * Math.PI * 2,
+                    opacity: Math.random() * 0.55 + 0.35
+                });
+            }
+
+            // Khởi tạo hạt Mưa
+            for (let i = 0; i < MAX_RAIN; i++) {
+                rainDrops.push({
+                    x: Math.random() * (width + 100),
+                    y: Math.random() * height,
+                    len: Math.random() * 18 + 12,
+                    speedY: Math.random() * 12 + 15,
+                    speedX: -2.5,
+                    opacity: Math.random() * 0.35 + 0.22
+                });
+            }
+
+            // Khởi tạo hạt bụi sáng mặt trời
+            for (let i = 0; i < MAX_MOTES; i++) {
+                dustMotes.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    radius: Math.random() * 2.5 + 1,
+                    speedY: -(Math.random() * 0.5 + 0.2),
+                    speedX: Math.random() * 0.5 - 0.25,
+                    alpha: Math.random() * 0.55 + 0.2,
+                    pulseSpeed: Math.random() * 0.03 + 0.01,
+                    pulseAngle: Math.random() * Math.PI * 2
+                });
+            }
+
+            function createLightningBolt() {
+                const startX = Math.random() * width * 0.8 + width * 0.1;
+                const bolt = [{ x: startX, y: 0 }];
+                let curX = startX;
+                let curY = 0;
+                const steps = Math.floor(Math.random() * 6) + 7;
+                const targetY = height * (Math.random() * 0.45 + 0.35);
+                const dy = targetY / steps;
+
+                for (let i = 0; i < steps; i++) {
+                    curX += (Math.random() - 0.5) * 60;
+                    curY += dy;
+                    bolt.push({ x: curX, y: curY });
+                }
+                return bolt;
+            }
+
+            // 1. VẼ HIỆU ỨNG BÌNH MINH (SUNRISE)
+            function drawSunrise(dt) {
+                sunRays.rotation += 0.002;
+                const sunX = width > 768 ? width * 0.85 : width * 0.8;
+                const sunY = height * 0.15;
+
+                // Quầng sáng rạng đông tỏa ra từ góc mặt trời
+                const sunriseGlow = ctx.createRadialGradient(sunX, sunY, 10, sunX, sunY, Math.max(width, height) * 0.65);
+                sunriseGlow.addColorStop(0, 'rgba(255, 237, 213, 0.45)');
+                sunriseGlow.addColorStop(0.25, 'rgba(254, 215, 170, 0.22)');
+                sunriseGlow.addColorStop(0.55, 'rgba(254, 240, 138, 0.08)');
+                sunriseGlow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                ctx.fillStyle = sunriseGlow;
+                ctx.fillRect(0, 0, width, height);
+
+                // Các tia nắng bình minh (Sunbeams) xoay nhẹ
+                ctx.save();
+                ctx.translate(sunX, sunY);
+                ctx.rotate(sunRays.rotation);
+                const rayCount = 12;
+                const maxRayLen = Math.max(width, height) * 0.8;
+                for (let i = 0; i < rayCount; i++) {
+                    const angle = (i * Math.PI * 2) / rayCount;
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.arc(0, 0, maxRayLen, angle - 0.08, angle + 0.08);
+                    ctx.closePath();
+                    ctx.fillStyle = 'rgba(251, 191, 36, 0.038)';
+                    ctx.fill();
+                }
+                ctx.restore();
+
+                // Quả cầu mặt trời hồng hào bình minh
+                const sunDisc = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, 70);
+                sunDisc.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+                sunDisc.addColorStop(0.35, 'rgba(254, 215, 170, 0.65)');
+                sunDisc.addColorStop(0.7, 'rgba(251, 146, 60, 0.25)');
+                sunDisc.addColorStop(1, 'rgba(251, 146, 60, 0)');
+                ctx.beginPath();
+                ctx.arc(sunX, sunY, 70, 0, Math.PI * 2);
+                ctx.fillStyle = sunDisc;
+                ctx.fill();
+
+                // Hạt ánh sáng buổi sớm
+                dustMotes.forEach(m => {
+                    m.y += m.speedY;
+                    m.x += m.speedX;
+                    m.pulseAngle += m.pulseSpeed;
+                    if (m.y < 0) { m.y = height + 10; m.x = Math.random() * width; }
+                    if (m.x < 0) m.x = width;
+                    if (m.x > width) m.x = 0;
+
+                    const alpha = m.alpha * (0.6 + 0.4 * Math.sin(m.pulseAngle));
+                    ctx.beginPath();
+                    ctx.arc(m.x, m.y, m.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(245, 158, 11, ${alpha})`;
+                    ctx.fill();
+                });
+            }
+
+            // 2. VẼ HIỆU ỨNG NẮNG MẶT TRỜI (SUNSHINE)
+            function drawSunshine(dt) {
+                sunRays.rotation += 0.003;
+                const sunX = width > 768 ? width * 0.88 : width * 0.82;
+                const sunY = height * 0.12;
+
+                const sunGlow = ctx.createRadialGradient(sunX, sunY, 15, sunX, sunY, Math.max(width, height) * 0.7);
+                sunGlow.addColorStop(0, 'rgba(254, 240, 138, 0.48)');
+                sunGlow.addColorStop(0.25, 'rgba(253, 224, 71, 0.18)');
+                sunGlow.addColorStop(0.6, 'rgba(250, 204, 21, 0.06)');
+                sunGlow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                ctx.fillStyle = sunGlow;
+                ctx.fillRect(0, 0, width, height);
+
+                ctx.save();
+                ctx.translate(sunX, sunY);
+                ctx.rotate(sunRays.rotation);
+                const rayCount = 16;
+                const maxRayLen = Math.max(width, height);
+                for (let i = 0; i < rayCount; i++) {
+                    const angle = (i * Math.PI * 2) / rayCount;
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.arc(0, 0, maxRayLen, angle - 0.06, angle + 0.06);
+                    ctx.closePath();
+                    ctx.fillStyle = 'rgba(234, 179, 8, 0.04)';
+                    ctx.fill();
+                }
+                ctx.restore();
+
+                ctx.beginPath();
+                ctx.arc(sunX, sunY, 65, 0, Math.PI * 2);
+                const coreGrad = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, 65);
+                coreGrad.addColorStop(0, 'rgba(255, 255, 255, 0.98)');
+                coreGrad.addColorStop(0.4, 'rgba(254, 240, 138, 0.7)');
+                coreGrad.addColorStop(0.8, 'rgba(234, 179, 8, 0.25)');
+                coreGrad.addColorStop(1, 'rgba(234, 179, 8, 0)');
+                ctx.fillStyle = coreGrad;
+                ctx.fill();
+
+                dustMotes.forEach(m => {
+                    m.y += m.speedY * 1.2;
+                    m.x += m.speedX;
+                    m.pulseAngle += m.pulseSpeed;
+                    if (m.y < 0) { m.y = height + 10; m.x = Math.random() * width; }
+                    const alpha = m.alpha * (0.5 + 0.5 * Math.sin(m.pulseAngle));
+                    ctx.beginPath();
+                    ctx.arc(m.x, m.y, m.radius * 1.2, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(234, 179, 8, ${alpha})`;
+                    ctx.fill();
+                });
+            }
+
+            // 3. VẼ HIỆU ỨNG TUYẾT RƠI (SNOW)
+            function drawSnow(dt) {
+                snowFlakes.forEach(f => {
+                    f.y += f.speedY;
+                    f.swayAngle += f.swaySpeed;
+                    f.x += f.speedX + Math.sin(f.swayAngle) * 0.8;
+
+                    if (f.y > height + 10) {
+                        f.y = -10;
+                        f.x = Math.random() * width;
+                    }
+                    if (f.x > width + 10) f.x = -10;
+                    if (f.x < -10) f.x = width + 10;
+
+                    ctx.beginPath();
+                    ctx.arc(f.x, f.y, f.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(186, 230, 253, ${f.opacity})`;
+                    ctx.shadowBlur = f.radius > 2.2 ? 4 : 0;
+                    ctx.shadowColor = 'rgba(56, 189, 248, 0.5)';
+                    ctx.fill();
+                });
+                ctx.shadowBlur = 0;
+            }
+
+            // 4. VẼ HIỆU ỨNG MƯA & SẤM SÉT (RAIN & LIGHTNING)
+            function drawRain(dt, now) {
+                if (now > lightning.nextTime) {
+                    lightning.active = true;
+                    lightning.opacity = Math.random() * 0.45 + 0.45;
+                    lightning.bolt = createLightningBolt();
+                    lightning.nextTime = now + Math.random() * 5500 + 4000; // 4-9s chớp 1 lần
+                }
+
+                if (lightning.active) {
+                    // Ánh chớp sáng lòa
+                    ctx.fillStyle = `rgba(255, 255, 255, ${lightning.opacity})`;
+                    ctx.fillRect(0, 0, width, height);
+
+                    // Tia sét phân nhánh
+                    if (lightning.bolt && lightning.bolt.length > 1) {
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.moveTo(lightning.bolt[0].x, lightning.bolt[0].y);
+                        for (let i = 1; i < lightning.bolt.length; i++) {
+                            ctx.lineTo(lightning.bolt[i].x, lightning.bolt[i].y);
+                        }
+                        ctx.strokeStyle = `rgba(255, 255, 255, ${Math.min(1, lightning.opacity * 1.6)})`;
+                        ctx.lineWidth = 3.5;
+                        ctx.shadowBlur = 20;
+                        ctx.shadowColor = '#0284c7';
+                        ctx.stroke();
+
+                        ctx.lineWidth = 1.5;
+                        ctx.strokeStyle = '#ffffff';
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+
+                    lightning.opacity -= 0.045;
+                    if (lightning.opacity <= 0) {
+                        lightning.active = false;
+                        lightning.bolt = null;
+                    }
+                }
+
+                // Hạt mưa rơi
+                ctx.lineWidth = 1.5;
+                rainDrops.forEach(d => {
+                    d.y += d.speedY;
+                    d.x += d.speedX;
+
+                    if (d.y > height) {
+                        if (Math.random() < 0.25) {
+                            splashes.push({ x: d.x, y: height - 5, r: 2, alpha: 0.6 });
+                        }
+                        d.y = -d.len;
+                        d.x = Math.random() * (width + 100);
+                    }
+
+                    ctx.beginPath();
+                    ctx.moveTo(d.x, d.y);
+                    ctx.lineTo(d.x + d.speedX * 1.5, d.y + d.len);
+                    ctx.strokeStyle = `rgba(2, 132, 199, ${d.opacity})`;
+                    ctx.stroke();
+                });
+
+                // Bọt nước bắn
+                for (let i = splashes.length - 1; i >= 0; i--) {
+                    const sp = splashes[i];
+                    sp.r += 0.5;
+                    sp.alpha -= 0.05;
+                    if (sp.alpha <= 0) {
+                        splashes.splice(i, 1);
+                        continue;
+                    }
+                    ctx.beginPath();
+                    ctx.arc(sp.x, sp.y, sp.r, 0, Math.PI * 2);
+                    ctx.strokeStyle = `rgba(56, 189, 248, ${sp.alpha})`;
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                }
+            }
+
+            function render(now) {
+                animId = requestAnimationFrame(render);
+                const dt = (now - lastTime) / 1000;
+                lastTime = now;
+
+                ctx.clearRect(0, 0, width, height);
+
+                if (currentMode === 'sunrise') {
+                    drawSunrise(dt);
+                } else if (currentMode === 'sunshine') {
+                    drawSunshine(dt);
+                } else if (currentMode === 'snow') {
+                    drawSnow(dt);
+                } else if (currentMode === 'rain') {
+                    drawRain(dt, now);
+                }
+            }
+
+            window.setWeatherMode = function(mode, save = true) {
+                currentMode = mode;
+                if (save) {
+                    localStorage.setItem('muce_weather_mode', mode);
+                    if (isAutoCycle && mode !== 'auto') {
+                        isAutoCycle = false;
+                        localStorage.setItem('muce_weather_auto', 'false');
+                        const autoBtn = document.getElementById('wpAuto');
+                        if (autoBtn) autoBtn.classList.remove('active');
+                    }
+                }
+
+                document.body.classList.remove('weather-bg-sunrise', 'weather-bg-sunshine', 'weather-bg-snow', 'weather-bg-rain');
+                if (mode !== 'off') {
+                    document.body.classList.add('weather-bg-' + mode);
+                }
+
+                document.querySelectorAll('.weather-pill-btn').forEach(btn => btn.classList.remove('active'));
+                const btnIdMap = {
+                    'sunrise': 'wpSunrise',
+                    'sunshine': 'wpSunshine',
+                    'snow': 'wpSnow',
+                    'rain': 'wpRain'
+                };
+                const activeBtn = document.getElementById(btnIdMap[mode]);
+                if (activeBtn) activeBtn.classList.add('active');
+
+                if (mode === 'off') {
+                    canvas.style.display = 'none';
+                } else {
+                    canvas.style.display = 'block';
+                }
+            };
+
+            window.toggleWeatherAuto = function() {
+                isAutoCycle = !isAutoCycle;
+                localStorage.setItem('muce_weather_auto', isAutoCycle ? 'true' : 'false');
+                const autoBtn = document.getElementById('wpAuto');
+                if (autoBtn) {
+                    if (isAutoCycle) {
+                        autoBtn.classList.add('active');
+                        if (typeof showVoiceToast === 'function') {
+                            showVoiceToast('🔄 Đã bật chế độ tự động luân chuyển thời tiết (mỗi 25 giây)', 'success');
+                        }
+                    } else {
+                        autoBtn.classList.remove('active');
+                        if (typeof showVoiceToast === 'function') {
+                            showVoiceToast('⏹️ Đã tắt tự động luân chuyển thời tiết', 'warning');
+                        }
+                    }
+                }
+            };
+
+            const modes = ['sunrise', 'sunshine', 'snow', 'rain'];
+            let modeIdx = modes.indexOf(currentMode);
+            if (modeIdx === -1) modeIdx = 0;
+
+            setInterval(() => {
+                if (isAutoCycle) {
+                    modeIdx = (modeIdx + 1) % modes.length;
+                    window.setWeatherMode(modes[modeIdx], false);
+                }
+            }, 25000);
+
+            window.setWeatherMode(currentMode, false);
+            if (isAutoCycle) {
+                const autoBtn = document.getElementById('wpAuto');
+                if (autoBtn) autoBtn.classList.add('active');
+            }
+            animId = requestAnimationFrame(render);
+        })();
     </script>
 </body>
 </html>
