@@ -544,141 +544,190 @@
                 20%, 60% { transform: translateX(-5px); }
                 40%, 80% { transform: translateX(5px); }
             }
+        }
 
-            /* ===== HIỆU ỨNG HÌNH NỀN THỜI TIẾT ĐỘNG (NỀN TRẮNG SÁNG) ===== */
-            #weatherCanvas {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100vw;
-                height: 100vh;
-                pointer-events: none;
-                z-index: 0;
-            }
-            body {
-                position: relative;
-                background: #f8fafc;
-                transition: background 0.8s ease;
-            }
-            body.weather-bg-sunrise {
-                background: linear-gradient(180deg, #fff7ed 0%, #fef2f2 35%, #f8fafc 100%) !important;
-            }
-            body.weather-bg-sunshine {
-                background: linear-gradient(180deg, #fefce8 0%, #fffbeb 40%, #f8fafc 100%) !important;
-            }
-            body.weather-bg-snow {
-                background: linear-gradient(180deg, #f0f9ff 0%, #f8fafc 50%, #ffffff 100%) !important;
-            }
-            body.weather-bg-rain {
-                background: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 60%, #f8fafc 100%) !important;
-            }
-            .top-bar, .sub-bar, .container, .muce-footer {
-                position: relative;
-                z-index: 1;
-            }
-            .activity-header, .panel-card {
-                background: rgba(255, 255, 255, 0.72) !important;
-                backdrop-filter: blur(14px) saturate(180%) !important;
-                -webkit-backdrop-filter: blur(14px) saturate(180%) !important;
-                border: 1px solid rgba(255, 255, 255, 0.65) !important;
-                box-shadow: 0 8px 32px rgba(2, 132, 199, 0.07) !important;
-            }
-            .panel-header {
-                background: rgba(255, 255, 255, 0.55) !important;
-                backdrop-filter: blur(10px) !important;
-                -webkit-backdrop-filter: blur(10px) !important;
-            }
-            .top-bar {
-                background: rgba(255, 255, 255, 0.82) !important;
-                backdrop-filter: blur(14px) saturate(180%) !important;
-                -webkit-backdrop-filter: blur(14px) saturate(180%) !important;
-            }
+        /* ===== HIỆU ỨNG HÌNH NỀN THỜI TIẾT ĐỘNG (NỀN TRẮNG SÁNG) ===== */
+        #weatherCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 0;
+        }
+        body {
+            position: relative;
+            background: #f8fafc;
+            transition: background 0.8s ease;
+        }
+        body.weather-bg-sunrise {
+            background: linear-gradient(180deg, #fff7ed 0%, #fef2f2 35%, #f8fafc 100%) !important;
+        }
+        body.weather-bg-sunshine {
+            background: linear-gradient(180deg, #fefce8 0%, #fffbeb 40%, #f8fafc 100%) !important;
+        }
+        body.weather-bg-snow {
+            background: linear-gradient(180deg, #f0f9ff 0%, #f8fafc 50%, #ffffff 100%) !important;
+        }
+        body.weather-bg-rain {
+            background: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 60%, #f8fafc 100%) !important;
+        }
+        .top-bar, .sub-bar, .container, .muce-footer {
+            position: relative;
+            z-index: 1;
+        }
 
-            /* Ô điền thông tin trong suốt để thấy hiệu ứng nền phía sau */
-            .form-section .form-control, .form-select {
-                background-color: rgba(255, 255, 255, 0.58) !important;
-                backdrop-filter: blur(10px) saturate(170%) !important;
-                -webkit-backdrop-filter: blur(10px) saturate(170%) !important;
-                border: 1.5px solid rgba(186, 230, 253, 0.65) !important;
-                color: #0f172a !important;
-                transition: all 0.25s ease;
-            }
-            .form-section .form-control:focus, .form-select:focus {
-                background-color: rgba(255, 255, 255, 0.88) !important;
-                border-color: #0284c7 !important;
-                box-shadow: 0 0 0 3.5px rgba(2, 132, 199, 0.16) !important;
-            }
-            .form-section .form-control:disabled, .form-select:disabled {
-                background-color: rgba(241, 245, 249, 0.45) !important;
-                opacity: 0.88;
-                border-color: rgba(226, 232, 240, 0.6) !important;
-            }
+        /* ===== CÁC KHUNG THẺ TRONG SUỐT GLASSMORPHISM SIÊU THẤU ===== */
+        .activity-header, .panel-card {
+            background: rgba(255, 255, 255, 0.22) !important;
+            backdrop-filter: blur(4px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(4px) saturate(180%) !important;
+            border: 1.5px solid rgba(255, 255, 255, 0.75) !important;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04), inset 0 1px 2px rgba(255, 255, 255, 0.8) !important;
+        }
+        .panel-header {
+            background: rgba(255, 255, 255, 0.12) !important;
+            backdrop-filter: blur(3px) !important;
+            -webkit-backdrop-filter: blur(3px) !important;
+            border-bottom: 1px solid rgba(226, 232, 240, 0.4) !important;
+        }
+        .top-bar {
+            background: rgba(255, 255, 255, 0.65) !important;
+            backdrop-filter: blur(10px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(10px) saturate(180%) !important;
+        }
 
-            /* Các ô thông báo trong suốt */
-            .gps-alert {
-                backdrop-filter: blur(12px) saturate(180%) !important;
-                -webkit-backdrop-filter: blur(12px) saturate(180%) !important;
-            }
-            .gps-alert.warning {
-                background: rgba(255, 251, 235, 0.68) !important;
-                border: 1.5px solid rgba(254, 215, 170, 0.75) !important;
-            }
-            .gps-alert.success {
-                background: rgba(240, 253, 244, 0.68) !important;
-                border: 1.5px solid rgba(187, 247, 208, 0.75) !important;
-            }
-            .gps-info-box {
-                background: rgba(255, 255, 255, 0.52) !important;
-                backdrop-filter: blur(12px) saturate(170%) !important;
-                -webkit-backdrop-filter: blur(12px) saturate(170%) !important;
-                border: 1px solid rgba(186, 230, 253, 0.5) !important;
-            }
-            .voice-alert-toast {
-                background: rgba(255, 255, 255, 0.78) !important;
-                backdrop-filter: blur(16px) saturate(190%) !important;
-                -webkit-backdrop-filter: blur(16px) saturate(190%) !important;
-                border: 1px solid rgba(255, 255, 255, 0.65);
-                border-left: 5px solid #f59e0b !important;
-                box-shadow: 0 12px 35px rgba(0, 0, 0, 0.16) !important;
-            }
-            .voice-alert-toast.success-toast {
-                border-left-color: #10b981 !important;
-            }
-            .result-box.success {
-                background: rgba(240, 253, 244, 0.75) !important;
-                backdrop-filter: blur(14px) saturate(180%) !important;
-                -webkit-backdrop-filter: blur(14px) saturate(180%) !important;
-                border: 1px solid rgba(187, 247, 208, 0.8) !important;
-            }
+        /* ===== CÁC Ô ĐIỀN THÔNG TIN TRONG SUỐT XUYÊN THẤU ĐỂ THẤY HIỆU ỨNG ĐỘNG ===== */
+        .form-section .form-control,
+        .form-control,
+        .form-select,
+        #studentCode,
+        #fullName,
+        #className,
+        #faculty,
+        #phoneNumber,
+        #email {
+            background-color: rgba(255, 255, 255, 0.10) !important;
+            backdrop-filter: blur(2px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(2px) saturate(180%) !important;
+            border: 1.5px solid rgba(2, 132, 199, 0.45) !important;
+            color: #0f172a !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03), inset 0 1px 2px rgba(255, 255, 255, 0.6) !important;
+        }
+        .form-section .form-control:focus,
+        .form-control:focus,
+        .form-select:focus {
+            background-color: rgba(255, 255, 255, 0.45) !important;
+            border-color: #0284c7 !important;
+            box-shadow: 0 0 0 3.5px rgba(2, 132, 199, 0.25), inset 0 1px 2px rgba(255, 255, 255, 0.8) !important;
+        }
+        .form-section .form-control:disabled,
+        .form-control:disabled,
+        .form-select:disabled {
+            background-color: rgba(255, 255, 255, 0.05) !important;
+            border: 1.5px dashed rgba(2, 132, 199, 0.35) !important;
+            color: #334155 !important;
+            opacity: 1 !important;
+        }
+        .form-control::placeholder {
+            color: #64748b !important;
+            opacity: 0.85;
+        }
 
-            .weather-pill-group {
-                background: rgba(255, 255, 255, 0.22);
-                backdrop-filter: blur(8px);
-                border-radius: 20px;
-                padding: 2px 4px;
-                border: 1px solid rgba(255, 255, 255, 0.35);
-            }
-            .weather-pill-btn {
-                background: transparent;
-                border: none;
-                font-size: 0.82rem;
-                line-height: 1;
-                padding: 3px 6px;
-                border-radius: 12px;
-                cursor: pointer;
-                transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-                opacity: 0.78;
-            }
-            .weather-pill-btn:hover {
-                opacity: 1;
-                transform: scale(1.18);
-            }
-            .weather-pill-btn.active {
-                background: #ffffff;
-                opacity: 1;
-                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.16);
-                transform: scale(1.12);
-            }
+        /* ===== CÁC Ô THÔNG BÁO TRONG SUỐT XUYÊN THẤU ===== */
+        .gps-alert,
+        .alert,
+        #formGpsAlert {
+            backdrop-filter: blur(3px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(3px) saturate(180%) !important;
+        }
+        .gps-alert.warning,
+        .alert.alert-warning,
+        #formGpsAlert {
+            background-color: rgba(254, 243, 199, 0.22) !important;
+            border: 1.5px solid rgba(245, 158, 11, 0.55) !important;
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.7) !important;
+            color: #92400e !important;
+        }
+        .gps-alert.success,
+        .alert.alert-success,
+        #formGpsAlert.success {
+            background-color: rgba(209, 250, 229, 0.22) !important;
+            border: 1.5px solid rgba(16, 185, 129, 0.55) !important;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.7) !important;
+            color: #065f46 !important;
+        }
+
+        /* THẺ TRẠNG THÁI KHÓA/MỞ KHÓA TRONG SUỐT */
+        .badge-form-status.locked,
+        #formStatusBadge.locked {
+            background-color: rgba(254, 226, 226, 0.35) !important;
+            backdrop-filter: blur(3px) !important;
+            -webkit-backdrop-filter: blur(3px) !important;
+            border: 1px solid rgba(239, 68, 68, 0.45) !important;
+            color: #991b1b !important;
+        }
+        .badge-form-status.unlocked,
+        #formStatusBadge.unlocked {
+            background-color: rgba(220, 252, 231, 0.35) !important;
+            backdrop-filter: blur(3px) !important;
+            -webkit-backdrop-filter: blur(3px) !important;
+            border: 1px solid rgba(34, 197, 94, 0.45) !important;
+            color: #166534 !important;
+        }
+
+        .gps-info-box {
+            background: rgba(255, 255, 255, 0.15) !important;
+            backdrop-filter: blur(3px) saturate(170%) !important;
+            -webkit-backdrop-filter: blur(3px) saturate(170%) !important;
+            border: 1.5px solid rgba(186, 230, 253, 0.6) !important;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03), inset 0 1px 2px rgba(255, 255, 255, 0.6) !important;
+        }
+        .voice-alert-toast {
+            background: rgba(255, 255, 255, 0.75) !important;
+            backdrop-filter: blur(14px) saturate(190%) !important;
+            -webkit-backdrop-filter: blur(14px) saturate(190%) !important;
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-left: 5px solid #f59e0b !important;
+        }
+        .voice-alert-toast.success-toast {
+            border-left-color: #10b981 !important;
+        }
+        .result-box.success {
+            background: rgba(209, 250, 229, 0.4) !important;
+            backdrop-filter: blur(10px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(10px) saturate(180%) !important;
+            border: 1.5px solid rgba(187, 247, 208, 0.7) !important;
+        }
+
+        .weather-pill-group {
+            background: rgba(255, 255, 255, 0.22);
+            backdrop-filter: blur(8px);
+            border-radius: 20px;
+            padding: 2px 4px;
+            border: 1px solid rgba(255, 255, 255, 0.35);
+        }
+        .weather-pill-btn {
+            background: transparent;
+            border: none;
+            font-size: 0.82rem;
+            line-height: 1;
+            padding: 3px 6px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            opacity: 0.78;
+        }
+        .weather-pill-btn:hover {
+            opacity: 1;
+            transform: scale(1.18);
+        }
+        .weather-pill-btn.active {
+            background: #ffffff;
+            opacity: 1;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.16);
+            transform: scale(1.12);
         }
     </style>
 </head>
@@ -1730,7 +1779,7 @@
                 snowFlakes.forEach(f => {
                     f.y += f.speedY;
                     f.swayAngle += f.swaySpeed;
-                    f.x += f.speedX + Math.sin(f.swayAngle) * 0.8;
+                    f.x += f.speedX + Math.sin(f.swayAngle) * 0.9;
 
                     if (f.y > height + 10) {
                         f.y = -10;
@@ -1739,11 +1788,18 @@
                     if (f.x > width + 10) f.x = -10;
                     if (f.x < -10) f.x = width + 10;
 
+                    // Hào quang xanh băng tuyết xung quanh bông tuyết
                     ctx.beginPath();
                     ctx.arc(f.x, f.y, f.radius, 0, Math.PI * 2);
-                    ctx.fillStyle = `rgba(186, 230, 253, ${f.opacity})`;
-                    ctx.shadowBlur = f.radius > 2.2 ? 4 : 0;
-                    ctx.shadowColor = 'rgba(56, 189, 248, 0.5)';
+                    ctx.fillStyle = `rgba(56, 189, 248, ${f.opacity * 0.85})`;
+                    ctx.shadowBlur = 6;
+                    ctx.shadowColor = '#0284c7';
+                    ctx.fill();
+
+                    // Lõi tuyết trắng sáng bên trong
+                    ctx.beginPath();
+                    ctx.arc(f.x, f.y, f.radius * 0.65, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(255, 255, 255, 0.95)`;
                     ctx.fill();
                 });
                 ctx.shadowBlur = 0;
@@ -1753,14 +1809,14 @@
             function drawRain(dt, now) {
                 if (now > lightning.nextTime) {
                     lightning.active = true;
-                    lightning.opacity = Math.random() * 0.45 + 0.45;
+                    lightning.opacity = Math.random() * 0.5 + 0.5;
                     lightning.bolt = createLightningBolt();
-                    lightning.nextTime = now + Math.random() * 5500 + 4000; // 4-9s chớp 1 lần
+                    lightning.nextTime = now + Math.random() * 5000 + 3500;
                 }
 
                 if (lightning.active) {
                     // Ánh chớp sáng lòa
-                    ctx.fillStyle = `rgba(255, 255, 255, ${lightning.opacity})`;
+                    ctx.fillStyle = `rgba(255, 255, 255, ${lightning.opacity * 0.85})`;
                     ctx.fillRect(0, 0, width, height);
 
                     // Tia sét phân nhánh
@@ -1771,19 +1827,19 @@
                         for (let i = 1; i < lightning.bolt.length; i++) {
                             ctx.lineTo(lightning.bolt[i].x, lightning.bolt[i].y);
                         }
-                        ctx.strokeStyle = `rgba(255, 255, 255, ${Math.min(1, lightning.opacity * 1.6)})`;
-                        ctx.lineWidth = 3.5;
-                        ctx.shadowBlur = 20;
+                        ctx.strokeStyle = `rgba(255, 255, 255, ${Math.min(1, lightning.opacity * 1.8)})`;
+                        ctx.lineWidth = 4;
+                        ctx.shadowBlur = 25;
                         ctx.shadowColor = '#0284c7';
                         ctx.stroke();
 
-                        ctx.lineWidth = 1.5;
+                        ctx.lineWidth = 1.8;
                         ctx.strokeStyle = '#ffffff';
                         ctx.stroke();
                         ctx.restore();
                     }
 
-                    lightning.opacity -= 0.045;
+                    lightning.opacity -= 0.05;
                     if (lightning.opacity <= 0) {
                         lightning.active = false;
                         lightning.bolt = null;
@@ -1791,14 +1847,14 @@
                 }
 
                 // Hạt mưa rơi
-                ctx.lineWidth = 1.5;
+                ctx.lineWidth = 2;
                 rainDrops.forEach(d => {
                     d.y += d.speedY;
                     d.x += d.speedX;
 
                     if (d.y > height) {
-                        if (Math.random() < 0.25) {
-                            splashes.push({ x: d.x, y: height - 5, r: 2, alpha: 0.6 });
+                        if (Math.random() < 0.3) {
+                            splashes.push({ x: d.x, y: height - 5, r: 2, alpha: 0.8 });
                         }
                         d.y = -d.len;
                         d.x = Math.random() * (width + 100);
@@ -1807,7 +1863,7 @@
                     ctx.beginPath();
                     ctx.moveTo(d.x, d.y);
                     ctx.lineTo(d.x + d.speedX * 1.5, d.y + d.len);
-                    ctx.strokeStyle = `rgba(2, 132, 199, ${d.opacity})`;
+                    ctx.strokeStyle = `rgba(2, 132, 199, ${d.opacity * 1.4})`;
                     ctx.stroke();
                 });
 
