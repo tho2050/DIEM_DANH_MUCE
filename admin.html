@@ -1230,7 +1230,7 @@
                 <form onsubmit="handleLogin(event)">
                     <div class="mb-3">
                         <label class="form-label fw-bold small">Tên đăng nhập / Email:</label>
-                        <input type="text" class="form-control" id="adminUsernameInput" placeholder="VD: hongnhung2050py@gmail.com" required
+                        <input type="text" class="form-control" id="adminUsernameInput" placeholder="Nhập tên đăng nhập hoặc email..." required
                             autocomplete="username" />
                     </div>
                     <div class="mb-3">
@@ -1260,13 +1260,13 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label fw-bold small">Tên đăng nhập / Địa chỉ Gmail đã đăng ký:</label>
-                    <input type="text" class="form-control" id="forgotUsernameInput" placeholder="VD: hongnhung2050py@gmail.com hoặc hiennguyen"
+                    <input type="text" class="form-control" id="forgotUsernameInput" placeholder="Nhập tên đăng nhập hoặc email đã đăng ký..."
                         required />
                 </div>
                 <div class="mb-3">
                     <label class="form-label fw-bold small">Địa chỉ Gmail nhận mã OTP:</label>
                     <input type="email" class="form-control" id="forgotEmailInput"
-                        placeholder="VD: hongnhung2050py@gmail.com" required />
+                        placeholder="Nhập địa chỉ Gmail nhận mã OTP..." required />
                     <span class="text-muted" style="font-size: 0.72rem; display: block; margin-top: 4px;">* Hệ thống sẽ tự động gửi email chứa mã OTP 6 số đến Gmail này để bạn đặt lại/lấy lại mật khẩu.</span>
                 </div>
 
@@ -1319,7 +1319,7 @@
                 <form onsubmit="handleRegister(event)">
                     <div class="mb-3">
                         <label class="form-label fw-bold small">Tên đăng nhập / Email Gmail:</label>
-                        <input type="text" class="form-control" id="regUsernameInput" placeholder="VD: hongnhung2050py@gmail.com hoặc hiennguyen"
+                        <input type="text" class="form-control" id="regUsernameInput" placeholder="Nhập tên đăng nhập hoặc email..."
                             required />
                     </div>
                     <div class="mb-3">
@@ -1666,7 +1666,7 @@
                             <div class="col-md-4">
                                 <label class="form-label fw-bold small"><i class="fa-solid fa-user-pen text-primary me-1"></i>Tài khoản tạo sự kiện:</label>
                                 <input type="text" class="form-control" id="newCreatedBy"
-                                    placeholder="VD: hongnhung2050py@gmail.com" />
+                                    placeholder="Tên tài khoản người tạo..." />
                             </div>
                         </div>
 
@@ -1813,7 +1813,7 @@
                                 <label class="form-label small fw-bold mb-1">Địa chỉ Gmail gửi (Tài khoản Google của bạn):</label>
                                 <div class="input-group input-group-sm">
                                     <span class="input-group-text bg-white"><i class="fa-solid fa-envelope text-primary"></i></span>
-                                    <input type="email" class="form-control" id="smtpUserEmailInput" placeholder="VD: hongnhung2050py@gmail.com" />
+                                    <input type="email" class="form-control" id="smtpUserEmailInput" placeholder="your-email@gmail.com" />
                                 </div>
                             </div>
                             <div class="col-md-4">
@@ -3080,7 +3080,7 @@
             const user = (document.getElementById('smtpUserEmailInput').value || '').trim();
             const alertEl = document.getElementById('smtpStatusAlert');
 
-            const testEmail = prompt("Nhập địa chỉ Gmail để nhận email thử nghiệm:", user || "hongnhung2050py@gmail.com");
+            const testEmail = prompt("Nhập địa chỉ Gmail để nhận email thử nghiệm:", user || "");
             if (!testEmail) return;
 
             if (alertEl) {
