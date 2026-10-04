@@ -1216,7 +1216,8 @@
         document.getElementById('actLocation').textContent = activity.locationAddress;
         document.getElementById('actRadius').textContent = activity.radiusMeters + ' mét';
         if (document.getElementById('actCreatedBy')) {
-            document.getElementById('actCreatedBy').textContent = activity.createdBy || 'hongnhung2050py@gmail.com';
+            const rawCreator = activity.createdBy || 'hongnhung2050py@gmail.com';
+            document.getElementById('actCreatedBy').textContent = typeof formatCreatorName === 'function' ? formatCreatorName(rawCreator) : (String(rawCreator).toLowerCase().includes('hongnhung2050') ? 'hongnhung' : rawCreator);
         }
         if (document.getElementById('subBarRadius')) {
             document.getElementById('subBarRadius').textContent = activity.radiusMeters;

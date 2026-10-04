@@ -2542,7 +2542,8 @@
 
             container.innerHTML = list.map((item, idx) => {
                 const actCount = (attendanceData || []).filter(r => String(r.code || '').trim().toUpperCase() === String(item.code || '').trim().toUpperCase()).length;
-                const creator = item.createdBy || sessionStorage.getItem("admin_user") || "hongnhung2050py@gmail.com";
+                const rawCreator = item.createdBy || sessionStorage.getItem("admin_user") || "hongnhung2050py@gmail.com";
+                const displayCreator = typeof formatCreatorName === 'function' ? formatCreatorName(rawCreator) : (rawCreator.toLowerCase().includes('hongnhung2050') ? 'hongnhung' : rawCreator);
                 return `
                 <div class="activity-item-row d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <div style="cursor: pointer;" onclick="viewActivityAttendance('${item.code}')" title="Nhấn vào để xem danh sách ${actCount} sinh viên điểm danh sự kiện này">
@@ -2555,7 +2556,7 @@
                         <strong class="d-block mt-1 text-primary">${item.title}</strong>
                         <span class="small text-muted d-block"><i class="fa-solid fa-location-dot"></i> ${item.locationAddress} (Bán kính: ${item.radiusMeters}m)</span>
                         <span class="small text-secondary d-block mt-1" style="font-size: 0.8rem;">
-                            <i class="fa-solid fa-user-pen text-primary me-1"></i>Tài khoản tạo: <strong class="text-dark">${creator}</strong>
+                            <i class="fa-solid fa-user-pen text-primary me-1"></i>Tài khoản tạo: <strong class="text-dark">${displayCreator}</strong>
                         </span>
                     </div>
                     <div class="d-flex gap-2">
@@ -2790,7 +2791,7 @@
                                             <i class="fa-solid fa-location-dot me-1"></i>${item.locationAddress || 'Chưa có địa chỉ'} (Bán kính: ${item.radiusMeters || 50}m)
                                         </span>
                                         <span class="small text-secondary d-block mt-1" style="font-size: 0.78rem;">
-                                            <i class="fa-solid fa-user-pen text-primary me-1"></i>Tài khoản tạo: <strong class="text-dark">${item.createdBy || sessionStorage.getItem("admin_user") || 'hongnhung2050py@gmail.com'}</strong>
+                                            <i class="fa-solid fa-user-pen text-primary me-1"></i>Tài khoản tạo: <strong class="text-dark">${typeof formatCreatorName === 'function' ? formatCreatorName(item.createdBy || sessionStorage.getItem("admin_user")) : (String(item.createdBy || '').toLowerCase().includes('hongnhung2050') ? 'hongnhung' : (item.createdBy || 'hongnhung'))}</strong>
                                         </span>
                                     </td>
                                     <td>
@@ -2951,7 +2952,7 @@
 
             const creator = act.createdBy || sessionStorage.getItem('admin_user') || 'hongnhung2050py@gmail.com';
             const creatorEl = document.getElementById('newCreatedBy');
-            if (creatorEl) creatorEl.value = creator;
+            if (creatorEl) creatorEl.value = typeof formatCreatorName === 'function' ? formatCreatorName(creator) : creator;
 
             const lat = parseFloat(act.latitude) || 0;
             const lng = parseFloat(act.longitude) || 0;
@@ -3109,7 +3110,8 @@
                     document.getElementById('addTabHeader').innerHTML = '<i class="fa-solid fa-plus-circle me-2 text-primary"></i>Tạo sự kiện điểm danh mới';
                     document.getElementById('btnSubmitEvent').innerHTML = '<i class="fa-solid fa-save me-2"></i>Tạo Sự Kiện Điểm Danh';
                     const creatorEl = document.getElementById('newCreatedBy');
-                    if (creatorEl) creatorEl.value = sessionStorage.getItem("admin_user") || "hongnhung2050py@gmail.com";
+                    const rawUser = sessionStorage.getItem("admin_user") || "hongnhung2050py@gmail.com";
+                    if (creatorEl) creatorEl.value = typeof formatCreatorName === 'function' ? formatCreatorName(rawUser) : (rawUser.toLowerCase().includes('hongnhung2050') ? 'hongnhung' : rawUser);
                 }
 
                 initSelectMap();

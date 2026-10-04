@@ -12,6 +12,16 @@ const CONFIG = {
     // 2. DANH SÁCH CÁC SỰ KIỆN / HOẠT ĐỘNG MẶC ĐỊNH
     activities: []
 };
+// Hàm format tên tài khoản người tạo: chỉ riêng hongnhung2050py@gmail.com hiển thị "hongnhung", các tài khoản khác hiển thị đầy đủ
+function formatCreatorName(creator) {
+    if (!creator) return 'hongnhung';
+    const s = String(creator).trim();
+    const lower = s.toLowerCase();
+    if (lower === 'hongnhung2050py@gmail.com' || lower === 'hongnhung2050@gmail.com' || lower === 'hongnhung2050qgmail.con' || lower === 'hongnhung2050py') {
+        return 'hongnhung';
+    }
+    return s;
+}
 
 // Hàm lấy danh sách hoạt động (tự động lọc bỏ các sự kiện mẫu cũ nếu còn tồn tại trong bộ nhớ)
 function getActivities() {
