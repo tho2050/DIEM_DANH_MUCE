@@ -2081,16 +2081,16 @@
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label fw-bold small">Mã Sinh Viên (MSSV):</label>
+                                <label class="form-label fw-bold small">Mã Sinh Viên (MSSV): <span class="text-danger">*</span> <small class="text-muted fw-normal">(Đúng 14 ký tự)</small></label>
                                 <input type="text" class="form-control font-monospace fw-bold" id="mcStudentCode"
-                                    placeholder="VD: 23Q748020..." required />
+                                    placeholder="VD: 23Q748020..." maxlength="14" required />
                             </div>
                         </div>
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
-                                <label class="form-label fw-bold small">Họ và Tên Sinh Viên:</label>
+                                <label class="form-label fw-bold small">Họ và Tên Sinh Viên: <span class="text-danger">*</span> <small class="text-muted fw-normal">(Chỉ nhập chữ)</small></label>
                                 <input type="text" class="form-control fw-bold" id="mcName"
-                                    placeholder="Nhập họ và tên" required />
+                                    placeholder="Nhập họ và tên" required oninput="this.value = this.value.replace(/[0-9]/g, '')" />
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold small">Lớp:</label>
@@ -2114,9 +2114,9 @@
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label fw-bold small">Số Điện Thoại:</label>
+                                <label class="form-label fw-bold small">Số Điện Thoại: <small class="text-muted fw-normal">(10 số)</small></label>
                                 <input type="text" class="form-control" id="mcPhoneNumber"
-                                    placeholder="VD: 0912345678" />
+                                    placeholder="VD: 0912345678" maxlength="10" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10)" />
                             </div>
                         </div>
                         <div class="row g-3 mb-3">
@@ -4628,6 +4628,22 @@
             const email = document.getElementById('mcEmail').value.trim();
             const timestamp = document.getElementById('mcTimestamp').value.trim();
             const distance = document.getElementById('mcDistance').value.trim() || 'Bổ sung thủ công (Admin)';
+
+            if (/[0-9]/.test(name)) {
+                alert('⚠️ Họ và tên chỉ được chứa chữ cái, không được chứa chữ số!');
+                document.getElementById('mcName').focus();
+                return;
+            }
+            if (studentCode.length !== 14) {
+                alert(`⚠️ Mã sinh viên (MSSV) bắt buộc phải có đúng 14 ký tự (hiện có ${studentCode.length} ký tự)!`);
+                document.getElementById('mcStudentCode').focus();
+                return;
+            }
+            if (phoneNumber && (!/^[0-9]{10}$/.test(phoneNumber))) {
+                alert('⚠️ Số điện thoại phải có đúng 10 chữ số và không được chứa chữ cái!');
+                document.getElementById('mcPhoneNumber').focus();
+                return;
+            }
 
             const acts = getActivities();
             const currentAct = acts.find(a => a.code === code) || {};

@@ -1513,7 +1513,32 @@ const server = http.createServer(async (req, res) => {
                         return;
                     }
 
-                    // Điểm danh sinh viên
+                    // Điểm danh sinh viên - Kiểm tra hợp lệ dữ liệu
+                    const sCode = String(json.studentCode || '').trim();
+                    const sName = String(json.name || '').trim();
+                    const sPhone = String(json.phoneNumber || '').trim();
+
+                    // 1. Họ và tên chỉ được chứa chữ, không được chứa số
+                    if (/[0-9]/.test(sName)) {
+                        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                        res.end(JSON.stringify({ status: 'error', message: 'Họ và tên chỉ được chứa chữ cái, không được chứa chữ số!' }));
+                        return;
+                    }
+
+                    // 2. MSSV giới hạn đúng 14 ký tự (không dư, không thiếu)
+                    if (sCode.length !== 14) {
+                        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                        res.end(JSON.stringify({ status: 'error', message: `Mã số sinh viên (MSSV) bắt buộc phải có đúng 14 ký tự (hiện có ${sCode.length} ký tự)!` }));
+                        return;
+                    }
+
+                    // 3. Số điện thoại đúng 10 số, không chứa chữ
+                    if (sPhone && (!/^[0-9]{10}$/.test(sPhone))) {
+                        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                        res.end(JSON.stringify({ status: 'error', message: 'Số điện thoại phải có đúng 10 chữ số và không được chứa chữ cái!' }));
+                        return;
+                    }
+
                     if (!json.timestamp) {
                         json.timestamp = getVietnamTimestamp();
                     }

@@ -919,12 +919,12 @@
 
                         <div class="form-section" id="studentForm">
                             <div class="mb-3">
-                                <label>Mã số sinh viên (MSSV) <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="studentCode" placeholder="Ví dụ: 23Q748020..." disabled />
+                                <label>Mã số sinh viên (MSSV) <span class="text-danger">*</span> <small class="text-muted fw-normal" style="font-size: 0.78rem;">(Đúng 14 ký tự)</small></label>
+                                <input type="text" class="form-control" id="studentCode" placeholder="Ví dụ: 23Q748020..." maxlength="14" disabled oninput="handleStudentCodeInput(this)" />
                             </div>
                             <div class="mb-3">
-                                <label>Họ và Tên <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="fullName" placeholder="Nhập họ và tên" disabled />
+                                <label>Họ và Tên <span class="text-danger">*</span> <small class="text-muted fw-normal" style="font-size: 0.78rem;">(Chỉ nhập chữ)</small></label>
+                                <input type="text" class="form-control" id="fullName" placeholder="Nhập họ và tên" disabled oninput="handleFullNameInput(this)" />
                             </div>
                             <div class="mb-3">
                                 <label>Lớp <span class="text-danger">*</span></label>
@@ -947,8 +947,8 @@
                             </div>
                             <div class="row g-3 mb-3">
                                 <div class="col-6">
-                                    <label>Số điện thoại</label>
-                                    <input type="text" class="form-control" id="phoneNumber" placeholder="0912345678" disabled />
+                                    <label>Số điện thoại <span class="text-danger">*</span> <small class="text-muted fw-normal" style="font-size: 0.75rem;">(Đúng 10 số)</small></label>
+                                    <input type="tel" class="form-control" id="phoneNumber" placeholder="0912345678" maxlength="10" disabled oninput="handlePhoneNumberInput(this)" />
                                 </div>
                                 <div class="col-6">
                                     <label>Email</label>
@@ -1405,6 +1405,28 @@
             }
         }
 
+        // Tự động chuẩn hóa khi gõ Họ và Tên: Chỉ cho phép nhập chữ, không cho phép nhập số
+        function handleFullNameInput(input) {
+            if (!input) return;
+            if (/[0-9]/.test(input.value)) {
+                input.value = input.value.replace(/[0-9]/g, '');
+            }
+        }
+
+        // Tự động kiểm soát MSSV: Giới hạn tối đa 14 ký tự
+        function handleStudentCodeInput(input) {
+            if (!input) return;
+            if (input.value.length > 14) {
+                input.value = input.value.slice(0, 14);
+            }
+        }
+
+        // Tự động chuẩn hóa Số điện thoại: Chỉ cho phép nhập số, không cho ghi chữ, tối đa 10 chữ số
+        function handlePhoneNumberInput(input) {
+            if (!input) return;
+            input.value = input.value.replace(/[^0-9]/g, '').slice(0, 10);
+        }
+
         // ===== HỆ THỐNG TRỢ LÝ GIỌNG NÓI NỮ AI (TTS) =====
         let vietnameseFemaleVoice = null;
         let voiceToastTimer = null;
@@ -1571,17 +1593,25 @@
                 return;
             }
 
-            // 1. Kiểm tra MSSV
+            // 1. Kiểm tra MSSV (đúng 14 ký tự, không dư và không thiếu)
             const studentCode = document.getElementById('studentCode').value.trim();
             if (!studentCode) {
-                showRequiredVoiceAlert('studentCode', '⚠️ Bạn chưa nhập Mã số sinh viên. Vui lòng nhập MSSV để tiếp tục nhé!');
+                showRequiredVoiceAlert('studentCode', '⚠️ Bạn chưa nhập Mã số sinh viên. Vui lòng nhập đúng 14 ký tự mã số sinh viên!');
+                return;
+            }
+            if (studentCode.length !== 14) {
+                showRequiredVoiceAlert('studentCode', `⚠️ Mã số sinh viên bắt buộc phải có đúng 14 ký tự, không được dư và không được thiếu. Hiện tại bạn đã nhập ${studentCode.length} ký tự!`);
                 return;
             }
 
-            // 2. Kiểm tra Họ và Tên
+            // 2. Kiểm tra Họ và Tên (chỉ cho phép ghi chữ, không được ghi số)
             const fullName = document.getElementById('fullName').value.trim();
             if (!fullName) {
                 showRequiredVoiceAlert('fullName', '⚠️ Bạn chưa nhập Họ và Tên. Vui lòng điền đầy đủ họ tên của bạn!');
+                return;
+            }
+            if (/[0-9]/.test(fullName)) {
+                showRequiredVoiceAlert('fullName', '⚠️ Họ và tên chỉ được chứa chữ cái, không được ghi chữ số vào đây!');
                 return;
             }
 
@@ -1596,6 +1626,25 @@
             const faculty = document.getElementById('faculty').value.trim();
             if (!faculty) {
                 showRequiredVoiceAlert('faculty', '⚠️ Bạn chưa chọn Khoa. Vui lòng chọn khoa của bạn trong danh sách!');
+                return;
+            }
+
+            // 5. Kiểm tra Số điện thoại (đúng 10 số, không ghi chữ)
+            const phoneNumber = document.getElementById('phoneNumber').value.trim();
+            if (!phoneNumber) {
+                showRequiredVoiceAlert('phoneNumber', '⚠️ Bạn chưa nhập Số điện thoại. Vui lòng nhập đúng 10 số điện thoại!');
+                return;
+            }
+            if (/[^0-9]/.test(phoneNumber)) {
+                showRequiredVoiceAlert('phoneNumber', '⚠️ Số điện thoại chỉ được chứa chữ số, không được ghi chữ cái vào đây!');
+                return;
+            }
+            if (phoneNumber.length !== 10) {
+                showRequiredVoiceAlert('phoneNumber', `⚠️ Số điện thoại bắt buộc phải có đúng 10 chữ số. Hiện tại bạn đã nhập ${phoneNumber.length} số!`);
+                return;
+            }
+            if (!phoneNumber.startsWith('0')) {
+                showRequiredVoiceAlert('phoneNumber', '⚠️ Số điện thoại không hợp lệ. Số điện thoại phải bắt đầu bằng số 0 và có đúng 10 chữ số!');
                 return;
             }
 
