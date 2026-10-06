@@ -1197,72 +1197,94 @@
             font-weight: 500;
         }
 
-        /* ===== ĐỊNH DẠNG ĐỒNG BỘ 2 Ô BẰNG NHAU TRÊN ĐIỆN THOẠI ===== */
+        /* ===== ĐỊNH DẠNG 2 Ô TRÊN ĐIỆN THOẠI: 70% (THỜI TIẾT) - 30% (ĐỒNG HỒ) ===== */
         @media (max-width: 576px) {
             .sub-bar-widgets-group {
+                width: 100% !important;
                 display: flex !important;
                 flex-direction: row !important;
                 align-items: stretch !important;
-                gap: 4px !important;
+                gap: 5px !important;
             }
-            .sub-bar-widgets-group .weather-realtime-card,
-            .sub-bar-widgets-group .live-datetime-card {
-                flex: 1 1 0 !important;
+            .sub-bar-widgets-group .weather-realtime-card {
+                flex: 0 0 calc(70% - 3px) !important;
+                width: calc(70% - 3px) !important;
                 min-width: 0 !important;
                 margin: 0 !important;
-                padding: 4px 6px !important;
+                padding: 4px 8px !important;
+                display: flex !important;
+                align-items: center !important;
+                box-sizing: border-box !important;
+            }
+            .sub-bar-widgets-group .live-datetime-card {
+                flex: 0 0 calc(30% - 2px) !important;
+                width: calc(30% - 2px) !important;
+                min-width: 0 !important;
+                margin: 0 !important;
+                padding: 4px 5px !important;
                 display: flex !important;
                 align-items: center !important;
                 justify-content: center !important;
                 box-sizing: border-box !important;
             }
-            .sub-bar-widgets-group .weather-realtime-card > div,
-            .sub-bar-widgets-group .live-datetime-card > div {
+            .sub-bar-widgets-group .weather-realtime-card > div {
                 width: 100% !important;
                 justify-content: space-between !important;
-                gap: 3px !important;
+                gap: 5px !important;
+            }
+            .sub-bar-widgets-group .live-datetime-card > div {
+                width: 100% !important;
+                justify-content: center !important;
+                gap: 4px !important;
             }
             .sub-bar-widgets-group .weather-temp-badge {
-                font-size: 0.82rem !important;
+                font-size: 0.95rem !important;
                 font-weight: 800 !important;
+                flex-shrink: 0 !important;
+            }
+            .sub-bar-widgets-group .weather-desc-wrap {
+                flex: 1 1 auto !important;
+                min-width: 0 !important;
             }
             .sub-bar-widgets-group .weather-condition-text {
-                font-size: 0.68rem !important;
+                font-size: 0.74rem !important;
                 white-space: nowrap !important;
                 overflow: hidden !important;
                 text-overflow: ellipsis !important;
-                max-width: 68px !important;
+                max-width: 100% !important;
             }
             .sub-bar-widgets-group .weather-rain-text {
-                font-size: 0.62rem !important;
+                font-size: 0.66rem !important;
                 white-space: nowrap !important;
                 overflow: hidden !important;
                 text-overflow: ellipsis !important;
-                max-width: 68px !important;
+                max-width: 100% !important;
+            }
+            .sub-bar-widgets-group .btn-refresh-weather {
+                width: 22px !important;
+                height: 22px !important;
+                font-size: 0.65rem !important;
+                flex-shrink: 0 !important;
+                margin-left: 2px !important;
+            }
+            .sub-bar-widgets-group .datetime-icon-badge {
+                font-size: 0.82rem !important;
+                width: 16px !important;
+                height: 16px !important;
+                flex-shrink: 0 !important;
             }
             .sub-bar-widgets-group .live-clock-time {
-                font-size: 0.74rem !important;
+                font-size: 0.72rem !important;
                 font-weight: 800 !important;
                 white-space: nowrap !important;
+                line-height: 1.15 !important;
             }
             .sub-bar-widgets-group .live-calendar-date {
                 font-size: 0.62rem !important;
                 white-space: nowrap !important;
                 overflow: hidden !important;
                 text-overflow: ellipsis !important;
-                max-width: 78px !important;
-            }
-            .sub-bar-widgets-group .btn-refresh-weather {
-                width: 19px !important;
-                height: 19px !important;
-                font-size: 0.6rem !important;
-                flex-shrink: 0 !important;
-            }
-            .sub-bar-widgets-group .datetime-icon-badge {
-                font-size: 0.9rem !important;
-                width: 17px !important;
-                height: 17px !important;
-                flex-shrink: 0 !important;
+                line-height: 1.15 !important;
             }
         }
     </style>
@@ -6351,7 +6373,13 @@
                 const clockEl = document.getElementById('liveClockTime');
                 const dateEl = document.getElementById('liveCalendarDate');
                 if (clockEl) clockEl.textContent = timeStr;
-                if (dateEl) dateEl.textContent = dateStr;
+                if (dateEl) {
+                    if (window.innerWidth <= 576) {
+                        dateEl.textContent = `${day}/${month}/${year}`;
+                    } else {
+                        dateEl.textContent = `${dayName}, ${day}/${month}/${year}`;
+                    }
+                }
             }
 
             updateClockDisplay();
