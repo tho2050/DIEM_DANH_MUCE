@@ -4038,13 +4038,15 @@
             try {
                 const res = await fetch(scriptUrl + (scriptUrl.includes('?') ? '&' : '?') + '_t=' + Date.now());
                 const sheetData = await res.json();
-                // Sắp xếp theo Sự kiện -> Khoa (CNTT -> Kinh tế -> Xây dựng -> Kiến trúc) -> Lớp
-                attendanceData = sortAttendanceData([...localRecords, ...sheetData]);
-                populateActivityFilterDropdown();
-                if (document.getElementById('attendanceSearch')?.value || document.getElementById('attendanceFacultyFilter')?.value || document.getElementById('attendanceActivityFilter')?.value) {
-                    filterAttendanceTable();
-                } else {
-                    renderAttendanceTable(attendanceData);
+                if (Array.isArray(sheetData)) {
+                    // Dữ liệu chuẩn trực tiếp từ máy chủ Database
+                    attendanceData = sortAttendanceData(sheetData);
+                    populateActivityFilterDropdown();
+                    if (document.getElementById('attendanceSearch')?.value || document.getElementById('attendanceFacultyFilter')?.value || document.getElementById('attendanceActivityFilter')?.value) {
+                        filterAttendanceTable();
+                    } else {
+                        renderAttendanceTable(attendanceData);
+                    }
                 }
             } catch (err) {
                 console.error("Lỗi khi fetch dữ liệu từ Google Apps Script / API", err);
@@ -4421,10 +4423,7 @@
                 const res = await fetch(scriptUrl + (scriptUrl.includes('?') ? '&' : '?') + '_t=' + Date.now());
                 const sheetData = await res.json();
                 if (Array.isArray(sheetData)) {
-                    const localRecords = localStorage.getItem("gps_attendance_local_records")
-                        ? JSON.parse(localStorage.getItem("gps_attendance_local_records"))
-                        : [];
-                    attendanceData = sortAttendanceData([...localRecords, ...sheetData]);
+                    attendanceData = sortAttendanceData(sheetData);
                     populateActivityFilterDropdown();
                     if (document.getElementById('attendanceSearch')?.value || document.getElementById('attendanceFacultyFilter')?.value || document.getElementById('attendanceActivityFilter')?.value) {
                         filterAttendanceTable();
@@ -4702,27 +4701,69 @@
                 alert('Chức năng Xóa lượt điểm danh chỉ dành riêng cho tài khoản hongnhung2050py@gmail.com!');
                 return;
             }
-            const item = attendanceData[idx];
-            if (!item) return;
+            const item = (attendanceData && attendanceData[idx]) ? attendanceData[idx] : (currentRenderedAttendanceData && currentRenderedAttendanceData[idx]);
+            if (!item) {
+                alert('Không tìm thấy bản ghi cần xóa!');
+                return;
+            }
 
-            if (!confirm(`Bạn có chắc chắn muốn XÓA lượt điểm danh của sinh viên "${item.name}" (MSSV: ${item.studentCode})?`)) return;
+            const cleanSc = String(item.studentCode || '').trim();
+            const cleanCode = String(item.code || '').trim();
+            const cleanName = String(item.name || '').trim() || cleanSc;
+            const recordId = item.id;
 
+            if (!confirm(`Bạn có chắc chắn muốn XÓA lượt điểm danh của sinh viên "${cleanName}" (MSSV: ${cleanSc})?`)) return;
+
+            // 1. Xóa ngay lập tức khỏi localStorage trên máy duyệt này nếu có lưu vết thử nghiệm
+            try {
+                const rawLocal = localStorage.getItem("gps_attendance_local_records");
+                if (rawLocal) {
+                    const localRecs = JSON.parse(rawLocal);
+                    const updatedLocal = localRecs.filter(r => 
+                        !(String(r.studentCode || '').trim().toLowerCase() === cleanSc.toLowerCase() && 
+                          (cleanCode === '' || String(r.code || '').trim().toUpperCase() === cleanCode.toUpperCase()))
+                    );
+                    localStorage.setItem("gps_attendance_local_records", JSON.stringify(updatedLocal));
+                }
+            } catch (e) {}
+
+            // 2. Xóa khỏi mảng dữ liệu bộ nhớ đang hiển thị ngay trên giao diện
+            if (Array.isArray(attendanceData)) {
+                attendanceData = attendanceData.filter(r => 
+                    !(String(r.studentCode || '').trim().toLowerCase() === cleanSc.toLowerCase() &&
+                      (cleanCode === '' || String(r.code || '').trim().toUpperCase() === cleanCode.toUpperCase()))
+                );
+            }
+            if (Array.isArray(currentRenderedAttendanceData)) {
+                currentRenderedAttendanceData = currentRenderedAttendanceData.filter(r => 
+                    !(String(r.studentCode || '').trim().toLowerCase() === cleanSc.toLowerCase() &&
+                      (cleanCode === '' || String(r.code || '').trim().toUpperCase() === cleanCode.toUpperCase()))
+                );
+                renderAttendanceTable(currentRenderedAttendanceData);
+            } else if (Array.isArray(attendanceData)) {
+                renderAttendanceTable(attendanceData);
+            }
+            updateAttendanceCountBadges();
+
+            // 3. Gửi yêu cầu xóa lên máy chủ (Server Database)
             try {
                 const res = await fetch('/api?action=deleteCheckin', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: item.id, studentCode: item.studentCode, code: item.code })
+                    body: JSON.stringify({ id: recordId, studentCode: cleanSc, code: cleanCode })
                 });
                 const data = await res.json();
                 if (data.status === 'success') {
-                    alert(`Đã xóa lượt điểm danh của sinh viên "${item.name}"!`);
-                    fetchAttendanceData();
+                    alert(`Đã xóa lượt điểm danh của sinh viên "${cleanName}"!`);
+                    await fetchAttendanceData();
                 } else {
                     alert('Lỗi xóa: ' + (data.message || 'Thất bại'));
+                    await fetchAttendanceData();
                 }
             } catch (err) {
                 alert('Lỗi kết nối máy chủ!');
                 console.error(err);
+                await fetchAttendanceData();
             }
         }
 

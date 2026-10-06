@@ -508,18 +508,35 @@ async function dbUpdateCheckin(record) {
 }
 
 async function dbDeleteCheckinRecord(id, studentCode, code) {
+    const cleanSc = String(studentCode || '').trim();
+    const cleanCode = String(code || '').trim();
+    const numId = parseInt(id) || null;
+
     if (pool) {
         try {
-            if (id) {
-                await pool.query('DELETE FROM checkins WHERE id = $1', [id]);
-            } else if (studentCode && code) {
-                await pool.query('DELETE FROM checkins WHERE student_code = $1 AND code = $2', [studentCode, code]);
+            if (numId && cleanSc) {
+                await pool.query(`
+                    DELETE FROM checkins 
+                    WHERE id = $1 
+                       OR (LOWER(TRIM(student_code)) = LOWER($2) AND (UPPER(TRIM(code)) = UPPER($3) OR $3 = ''))
+                `, [numId, cleanSc, cleanCode]);
+            } else if (numId) {
+                await pool.query('DELETE FROM checkins WHERE id = $1', [numId]);
+            } else if (cleanSc && cleanCode) {
+                await pool.query('DELETE FROM checkins WHERE LOWER(TRIM(student_code)) = LOWER($1) AND UPPER(TRIM(code)) = UPPER($2)', [cleanSc, cleanCode]);
+            } else if (cleanSc) {
+                await pool.query('DELETE FROM checkins WHERE LOWER(TRIM(student_code)) = LOWER($1)', [cleanSc]);
             }
             return { status: 'success', message: 'Đã xóa lượt điểm danh thành công!' };
         } catch (e) { console.error('Lỗi delete checkin SQL:', e); }
     }
     let list = await dbGetCheckins();
-    list = list.filter(r => r.id != id && !(r.studentCode === studentCode && r.code === code));
+    list = list.filter(r => {
+        if (numId && r.id == numId) return false;
+        if (cleanSc && cleanCode && String(r.studentCode || '').trim().toLowerCase() === cleanSc.toLowerCase() && String(r.code || '').trim().toUpperCase() === cleanCode.toUpperCase()) return false;
+        if (cleanSc && !cleanCode && String(r.studentCode || '').trim().toLowerCase() === cleanSc.toLowerCase()) return false;
+        return true;
+    });
     fs.writeFileSync(RECORDS_FILE, JSON.stringify(list, null, 2), 'utf8');
     return { status: 'success', message: 'Đã xóa bản ghi điểm danh!' };
 }
