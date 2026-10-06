@@ -1,6 +1,7 @@
 process.env.TZ = 'Asia/Ho_Chi_Minh';
 
 const http = require('http');
+const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
@@ -1199,6 +1200,40 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/api/server-info') {
         res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
         res.end(JSON.stringify({ localIp: getLocalIp(), port: PORT, hasDatabase: !!pool }));
+        return;
+    }
+
+    // Endpoint phát giọng nói nữ tiếng Việt chuẩn chất lượng cao (Google TTS Streaming)
+    if (pathname === '/api/tts') {
+        const text = (parsedUrl.searchParams.get('q') || parsedUrl.searchParams.get('text') || '').trim();
+        if (!text) {
+            res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+            res.end('Missing text query');
+            return;
+        }
+        const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=vi&client=tw-ob&q=${encodeURIComponent(text.slice(0, 250))}`;
+        const reqOptions = {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Referer': 'https://translate.google.com/'
+            }
+        };
+        https.get(ttsUrl, reqOptions, (ttsRes) => {
+            if (ttsRes.statusCode === 200) {
+                res.writeHead(200, {
+                    'Content-Type': 'audio/mpeg',
+                    'Cache-Control': 'public, max-age=86400'
+                });
+                ttsRes.pipe(res);
+            } else {
+                res.writeHead(ttsRes.statusCode || 500);
+                res.end();
+            }
+        }).on('error', (err) => {
+            console.error('Lỗi TTS Proxy:', err.message);
+            res.writeHead(500);
+            res.end();
+        });
         return;
     }
 

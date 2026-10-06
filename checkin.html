@@ -1427,24 +1427,37 @@
             input.value = input.value.replace(/[^0-9]/g, '').slice(0, 10);
         }
 
-        // ===== HỆ THỐNG TRỢ LÝ GIỌNG NÓI NỮ AI (TTS) =====
+        // ===== HỆ THỐNG TRỢ LÝ GIỌNG NÓI NỮ AI TIẾNG VIỆT (TTS) =====
         let vietnameseFemaleVoice = null;
         let voiceToastTimer = null;
+        let currentTtsAudio = null;
 
         function loadVietnameseVoice() {
             if (!('speechSynthesis' in window)) return;
-            const voices = window.speechSynthesis.getVoices();
-            // Lọc ưu tiên các giọng nữ tiếng Việt (Hoài My, Linh, Mai, Google tiếng Việt, Natural...)
-            vietnameseFemaleVoice = voices.find(v => {
-                const lang = (v.lang || '').toLowerCase();
-                const name = (v.name || '').toLowerCase();
-                const isVi = lang.startsWith('vi');
-                const isFemale = name.includes('female') || name.includes('nữ') || 
-                                 name.includes('hoaimy') || name.includes('linh') || 
-                                 name.includes('mai') || name.includes('google') ||
-                                 name.includes('natural');
-                return isVi && isFemale;
-            }) || voices.find(v => (v.lang || '').toLowerCase().startsWith('vi')) || null;
+            try {
+                const voices = window.speechSynthesis.getVoices();
+                // Lọc chỉ chọn đúng giọng tiếng Việt (vi, vi-VN, Vietnamese)
+                const viVoices = voices.filter(v => {
+                    const lang = (v.lang || '').toLowerCase();
+                    const name = (v.name || '').toLowerCase();
+                    return lang.startsWith('vi') || name.includes('vietnam') || name.includes('tiếng việt');
+                });
+
+                if (viVoices.length > 0) {
+                    // Ưu tiên giọng nữ tiếng Việt (Hoài My, Linh, Mai, Google tiếng Việt, Natural...)
+                    vietnameseFemaleVoice = viVoices.find(v => {
+                        const name = (v.name || '').toLowerCase();
+                        return name.includes('female') || name.includes('nữ') || 
+                               name.includes('hoaimy') || name.includes('linh') || 
+                               name.includes('mai') || name.includes('google') ||
+                               name.includes('natural');
+                    }) || viVoices[0];
+                } else {
+                    vietnameseFemaleVoice = null;
+                }
+            } catch (e) {
+                vietnameseFemaleVoice = null;
+            }
         }
 
         if ('speechSynthesis' in window) {
@@ -1453,23 +1466,55 @@
         }
 
         function speakFemaleVoice(text) {
-            if (!('speechSynthesis' in window)) return;
-            try {
-                window.speechSynthesis.cancel(); // Dừng câu trước đó nếu đang nói
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'vi-VN';
-                utterance.rate = 0.95;  // Tốc độ chuẩn, phát âm rõ ràng
-                utterance.pitch = 1.15; // Tông giọng nữ trong trẻo, tự nhiên
+            if (!text || !text.trim()) return;
+            // Làm sạch văn bản trước khi đọc (bỏ các icon cảnh báo emoji)
+            const cleanText = text.replace(/^[⚠️!*🎉📌📢]\s*/g, '').replace(/[⚠️*]/g, '').trim();
+            if (!cleanText) return;
 
-                if (!vietnameseFemaleVoice) {
-                    loadVietnameseVoice();
-                }
-                if (vietnameseFemaleVoice) {
-                    utterance.voice = vietnameseFemaleVoice;
-                }
-                window.speechSynthesis.speak(utterance);
-            } catch (e) {
-                console.warn('Lỗi đọc giọng nói AI:', e);
+            // Dừng mọi âm thanh đang phát trước đó để tránh nói đè lên nhau
+            if (currentTtsAudio) {
+                try {
+                    currentTtsAudio.pause();
+                    currentTtsAudio.currentTime = 0;
+                } catch (e) {}
+                currentTtsAudio = null;
+            }
+            if ('speechSynthesis' in window) {
+                try { window.speechSynthesis.cancel(); } catch (e) {}
+            }
+
+            // CHIẾN LƯỢC 1 (ƯU TIÊN TUYỆT ĐỐI): Giọng phát thanh nữ tiếng Việt chuẩn Google Audio (Trong trẻo, tự nhiên, 100% tiếng Việt chuẩn)
+            const ttsProxyUrl = `/api/tts?q=${encodeURIComponent(cleanText)}`;
+            const audio = new Audio(ttsProxyUrl);
+            currentTtsAudio = audio;
+
+            const playPromise = audio.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(err => {
+                    console.warn('Phát TTS nội bộ chưa được, thử trực tiếp qua Google TTS:', err);
+                    // CHIẾN LƯỢC 2: Thử trực tiếp qua Google Translate TTS Endpoint
+                    const directUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=vi&client=tw-ob&q=${encodeURIComponent(cleanText)}`;
+                    const directAudio = new Audio(directUrl);
+                    currentTtsAudio = directAudio;
+                    directAudio.play().catch(directErr => {
+                        console.warn('Phát TTS trực tiếp chưa được, kiểm tra giọng Web Speech:', directErr);
+                        // CHIẾN LƯỢC 3 (Fallback cuối): Sử dụng Web Speech API nhưng CHỈ KHI máy có giọng tiếng Việt thực sự
+                        if ('speechSynthesis' in window) {
+                            if (!vietnameseFemaleVoice) {
+                                loadVietnameseVoice();
+                            }
+                            // TUYỆT ĐỐI CHỈ NÓI KHI CÓ GIỌNG TIẾNG VIỆT, không dùng giọng tiếng Anh mặc định của Windows!
+                            if (vietnameseFemaleVoice) {
+                                const utterance = new SpeechSynthesisUtterance(cleanText);
+                                utterance.voice = vietnameseFemaleVoice;
+                                utterance.lang = 'vi-VN';
+                                utterance.rate = 0.95;
+                                utterance.pitch = 1.15;
+                                window.speechSynthesis.speak(utterance);
+                            }
+                        }
+                    });
+                });
             }
         }
 
