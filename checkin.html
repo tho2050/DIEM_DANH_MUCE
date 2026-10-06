@@ -835,6 +835,78 @@
             white-space: nowrap;
             font-weight: 500;
         }
+
+        /* ===== ĐỊNH DẠNG ĐỒNG BỘ 2 Ô BẰNG NHAU TRÊN ĐIỆN THOẠI ===== */
+        @media (max-width: 576px) {
+            .sub-bar-widgets-group {
+                width: 100% !important;
+                display: flex !important;
+                flex-direction: row !important;
+                align-items: stretch !important;
+                gap: 6px !important;
+            }
+            .sub-bar-widgets-group .weather-realtime-card,
+            .sub-bar-widgets-group .live-datetime-card {
+                flex: 1 1 0 !important;
+                width: calc(50% - 3px) !important;
+                min-width: 0 !important;
+                margin: 0 !important;
+                padding: 4px 6px !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                box-sizing: border-box !important;
+            }
+            .sub-bar-widgets-group .weather-realtime-card > div,
+            .sub-bar-widgets-group .live-datetime-card > div {
+                width: 100% !important;
+                justify-content: space-between !important;
+                gap: 3px !important;
+            }
+            .sub-bar-widgets-group .weather-temp-badge {
+                font-size: 0.85rem !important;
+                font-weight: 800 !important;
+            }
+            .sub-bar-widgets-group .weather-condition-text {
+                font-size: 0.68rem !important;
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+                max-width: 72px !important;
+            }
+            .sub-bar-widgets-group .weather-rain-text {
+                font-size: 0.62rem !important;
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+                max-width: 72px !important;
+            }
+            .sub-bar-widgets-group .live-clock-time {
+                font-size: 0.74rem !important;
+                font-weight: 800 !important;
+                white-space: nowrap !important;
+            }
+            .sub-bar-widgets-group .live-calendar-date {
+                font-size: 0.62rem !important;
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+                max-width: 82px !important;
+            }
+            .sub-bar-widgets-group .btn-refresh-weather {
+                width: 19px !important;
+                height: 19px !important;
+                font-size: 0.6rem !important;
+                flex-shrink: 0 !important;
+                margin-left: 0 !important;
+            }
+            .sub-bar-widgets-group .datetime-icon-badge {
+                font-size: 0.9rem !important;
+                width: 17px !important;
+                height: 17px !important;
+                flex-shrink: 0 !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -855,7 +927,7 @@
     <div class="sub-bar py-2">
         <div class="container d-flex justify-content-between align-items-center flex-wrap gap-2">
             <!-- Nhóm tiện ích bên trái: Thời tiết GPS + Đồng hồ & Lịch thời gian thực -->
-            <div class="d-flex align-items-center flex-wrap gap-2">
+            <div class="sub-bar-widgets-group d-flex align-items-center gap-2">
                 <!-- Ô thời tiết GPS thực tế tại sự kiện -->
                 <div class="weather-realtime-card text-white" id="realtimeWeatherCard" title="Thời tiết thực tế tại tọa độ sự kiện GPS (Open-Meteo)">
                     <div class="d-flex align-items-center gap-2">

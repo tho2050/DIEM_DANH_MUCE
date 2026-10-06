@@ -879,6 +879,78 @@
             white-space: nowrap;
             font-weight: 500;
         }
+
+        /* ===== ĐỊNH DẠNG ĐỒNG BỘ 2 Ô BẰNG NHAU TRÊN ĐIỆN THOẠI ===== */
+        @media (max-width: 576px) {
+            .sub-bar-widgets-group {
+                width: 100% !important;
+                display: flex !important;
+                flex-direction: row !important;
+                align-items: stretch !important;
+                gap: 6px !important;
+            }
+            .sub-bar-widgets-group .weather-realtime-card,
+            .sub-bar-widgets-group .live-datetime-card {
+                flex: 1 1 0 !important;
+                width: calc(50% - 3px) !important;
+                min-width: 0 !important;
+                margin: 0 !important;
+                padding: 4px 6px !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                box-sizing: border-box !important;
+            }
+            .sub-bar-widgets-group .weather-realtime-card > div,
+            .sub-bar-widgets-group .live-datetime-card > div {
+                width: 100% !important;
+                justify-content: space-between !important;
+                gap: 3px !important;
+            }
+            .sub-bar-widgets-group .weather-temp-badge {
+                font-size: 0.85rem !important;
+                font-weight: 800 !important;
+            }
+            .sub-bar-widgets-group .weather-condition-text {
+                font-size: 0.68rem !important;
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+                max-width: 72px !important;
+            }
+            .sub-bar-widgets-group .weather-rain-text {
+                font-size: 0.62rem !important;
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+                max-width: 72px !important;
+            }
+            .sub-bar-widgets-group .live-clock-time {
+                font-size: 0.74rem !important;
+                font-weight: 800 !important;
+                white-space: nowrap !important;
+            }
+            .sub-bar-widgets-group .live-calendar-date {
+                font-size: 0.62rem !important;
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+                max-width: 82px !important;
+            }
+            .sub-bar-widgets-group .btn-refresh-weather {
+                width: 19px !important;
+                height: 19px !important;
+                font-size: 0.6rem !important;
+                flex-shrink: 0 !important;
+                margin-left: 0 !important;
+            }
+            .sub-bar-widgets-group .datetime-icon-badge {
+                font-size: 0.9rem !important;
+                width: 17px !important;
+                height: 17px !important;
+                flex-shrink: 0 !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -914,10 +986,6 @@
                             <i class="fa-solid fa-location-crosshairs me-2"></i>
                             <span id="gpsStatusText">Kiểm tra định vị GPS</span>
                         </button>
-                        <button id="btnInstallHero" class="btn btn-hero-install" onclick="installPWA()">
-                            <i class="fa-solid fa-mobile-screen"></i>
-                            <span>Cài App (PC & ĐT)</span>
-                        </button>
                     </div>
                 </div>
             </div>
@@ -933,29 +1001,32 @@
                     </div>
                 </div>
                 <div class="col-md-auto d-flex align-items-center flex-wrap gap-2">
-                    <!-- Ô hiển thị Nhiệt độ & Dự báo mưa thời gian thực tại GPS -->
-                    <div class="weather-realtime-card" id="realtimeWeatherCard" title="Thời tiết thực tế tại tọa độ sự kiện GPS (Open-Meteo)">
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="weather-temp-badge" id="weatherTempBadge"><i class="fa-solid fa-spinner fa-spin text-primary me-1"></i>--°C</span>
-                            <div class="weather-desc-wrap text-start">
-                                <div class="weather-condition-text" id="weatherConditionText">Đang tải thời tiết GPS...</div>
-                                <div class="weather-rain-text" id="weatherRainText">Hôm nay: --</div>
+                    <!-- Nhóm tiện ích Thời tiết GPS + Đồng hồ & Lịch thời gian thực -->
+                    <div class="sub-bar-widgets-group d-flex align-items-center gap-2">
+                        <!-- Ô hiển thị Nhiệt độ & Dự báo mưa thời gian thực tại GPS -->
+                        <div class="weather-realtime-card" id="realtimeWeatherCard" title="Thời tiết thực tế tại tọa độ sự kiện GPS (Open-Meteo)">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="weather-temp-badge" id="weatherTempBadge"><i class="fa-solid fa-spinner fa-spin text-primary me-1"></i>--°C</span>
+                                <div class="weather-desc-wrap text-start">
+                                    <div class="weather-condition-text" id="weatherConditionText">Đang tải thời tiết GPS...</div>
+                                    <div class="weather-rain-text" id="weatherRainText">Hôm nay: --</div>
+                                </div>
+                                <button type="button" class="btn-refresh-weather" onclick="syncLiveGpsWeather(true)" title="Cập nhật thời tiết theo vị trí GPS">
+                                    <i class="fa-solid fa-arrows-rotate" id="weatherRefreshIcon"></i>
+                                </button>
                             </div>
-                            <button type="button" class="btn-refresh-weather" onclick="syncLiveGpsWeather(true)" title="Cập nhật thời tiết theo vị trí GPS">
-                                <i class="fa-solid fa-arrows-rotate" id="weatherRefreshIcon"></i>
-                            </button>
                         </div>
-                    </div>
 
-                    <!-- Ô Đồng hồ và Lịch thời gian thực -->
-                    <div class="live-datetime-card" id="liveDateTimeCard" onclick="toggleClockFormat()" title="Đồng hồ và lịch thời gian thực (Bấm để chuyển định dạng 12h/24h)">
-                        <div class="d-flex align-items-center gap-2">
-                            <div class="datetime-icon-badge">
-                                <i class="fa-solid fa-clock text-warning" id="liveClockIcon"></i>
-                            </div>
-                            <div class="datetime-content text-start">
-                                <div class="live-clock-time fw-bold" id="liveClockTime">--:--:--</div>
-                                <div class="live-calendar-date" id="liveCalendarDate">--/--/----</div>
+                        <!-- Ô Đồng hồ và Lịch thời gian thực -->
+                        <div class="live-datetime-card" id="liveDateTimeCard" onclick="toggleClockFormat()" title="Đồng hồ và lịch thời gian thực (Bấm để chuyển định dạng 12h/24h)">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="datetime-icon-badge">
+                                    <i class="fa-solid fa-clock text-warning" id="liveClockIcon"></i>
+                                </div>
+                                <div class="datetime-content text-start">
+                                    <div class="live-clock-time fw-bold" id="liveClockTime">--:--:--</div>
+                                    <div class="live-calendar-date" id="liveCalendarDate">--/--/----</div>
+                                </div>
                             </div>
                         </div>
                     </div>
