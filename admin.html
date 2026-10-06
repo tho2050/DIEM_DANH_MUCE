@@ -1151,6 +1151,51 @@
             color: #ffffff;
             transform: rotate(90deg);
         }
+
+        /* ===== Ô ĐỒNG HỒ & LỊCH THỜI GIAN THỰC (LIVE CLOCK & CALENDAR) ===== */
+        .live-datetime-card {
+            background: rgba(255, 255, 255, 0.35) !important;
+            backdrop-filter: blur(8px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(8px) saturate(180%) !important;
+            border: 1.5px solid rgba(255, 255, 255, 0.6) !important;
+            border-radius: 12px;
+            padding: 3px 10px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04), inset 0 1px 2px rgba(255, 255, 255, 0.7) !important;
+            font-size: 0.8rem;
+            color: #1e293b;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            user-select: none;
+        }
+        .live-datetime-card:hover {
+            background: rgba(255, 255, 255, 0.5) !important;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08) !important;
+            transform: translateY(-1px);
+        }
+        .datetime-icon-badge {
+            font-size: 1.05rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 22px;
+            height: 22px;
+        }
+        .live-clock-time {
+            font-size: 0.82rem;
+            font-weight: 800;
+            line-height: 1.2;
+            color: #0f172a;
+            letter-spacing: 0.3px;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+        .live-calendar-date {
+            font-size: 0.7rem;
+            line-height: 1.2;
+            color: #0284c7;
+            white-space: nowrap;
+            font-weight: 500;
+        }
     </style>
 </head>
 
@@ -1176,6 +1221,19 @@
                         <button type="button" class="btn-refresh-weather" onclick="syncLiveGpsWeather(true)" title="Cập nhật thời tiết theo vị trí GPS sự kiện">
                             <i class="fa-solid fa-arrows-rotate" id="weatherRefreshIcon"></i>
                         </button>
+                    </div>
+                </div>
+
+                <!-- Ô Đồng hồ và Lịch thời gian thực -->
+                <div class="live-datetime-card me-1 d-none d-sm-block" id="liveDateTimeCard" onclick="toggleClockFormat()" title="Đồng hồ và lịch thời gian thực (Bấm để chuyển định dạng 12h/24h)">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="datetime-icon-badge">
+                            <i class="fa-solid fa-clock text-warning" id="liveClockIcon"></i>
+                        </div>
+                        <div class="datetime-content text-start">
+                            <div class="live-clock-time fw-bold" id="liveClockTime">--:--:--</div>
+                            <div class="live-calendar-date" id="liveCalendarDate">--/--/----</div>
+                        </div>
                     </div>
                 </div>
 
@@ -6184,6 +6242,49 @@
 
             syncLiveGpsWeather(false);
             animId = requestAnimationFrame(render);
+        })();
+
+        // ===== ĐỒNG HỒ & LỊCH THỜI GIAN THỰC (LIVE CLOCK & CALENDAR) =====
+        (function initLiveClock() {
+            let is24Hour = localStorage.getItem('muce_clock_is_24h') === 'true';
+
+            window.toggleClockFormat = function() {
+                is24Hour = !is24Hour;
+                localStorage.setItem('muce_clock_is_24h', is24Hour);
+                updateClockDisplay();
+            };
+
+            function updateClockDisplay() {
+                const now = new Date();
+                const daysOfWeek = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+                const dayName = daysOfWeek[now.getDay()];
+                const day = String(now.getDate()).padStart(2, '0');
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const year = now.getFullYear();
+
+                let hours = now.getHours();
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const seconds = String(now.getSeconds()).padStart(2, '0');
+
+                let timeStr = '';
+                if (is24Hour) {
+                    timeStr = `${String(hours).padStart(2, '0')}:${minutes}:${seconds}`;
+                } else {
+                    const ampm = hours >= 12 ? 'PM' : 'AM';
+                    const hours12 = hours % 12 || 12;
+                    timeStr = `${hours12}:${minutes}:${seconds} ${ampm}`;
+                }
+
+                const dateStr = `${dayName}, ${day}/${month}/${year}`;
+
+                const clockEl = document.getElementById('liveClockTime');
+                const dateEl = document.getElementById('liveCalendarDate');
+                if (clockEl) clockEl.textContent = timeStr;
+                if (dateEl) dateEl.textContent = dateStr;
+            }
+
+            updateClockDisplay();
+            setInterval(updateClockDisplay, 1000);
         })();
     </script>
 </body>
