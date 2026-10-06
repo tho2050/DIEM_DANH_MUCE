@@ -1197,16 +1197,32 @@
             font-weight: 500;
         }
 
-        /* ===== ĐỊNH DẠNG 2 Ô TRÊN ĐIỆN THOẠI: 70% (THỜI TIẾT) - 30% (ĐỒNG HỒ) ===== */
+        /* ===== THANH TIỆN ÍCH ADMIN (THỜI TIẾT, ĐỒNG HỒ, 4 MÙA) ===== */
+        .admin-widgets-subbar {
+            background: rgba(255, 255, 255, 0.45);
+            backdrop-filter: blur(10px) saturate(180%);
+            -webkit-backdrop-filter: blur(10px) saturate(180%);
+            border-bottom: 1px solid rgba(2, 132, 199, 0.15);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+        }
+
+        /* ===== ĐỊNH DẠNG TRÊN ĐIỆN THOẠI: XẾP THÀNH 2 DÒNG CHO CẢ 3 TIỆN ÍCH ===== */
         @media (max-width: 576px) {
-            .sub-bar-widgets-group {
+            .admin-widgets-subbar .container {
+                flex-direction: column !important;
+                gap: 5px !important;
+                padding-left: 8px !important;
+                padding-right: 8px !important;
+            }
+            /* Dòng 1: Ô Thời tiết (70%) + Ô Đồng hồ (30%) */
+            .admin-widgets-subbar .sub-bar-widgets-group {
                 width: 100% !important;
                 display: flex !important;
                 flex-direction: row !important;
                 align-items: stretch !important;
                 gap: 5px !important;
             }
-            .sub-bar-widgets-group .weather-realtime-card {
+            .admin-widgets-subbar .weather-realtime-card {
                 flex: 0 0 calc(70% - 3px) !important;
                 width: calc(70% - 3px) !important;
                 min-width: 0 !important;
@@ -1216,7 +1232,7 @@
                 align-items: center !important;
                 box-sizing: border-box !important;
             }
-            .sub-bar-widgets-group .live-datetime-card {
+            .admin-widgets-subbar .live-datetime-card {
                 flex: 0 0 calc(30% - 2px) !important;
                 width: calc(30% - 2px) !important;
                 min-width: 0 !important;
@@ -1227,64 +1243,75 @@
                 justify-content: center !important;
                 box-sizing: border-box !important;
             }
-            .sub-bar-widgets-group .weather-realtime-card > div {
+            .admin-widgets-subbar .weather-realtime-card > div {
                 width: 100% !important;
                 justify-content: space-between !important;
                 gap: 5px !important;
             }
-            .sub-bar-widgets-group .live-datetime-card > div {
+            .admin-widgets-subbar .live-datetime-card > div {
                 width: 100% !important;
                 justify-content: center !important;
                 gap: 4px !important;
             }
-            .sub-bar-widgets-group .weather-temp-badge {
+            .admin-widgets-subbar .weather-temp-badge {
                 font-size: 0.95rem !important;
                 font-weight: 800 !important;
                 flex-shrink: 0 !important;
             }
-            .sub-bar-widgets-group .weather-desc-wrap {
+            .admin-widgets-subbar .weather-desc-wrap {
                 flex: 1 1 auto !important;
                 min-width: 0 !important;
             }
-            .sub-bar-widgets-group .weather-condition-text {
+            .admin-widgets-subbar .weather-condition-text {
                 font-size: 0.74rem !important;
                 white-space: nowrap !important;
                 overflow: hidden !important;
                 text-overflow: ellipsis !important;
                 max-width: 100% !important;
             }
-            .sub-bar-widgets-group .weather-rain-text {
+            .admin-widgets-subbar .weather-rain-text {
                 font-size: 0.66rem !important;
                 white-space: nowrap !important;
                 overflow: hidden !important;
                 text-overflow: ellipsis !important;
                 max-width: 100% !important;
             }
-            .sub-bar-widgets-group .btn-refresh-weather {
+            .admin-widgets-subbar .btn-refresh-weather {
                 width: 22px !important;
                 height: 22px !important;
                 font-size: 0.65rem !important;
                 flex-shrink: 0 !important;
                 margin-left: 2px !important;
             }
-            .sub-bar-widgets-group .datetime-icon-badge {
+            .admin-widgets-subbar .datetime-icon-badge {
                 font-size: 0.82rem !important;
                 width: 16px !important;
                 height: 16px !important;
                 flex-shrink: 0 !important;
             }
-            .sub-bar-widgets-group .live-clock-time {
+            .admin-widgets-subbar .live-clock-time {
                 font-size: 0.72rem !important;
                 font-weight: 800 !important;
                 white-space: nowrap !important;
                 line-height: 1.15 !important;
             }
-            .sub-bar-widgets-group .live-calendar-date {
+            .admin-widgets-subbar .live-calendar-date {
                 font-size: 0.62rem !important;
                 white-space: nowrap !important;
                 overflow: hidden !important;
                 text-overflow: ellipsis !important;
                 line-height: 1.15 !important;
+            }
+            /* Dòng 2: Cụm 4 Mùa căn giữa đều đặn */
+            .admin-widgets-subbar .weather-selector-wrap {
+                width: 100% !important;
+                display: flex !important;
+                justify-content: center !important;
+                margin: 2px 0 0 !important;
+            }
+            .admin-widgets-subbar .weather-pill-group {
+                width: 100% !important;
+                justify-content: space-around !important;
             }
         }
     </style>
@@ -1301,53 +1328,60 @@
                 <img src="logo.png" alt="MUCE Logo" class="logo-responsive">
             </a>
             <div class="d-flex align-items-center gap-1 gap-sm-2 flex-shrink-0">
-                <div class="sub-bar-widgets-group d-flex align-items-center gap-1">
-                    <!-- Ô thời tiết GPS thực tế -->
-                    <div class="weather-realtime-card me-1 d-none d-md-block" id="realtimeWeatherCard" title="Thời tiết thực tế tại tọa độ sự kiện GPS (Open-Meteo)">
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="weather-temp-badge" id="weatherTempBadge"><i class="fa-solid fa-spinner fa-spin me-1"></i>--°C</span>
-                            <div class="weather-desc-wrap text-start">
-                                <div class="weather-condition-text" id="weatherConditionText">Đang tải thời tiết GPS...</div>
-                                <div class="weather-rain-text" id="weatherRainText">Hôm nay: --</div>
-                            </div>
-                            <button type="button" class="btn-refresh-weather" onclick="syncLiveGpsWeather(true)" title="Cập nhật thời tiết theo vị trí GPS sự kiện">
-                                <i class="fa-solid fa-arrows-rotate" id="weatherRefreshIcon"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Ô Đồng hồ và Lịch thời gian thực -->
-                    <div class="live-datetime-card me-1 d-none d-sm-block" id="liveDateTimeCard" onclick="toggleClockFormat()" title="Đồng hồ và lịch thời gian thực (Bấm để chuyển định dạng 12h/24h)">
-                        <div class="d-flex align-items-center gap-2">
-                            <div class="datetime-icon-badge">
-                                <i class="fa-solid fa-clock text-warning" id="liveClockIcon"></i>
-                            </div>
-                            <div class="datetime-content text-start">
-                                <div class="live-clock-time fw-bold" id="liveClockTime">--:--:--</div>
-                                <div class="live-calendar-date" id="liveCalendarDate">--/--/----</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="weather-selector-wrap d-inline-flex align-items-center gap-1 me-1">
-                    <div class="weather-pill-group d-flex" id="weatherPills">
-                        <button type="button" class="weather-pill-btn" id="wpLive" onclick="enableLiveGpsMode()" title="Chế độ Tự động theo thời tiết thực tế (GPS)">⚡ Real</button>
-                        <button type="button" class="weather-pill-btn active" id="wpSunrise" onclick="setWeatherMode('sunrise')" title="Mùa Xuân (Bình minh & Hoa anh đào)">🌸</button>
-                        <button type="button" class="weather-pill-btn" id="wpSunshine" onclick="setWeatherMode('sunshine')" title="Mùa Hạ (Nắng vàng rực rỡ & Lens flare)">☀️</button>
-                        <button type="button" class="weather-pill-btn" id="wpAutumn" onclick="setWeatherMode('autumn')" title="Mùa Thu (Lá vàng chao liệng trong gió)">🍂</button>
-                        <button type="button" class="weather-pill-btn" id="wpSnow" onclick="setWeatherMode('snow')" title="Mùa Đông (Tuyết rơi 3D & Pha lê băng)">❄️</button>
-                        <button type="button" class="weather-pill-btn" id="wpRain" onclick="setWeatherMode('rain')" title="Mùa Mưa (Mưa rào xiên gió & Sấm chớp)">🌧️</button>
-                        <button type="button" class="weather-pill-btn" id="wpAuto" onclick="toggleWeatherAuto()" title="Tự động luân chuyển các mùa">🔄</button>
-                    </div>
-                </div>
-                <a href="index.html" class="btn btn-sm btn-outline-primary"><i class="fa-solid fa-house"></i><span
-                        class="d-none d-sm-inline ms-1">Trang Chủ</span></a>
-                <button class="btn btn-sm btn-danger d-none" id="btnLogout" onclick="logout()"><i
-                        class="fa-solid fa-sign-out"></i><span class="d-none d-sm-inline ms-1">Thoát</span></button>
+                <a href="index.html" class="btn btn-sm btn-outline-primary" title="Về Trang Chủ"><i class="fa-solid fa-house"></i><span class="d-none d-sm-inline ms-1">Trang Chủ</span></a>
+                <button class="btn btn-sm btn-danger d-none" id="btnLogout" onclick="logout()" title="Đăng Xuất"><i class="fa-solid fa-sign-out"></i><span class="d-none d-sm-inline ms-1">Thoát</span></button>
             </div>
         </div>
     </nav>
+
+    <!-- THANH TIỆN ÍCH DÀNH CHO CẢ 3 MÓN: THỜI TIẾT + ĐỒNG HỒ & LỊCH + 4 MÙA (XẾP 2 DÒNG TRÊN DI ĐỘNG) -->
+    <div class="admin-widgets-subbar py-1 py-sm-2" id="adminWidgetsSubbar">
+        <div class="container d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <!-- Dòng 1 trên mobile (bên trái trên PC): Ô Thời tiết (70%) + Ô Đồng hồ (30%) -->
+            <div class="sub-bar-widgets-group d-flex align-items-center gap-1">
+                <!-- Ô thời tiết GPS thực tế -->
+                <div class="weather-realtime-card" id="realtimeWeatherCard" title="Thời tiết thực tế tại tọa độ sự kiện GPS (Open-Meteo)">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="weather-temp-badge" id="weatherTempBadge"><i class="fa-solid fa-spinner fa-spin me-1"></i>--°C</span>
+                        <div class="weather-desc-wrap text-start">
+                            <div class="weather-condition-text" id="weatherConditionText">Đang tải thời tiết GPS...</div>
+                            <div class="weather-rain-text" id="weatherRainText">Hôm nay: --</div>
+                        </div>
+                        <button type="button" class="btn-refresh-weather" onclick="syncLiveGpsWeather(true)" title="Cập nhật thời tiết theo vị trí GPS sự kiện">
+                            <i class="fa-solid fa-arrows-rotate" id="weatherRefreshIcon"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Ô Đồng hồ và Lịch thời gian thực -->
+                <div class="live-datetime-card" id="liveDateTimeCard" onclick="toggleClockFormat()" title="Đồng hồ và lịch thời gian thực (Bấm để chuyển định dạng 12h/24h)">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="datetime-icon-badge">
+                            <i class="fa-solid fa-clock text-warning" id="liveClockIcon"></i>
+                        </div>
+                        <div class="datetime-content text-start">
+                            <div class="live-clock-time fw-bold" id="liveClockTime">--:--:--</div>
+                            <div class="live-calendar-date" id="liveCalendarDate">--/--/----</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dòng 2 trên mobile (bên phải trên PC): Cụm nút 4 Mùa -->
+            <div class="weather-selector-wrap d-inline-flex align-items-center gap-1">
+                <span class="small text-muted d-none d-sm-inline me-1" style="font-size: 0.78rem; font-weight: 500;"><i class="fa-solid fa-cloud-sun me-1 text-primary"></i>4 Mùa:</span>
+                <div class="weather-pill-group d-flex" id="weatherPills">
+                    <button type="button" class="weather-pill-btn" id="wpLive" onclick="enableLiveGpsMode()" title="Chế độ Tự động theo thời tiết thực tế (GPS)">⚡ Real</button>
+                    <button type="button" class="weather-pill-btn active" id="wpSunrise" onclick="setWeatherMode('sunrise')" title="Mùa Xuân (Bình minh & Hoa anh đào)">🌸</button>
+                    <button type="button" class="weather-pill-btn" id="wpSunshine" onclick="setWeatherMode('sunshine')" title="Mùa Hạ (Nắng vàng rực rỡ & Lens flare)">☀️</button>
+                    <button type="button" class="weather-pill-btn" id="wpAutumn" onclick="setWeatherMode('autumn')" title="Mùa Thu (Lá vàng chao liệng trong gió)">🍂</button>
+                    <button type="button" class="weather-pill-btn" id="wpSnow" onclick="setWeatherMode('snow')" title="Mùa Đông (Tuyết rơi 3D & Pha lê băng)">❄️</button>
+                    <button type="button" class="weather-pill-btn" id="wpRain" onclick="setWeatherMode('rain')" title="Mùa Mưa (Mưa rào xiên gió & Sấm chớp)">🌧️</button>
+                    <button type="button" class="weather-pill-btn" id="wpAuto" onclick="toggleWeatherAuto()" title="Tự động luân chuyển các mùa">🔄</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- LOGIN PANEL -->
     <div class="container login-container" id="loginPanel">
