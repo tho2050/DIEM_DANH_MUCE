@@ -1007,12 +1007,16 @@
         <div class="activity-header">
             <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
                 <div>
-                    <span class="code-badge"><i class="fa-solid fa-fingerprint"></i> Mã Sự Kiện: <span id="actCodeHeader">---</span></span>
+                    <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                        <span class="code-badge"><i class="fa-solid fa-fingerprint"></i> Mã Sự Kiện: <span id="actCodeHeader">---</span></span>
+                        <span class="badge bg-danger text-white rounded-pill px-3 py-1 fw-bold shadow-sm d-none" id="actBenefitBadge" style="font-size: 0.82rem;"><i class="fa-solid fa-gift me-1"></i><span id="actBenefitBadgeText"></span></span>
+                    </div>
                     <h1 id="actTitle">Đang tải hoạt động...</h1>
                     <div class="activity-meta">
                         <span class="meta-item location"><i class="fa-solid fa-location-dot"></i> Địa điểm: <strong id="actLocation">---</strong></span>
                         <span class="meta-item"><i class="fa-solid fa-bullseye"></i> Bán kính cho phép: <strong id="actRadius">---</strong></span>
                         <span class="meta-item"><i class="fa-solid fa-user-pen"></i> Tài khoản tạo: <strong id="actCreatedBy">---</strong></span>
+                        <span class="meta-item benefit d-none" id="actBenefitItem" style="color: #dc2626;"><i class="fa-solid fa-gift text-danger"></i> Quyền lợi: <strong id="actBenefit" class="text-danger">---</strong></span>
                     </div>
                 </div>
                 <a href="index.html" class="btn btn-outline-secondary btn-sm" id="btnBackList"><i class="fa-solid fa-arrow-left"></i> Danh Sách Sự Kiện</a>
@@ -1330,6 +1334,7 @@
         let actLng = parseFloat(urlParams.get('lng')) || 0;
         let actRadius = parseInt(urlParams.get('radius')) || 50;
         let actLoc = urlParams.get('loc') || '';
+        let actBenefit = urlParams.get('benefit') || '';
         
         // If code is defined by route format `/Activity/CheckIn/{code}`
         if (!actCode) {
@@ -1349,7 +1354,8 @@
                 locationAddress: actLoc || "Địa điểm trên mã QR",
                 latitude: actLat,
                 longitude: actLng,
-                radiusMeters: actRadius
+                radiusMeters: actRadius,
+                benefit: actBenefit
             };
         }
 
@@ -1373,6 +1379,21 @@
         if (document.getElementById('actCreatedBy')) {
             const rawCreator = activity.createdBy || 'hongnhung';
             document.getElementById('actCreatedBy').textContent = typeof formatCreatorName === 'function' ? formatCreatorName(rawCreator) : (String(rawCreator).toLowerCase().includes('hongnhung2050') ? 'hongnhung' : rawCreator);
+        }
+
+        const ben = (activity ? activity.benefit : '') || actBenefit || '';
+        const benItem = document.getElementById('actBenefitItem');
+        const benText = document.getElementById('actBenefit');
+        const benBadge = document.getElementById('actBenefitBadge');
+        const benBadgeText = document.getElementById('actBenefitBadgeText');
+        if (ben) {
+            if (benText) benText.textContent = ben;
+            if (benItem) benItem.classList.remove('d-none');
+            if (benBadgeText) benBadgeText.textContent = ben;
+            if (benBadge) benBadge.classList.remove('d-none');
+        } else {
+            if (benItem) benItem.classList.add('d-none');
+            if (benBadge) benBadge.classList.add('d-none');
         }
         if (document.getElementById('subBarRadius')) {
             document.getElementById('subBarRadius').textContent = activity.radiusMeters;

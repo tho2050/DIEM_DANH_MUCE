@@ -1848,10 +1848,18 @@
                             </div>
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label fw-bold small">Mô tả sự kiện:</label>
-                            <textarea class="form-control" id="newDescription" rows="2"
-                                placeholder="Nội dung mô tả ngắn về sự kiện..."></textarea>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-7">
+                                <label class="form-label fw-bold small">Mô tả sự kiện:</label>
+                                <textarea class="form-control" id="newDescription" rows="2"
+                                    placeholder="Nội dung mô tả ngắn về sự kiện..."></textarea>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label fw-bold small text-danger"><i class="fa-solid fa-gift text-danger me-1"></i>Quyền lợi (NCTXH / Điểm rèn luyện):</label>
+                                <input type="text" class="form-control border-danger-subtle" id="newBenefit"
+                                    placeholder="VD: +0.5 NCTXH hoặc 2 3 đ rèn luyện" />
+                                <div class="form-text small text-muted">Ví dụ: <strong class="text-danger">+0.5 NCTXH</strong>, <strong class="text-primary">+3 ĐRL</strong>, <strong class="text-success">+2 Điểm rèn luyện</strong>...</div>
+                            </div>
                         </div>
 
                         <div class="row g-3 mb-3">
@@ -2139,7 +2147,12 @@
     <!-- PRINT SECTION -->
     <div class="print-area" id="printArea">
         <h1 style="font-size: 2.2rem; font-weight: 800;" id="printTitle">Gặp gỡ tân sinh viên</h1>
-        <h4 style="color: #475569; margin: 1rem 0;" id="printCode">MÃ SỰ KIỆN: ---</h4>
+        <h4 style="color: #475569; margin: 0.5rem 0;" id="printCode">MÃ SỰ KIỆN: ---</h4>
+        <div id="printBenefitContainer" class="d-none" style="margin: 0.5rem 0;">
+            <span style="display: inline-block; padding: 6px 16px; background-color: #fee2e2; color: #b91c1c; border-radius: 9999px; font-weight: bold; font-size: 1.1rem; border: 1.5px solid #f87171;">
+                <i class="fa-solid fa-gift"></i> Quyền lợi: <span id="printBenefit"></span>
+            </span>
+        </div>
         <div class="print-qr-code d-flex justify-content-center" id="printQrContainer"></div>
         <p style="font-size: 1.2rem; max-width: 600px;">
             Sinh viên mở Camera điện thoại quét mã QR trên để xác thực vị trí GPS trong bán kính quy định (<b
@@ -2160,8 +2173,11 @@
                 </div>
                 <div class="modal-body text-center p-4">
                     <h4 class="fw-bold mb-1 text-primary" id="qrModalTitle">Sự kiện</h4>
-                    <p class="text-muted small mb-3">Mã hoạt động: <span class="badge bg-secondary font-monospace"
+                    <p class="text-muted small mb-2">Mã hoạt động: <span class="badge bg-secondary font-monospace"
                             id="qrModalCode">CODE</span></p>
+                    <p class="mb-3 d-none" id="qrModalBenefitContainer">
+                        <span class="badge bg-danger text-white rounded-pill px-3 py-2 fs-6 shadow-sm"><i class="fa-solid fa-gift me-1"></i>Quyền lợi: <span id="qrModalBenefit"></span></span>
+                    </p>
 
                     <!-- Khung vẽ QR Code -->
                     <div class="d-flex justify-content-center my-4">
@@ -3369,16 +3385,18 @@
                             <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill fw-bold" id="act-count-badge-${item.code}">
                                 <i class="fa-solid fa-users me-1"></i><span id="act-count-${item.code}">${actCount}</span> SV
                             </span>
+                            ${item.benefit ? `<span class="badge bg-danger text-white rounded-pill fw-bold shadow-sm" title="Quyền lợi tham gia"><i class="fa-solid fa-gift me-1"></i>${item.benefit}</span>` : ''}
                         </div>
                         <strong class="d-block mt-1 text-primary">${item.title}</strong>
                         <span class="small text-muted d-block"><i class="fa-solid fa-location-dot"></i> ${item.locationAddress} (Bán kính: ${item.radiusMeters}m)</span>
+                        ${item.benefit ? `<span class="small text-danger fw-semibold d-block mt-1" style="font-size: 0.82rem;"><i class="fa-solid fa-gift me-1"></i>Quyền lợi: <strong class="text-danger">${item.benefit}</strong></span>` : ''}
                         <span class="small text-secondary d-block mt-1" style="font-size: 0.8rem;">
                             <i class="fa-solid fa-user-pen text-primary me-1"></i>Tài khoản tạo: <strong class="text-dark">${displayCreator}</strong>
                         </span>
                     </div>
                     <div class="d-flex gap-2">
                         <button class="btn btn-sm btn-primary fw-semibold" onclick="viewActivityAttendance('${item.code}')" title="Xem danh sách ${actCount} sinh viên sự kiện này"><i class="fa-solid fa-users-viewfinder me-1"></i>Xem DS (${actCount} SV)</button>
-                        <button class="btn btn-sm btn-outline-primary" onclick="printQr('${item.code}', '${item.title}', ${item.radiusMeters})"><i class="fa-solid fa-print me-1"></i>In QR</button>
+                        <button class="btn btn-sm btn-outline-primary" onclick="printQr('${item.code}', '${(item.title || item.code).replace(/'/g, "\\'")}', ${item.radiusMeters})"><i class="fa-solid fa-print me-1"></i>In QR</button>
                         <button class="btn btn-sm btn-outline-success fw-semibold" onclick="exportSingleActivityExcel('${item.code}', '${(item.title || item.code).replace(/'/g, "\\'")}')" title="Tải file Excel danh sách sinh viên sự kiện này"><i class="fa-solid fa-file-excel me-1"></i>Tải Excel</button>
                         <button class="btn btn-sm btn-outline-info" onclick="editActivity(${idx})"><i class="fa-solid fa-pencil"></i> Sửa</button>
                         <button class="btn btn-sm btn-danger" onclick="deleteActivity(${idx})"><i class="fa-solid fa-trash"></i></button>
@@ -3435,6 +3453,7 @@
             const newAct = {
                 code: document.getElementById('newCode').value.trim().toUpperCase(),
                 title: document.getElementById('newTitle').value.trim(),
+                benefit: (document.getElementById('newBenefit')?.value || '').trim(),
                 description: document.getElementById('newDescription').value.trim(),
                 locationAddress: document.getElementById('newLocation').value.trim(),
                 radiusMeters: parseInt(document.getElementById('newRadius').value) || 50,
@@ -3601,12 +3620,14 @@
                                 <tr>
                                     <td>
                                         <span class="badge bg-secondary font-monospace">${item.code}</span>
+                                        ${item.benefit ? `<span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill mt-1 d-block"><i class="fa-solid fa-gift me-1"></i>${item.benefit}</span>` : ''}
                                     </td>
                                     <td>
                                         <strong class="text-dark d-block">${item.title || item.code}</strong>
                                         <span class="text-muted small d-block">
                                             <i class="fa-solid fa-location-dot me-1"></i>${item.locationAddress || 'Chưa có địa chỉ'} (Bán kính: ${item.radiusMeters || 50}m)
                                         </span>
+                                        ${item.benefit ? `<span class="small text-danger fw-semibold d-block mt-1" style="font-size: 0.78rem;"><i class="fa-solid fa-gift me-1"></i>Quyền lợi: <strong>${item.benefit}</strong></span>` : ''}
                                         <span class="small text-secondary d-block mt-1" style="font-size: 0.78rem;">
                                             <i class="fa-solid fa-user-pen text-primary me-1"></i>Tài khoản tạo: <strong class="text-dark">${typeof formatCreatorName === 'function' ? formatCreatorName(item.createdBy || "hongnhung") : (String(item.createdBy || '').toLowerCase().includes('hongnhung2050') ? 'hongnhung' : (item.createdBy || 'hongnhung'))}</strong>
                                         </span>
@@ -3761,6 +3782,9 @@
 
             // Điền thông tin cũ vào form
             document.getElementById('newTitle').value = act.title || '';
+            if (document.getElementById('newBenefit')) {
+                document.getElementById('newBenefit').value = act.benefit || '';
+            }
             document.getElementById('newDescription').value = act.description || '';
             document.getElementById('newLocation').value = act.locationAddress || '';
             document.getElementById('newRadius').value = act.radiusMeters || 50;
@@ -3926,6 +3950,7 @@
                 if (editingIndex === -1) {
                     document.getElementById('addTabHeader').innerHTML = '<i class="fa-solid fa-plus-circle me-2 text-primary"></i>Tạo sự kiện điểm danh mới';
                     document.getElementById('btnSubmitEvent').innerHTML = '<i class="fa-solid fa-save me-2"></i>Tạo Sự Kiện Điểm Danh';
+                    if (document.getElementById('newBenefit')) document.getElementById('newBenefit').value = '';
                     const creatorEl = document.getElementById('newCreatedBy');
                     const rawUser = sessionStorage.getItem("admin_user") || "hongnhung2050py@gmail.com";
                     if (creatorEl) creatorEl.value = typeof formatCreatorName === 'function' ? formatCreatorName(rawUser) : (rawUser.toLowerCase().includes('hongnhung2050') ? 'hongnhung' : rawUser);
@@ -4252,7 +4277,7 @@
             let html = `<option value="">-- Tất cả sự kiện (${total} SV) --</option>`;
             acts.forEach(a => {
                 const count = (attendanceData || []).filter(r => String(r.code || '').trim().toUpperCase() === String(a.code || '').trim().toUpperCase()).length;
-                html += `<option value="${a.code}">${a.code} - ${a.title} (${count} SV)</option>`;
+                html += `<option value="${a.code}">${a.code} - ${a.title}${a.benefit ? ` [🎁 ${a.benefit}]` : ''} (${count} SV)</option>`;
             });
             filterSelect.innerHTML = html;
             if (currentVal) filterSelect.value = currentVal;
@@ -4757,7 +4782,7 @@
             if (acts.length === 0) {
                 actSelect.innerHTML = `<option value="${item.code}">${item.code} - ${item.title || item.code}</option>`;
             } else {
-                actSelect.innerHTML = acts.map(a => `<option value="${a.code}">${a.code} - ${a.title}</option>`).join('');
+                actSelect.innerHTML = acts.map(a => `<option value="${a.code}">${a.code} - ${a.title}${a.benefit ? ` [🎁 ${a.benefit}]` : ''}</option>`).join('');
                 actSelect.value = item.code || '';
             }
 
@@ -4971,7 +4996,7 @@
             if (acts.length === 0) {
                 actSelect.innerHTML = '<option value="">-- Chưa có sự kiện --</option>';
             } else {
-                actSelect.innerHTML = acts.map(a => `<option value="${a.code}">${a.code} - ${a.title}</option>`).join('');
+                actSelect.innerHTML = acts.map(a => `<option value="${a.code}">${a.code} - ${a.title}${a.benefit ? ` [🎁 ${a.benefit}]` : ''}</option>`).join('');
             }
 
             if (!importExcelModalInstance) {
@@ -5555,7 +5580,8 @@
             const dirPath = currentPath.substring(0, currentPath.lastIndexOf('/'));
 
             // Mã hóa đầy đủ thông số vào URL QR code (gửi kèm qr=true để ẩn 3 nút điều hướng)
-            const checkinUrl = baseOrigin + (dirPath === '/' ? '' : dirPath) + '/checkin.html'
+            const ben = act ? (act.benefit || '') : '';
+            let checkinUrl = baseOrigin + (dirPath === '/' ? '' : dirPath) + '/checkin.html'
                 + '?code=' + encodeURIComponent(code)
                 + '&title=' + encodeURIComponent(title)
                 + '&lat=' + lat
@@ -5563,11 +5589,25 @@
                 + '&radius=' + radius
                 + '&loc=' + encodeURIComponent(loc)
                 + '&qr=true';
+            if (ben) {
+                checkinUrl += '&benefit=' + encodeURIComponent(ben);
+            }
 
             // 1. Cập nhật và tạo QR cho trang In Bản Mềm (hidden on-screen)
             document.getElementById('printTitle').textContent = title;
             document.getElementById('printCode').textContent = 'MÃ SỰ KIỆN: ' + code;
             document.getElementById('printRadius').textContent = radius + 'm';
+            const printBenContainer = document.getElementById('printBenefitContainer');
+            const printBenText = document.getElementById('printBenefit');
+            if (printBenContainer && printBenText) {
+                if (ben) {
+                    printBenText.textContent = ben;
+                    printBenContainer.classList.remove('d-none');
+                } else {
+                    printBenContainer.classList.add('d-none');
+                }
+            }
+
             const printContainer = document.getElementById('printQrContainer');
             printContainer.innerHTML = '';
             new QRCode(printContainer, {
@@ -5581,6 +5621,16 @@
             document.getElementById('qrModalCode').textContent = code;
             document.getElementById('qrModalRadius').textContent = radius;
             document.getElementById('qrModalLink').textContent = checkinUrl;
+            const qrModalBenContainer = document.getElementById('qrModalBenefitContainer');
+            const qrModalBenText = document.getElementById('qrModalBenefit');
+            if (qrModalBenContainer && qrModalBenText) {
+                if (ben) {
+                    qrModalBenText.textContent = ben;
+                    qrModalBenContainer.classList.remove('d-none');
+                } else {
+                    qrModalBenContainer.classList.add('d-none');
+                }
+            }
 
             const modalContainer = document.getElementById('qrModalCanvasContainer');
             modalContainer.innerHTML = '';

@@ -73,14 +73,18 @@ if (DATABASE_URL) {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             is_deleted BOOLEAN DEFAULT FALSE,
             deleted_at TEXT,
-            created_by TEXT
+            created_by TEXT,
+            benefit TEXT
         );
 
-        -- Tự động thêm cột created_by nếu bảng đã tạo từ trước
+        -- Tự động thêm cột created_by và benefit nếu bảng đã tạo từ trước
         DO $$ 
         BEGIN 
             IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='activities' AND column_name='created_by') THEN
                 ALTER TABLE activities ADD COLUMN created_by TEXT;
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='activities' AND column_name='benefit') THEN
+                ALTER TABLE activities ADD COLUMN benefit TEXT;
             END IF;
         END $$;
 
@@ -155,9 +159,10 @@ if (DATABASE_URL) {
                 await pool.query(`
                     ALTER TABLE activities ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE;
                     ALTER TABLE activities ADD COLUMN IF NOT EXISTS deleted_at TEXT;
+                    ALTER TABLE activities ADD COLUMN IF NOT EXISTS benefit TEXT;
                 `);
             } catch (e) {
-                console.error("Lỗi cập nhật cột is_deleted cho activities:", e);
+                console.error("Lỗi cập nhật cột is_deleted và benefit cho activities:", e);
             }
 
             // Đảm bảo các tài khoản Google cá nhân (không phải Super Admin) phải ở trạng thái CHỜ DUYỆT (pending)
@@ -201,14 +206,14 @@ function getLocalIp() {
 async function dbGetActivities() {
     if (pool) {
         try {
-            const res = await pool.query('SELECT code, title, description, location_address as "locationAddress", latitude, longitude, radius_meters as "radiusMeters", start_time as "startTime", end_time as "endTime", COALESCE(NULLIF(created_by, \'\'), \'hongnhung\') as "createdBy" FROM activities WHERE is_deleted IS NOT TRUE ORDER BY created_at DESC');
+            const res = await pool.query('SELECT code, title, description, location_address as "locationAddress", latitude, longitude, radius_meters as "radiusMeters", start_time as "startTime", end_time as "endTime", COALESCE(NULLIF(created_by, \'\'), \'hongnhung\') as "createdBy", COALESCE(benefit, \'\') as "benefit" FROM activities WHERE is_deleted IS NOT TRUE ORDER BY created_at DESC');
             return res.rows;
         } catch (e) { console.error('Lỗi đọc activities từ SQL:', e); }
     }
     if (fs.existsSync(ACTIVITIES_FILE)) {
         try { 
             const list = JSON.parse(fs.readFileSync(ACTIVITIES_FILE, 'utf8'));
-            if (Array.isArray(list)) return list.map(a => ({ ...a, createdBy: a.createdBy || 'hongnhung' }));
+            if (Array.isArray(list)) return list.map(a => ({ ...a, createdBy: a.createdBy || 'hongnhung', benefit: a.benefit || '' }));
         } catch (e) {}
     }
     return [];
@@ -217,14 +222,14 @@ async function dbGetActivities() {
 async function dbGetDeletedActivities() {
     if (pool) {
         try {
-            const res = await pool.query('SELECT code, title, description, location_address as "locationAddress", latitude, longitude, radius_meters as "radiusMeters", start_time as "startTime", end_time as "endTime", COALESCE(NULLIF(created_by, \'\'), \'hongnhung\') as "createdBy", deleted_at as "deletedAt" FROM activities WHERE is_deleted = TRUE ORDER BY deleted_at DESC');
+            const res = await pool.query('SELECT code, title, description, location_address as "locationAddress", latitude, longitude, radius_meters as "radiusMeters", start_time as "startTime", end_time as "endTime", COALESCE(NULLIF(created_by, \'\'), \'hongnhung\') as "createdBy", deleted_at as "deletedAt", COALESCE(benefit, \'\') as "benefit" FROM activities WHERE is_deleted = TRUE ORDER BY deleted_at DESC');
             return res.rows;
         } catch (e) { console.error('Lỗi đọc deleted activities từ SQL:', e); }
     }
     if (fs.existsSync(DELETED_ACTIVITIES_FILE)) {
         try { 
             const list = JSON.parse(fs.readFileSync(DELETED_ACTIVITIES_FILE, 'utf8'));
-            if (Array.isArray(list)) return list.map(a => ({ ...a, createdBy: a.createdBy || 'hongnhung' }));
+            if (Array.isArray(list)) return list.map(a => ({ ...a, createdBy: a.createdBy || 'hongnhung', benefit: a.benefit || '' }));
         } catch (e) {}
     }
     return [];
@@ -245,8 +250,8 @@ async function dbSaveActivities(activitiesList) {
             for (const act of activitiesList) {
                 if (!act || !act.code) continue;
                 await pool.query(`
-                    INSERT INTO activities (code, title, description, location_address, latitude, longitude, radius_meters, start_time, end_time, created_by, is_deleted, deleted_at)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, FALSE, NULL)
+                    INSERT INTO activities (code, title, description, location_address, latitude, longitude, radius_meters, start_time, end_time, created_by, is_deleted, deleted_at, benefit)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, FALSE, NULL, $11)
                     ON CONFLICT (code) DO UPDATE SET
                         title = EXCLUDED.title,
                         description = EXCLUDED.description,
@@ -257,13 +262,14 @@ async function dbSaveActivities(activitiesList) {
                         start_time = EXCLUDED.start_time,
                         end_time = EXCLUDED.end_time,
                         created_by = COALESCE(NULLIF(EXCLUDED.created_by, ''), activities.created_by),
+                        benefit = EXCLUDED.benefit,
                         is_deleted = FALSE,
                         deleted_at = NULL;
                 `, [
                     act.code, act.title || '', act.description || '', act.locationAddress || '',
                     parseFloat(act.latitude) || 0, parseFloat(act.longitude) || 0,
                     parseInt(act.radiusMeters) || 50, act.startTime || '', act.endTime || '',
-                    act.createdBy || 'hongnhung'
+                    act.createdBy || 'hongnhung', act.benefit || ''
                 ]);
             }
             return true;
