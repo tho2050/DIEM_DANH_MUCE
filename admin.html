@@ -1801,6 +1801,7 @@
                                     <th>Thời gian</th>
                                     <th>Mã sự kiện</th>
                                     <th>Tên sự kiện</th>
+                                    <th>Quyền lợi</th>
                                     <th style="min-width: 130px;" class="text-warning"><i
                                             class="fa-solid fa-id-card me-1"></i>MSSV (Mã SV)</th>
                                     <th>Họ và Tên</th>
@@ -1817,7 +1818,7 @@
                             </thead>
                             <tbody id="attendanceTableBody">
                                 <tr>
-                                    <td colspan="15" class="text-center py-4 text-muted">Đang tải dữ liệu điểm danh...
+                                    <td colspan="16" class="text-center py-4 text-muted">Đang tải dữ liệu điểm danh...
                                     </td>
                                 </tr>
                             </tbody>
@@ -4663,7 +4664,7 @@
                 else thActions.classList.add('d-none');
             }
 
-            const colSpanVal = isSpecial ? 15 : 14;
+            const colSpanVal = isSpecial ? 16 : 15;
 
             if (!data || data.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="${colSpanVal}" class="text-center py-4 text-muted">Chưa có ai điểm danh hoặc không tìm thấy kết quả.</td></tr>`;
@@ -4672,6 +4673,14 @@
                 updateAttendanceCountBadges();
                 return;
             }
+
+            const acts = typeof getActivities === 'function' ? getActivities() : [];
+            const actMap = {};
+            (acts || []).forEach(a => {
+                if (a && a.code) {
+                    actMap[String(a.code).trim().toUpperCase()] = a;
+                }
+            });
 
             tbody.innerHTML = data.map((item, idx) => {
                 const actualIdx = attendanceData ? attendanceData.indexOf(item) : idx;
@@ -4682,12 +4691,17 @@
                     ? (item.timestamp.includes('T') ? getVietnamTimestamp(item.timestamp) : item.timestamp)
                     : '--';
 
+                const matchedAct = actMap[String(item.code || '').trim().toUpperCase()];
+                const benefitVal = item.benefit || (matchedAct ? matchedAct.benefit : '') || '';
+                const titleVal = item.title || (matchedAct ? matchedAct.title : '--');
+
                 return `
                 <tr class="text-nowrap attendance-row-item ${isSelected ? 'row-selected' : ''}" onclick="selectStudentRow(this, ${idx})" title="Click để hiện viền xanh kiểm tra sinh viên này">
                     <td class="text-center">${idx + 1}</td>
                     <td class="small text-muted font-monospace">${displayTime}</td>
                     <td><span class="badge bg-secondary">${item.code}</span></td>
-                    <td>${item.title || '--'}</td>
+                    <td>${titleVal}</td>
+                    <td>${benefitVal ? `<span class="badge bg-danger text-white rounded-pill shadow-sm"><i class="fa-solid fa-gift me-1"></i>${benefitVal}</span>` : '<span class="text-muted">--</span>'}</td>
                     <td style="min-width: 130px;"><span class="badge bg-light text-primary font-monospace border border-primary px-2 py-1 fs-6">${item.studentCode || '--'}</span></td>
                     <td class="fw-bold text-dark">${item.name}</td>
                     <td>${item.className || '--'}</td>
@@ -5244,15 +5258,27 @@
 
         // TIỀN XỬ LÝ MẢNG DỮ LIỆU SANG MA TRẬN SHEETJS (XLSX)
         function prepareSheetData(list) {
+            const acts = typeof getActivities === 'function' ? getActivities() : [];
+            const actMap = {};
+            (acts || []).forEach(a => {
+                if (a && a.code) {
+                    actMap[String(a.code).trim().toUpperCase()] = a;
+                }
+            });
+
             const data = [
-                ["STT", "Thời Gian", "Mã Sự Kiện", "Tên Sự Kiện", "MSSV", "Họ và Tên", "Lớp", "Khoa", "Số Điện Thoại", "Email", "Khoảng Cách", "Thiết Bị", "Tọa Độ GPS", "IP Máy"]
+                ["STT", "Thời Gian", "Mã Sự Kiện", "Tên Sự Kiện", "Quyền Lợi", "MSSV", "Họ và Tên", "Lớp", "Khoa", "Số Điện Thoại", "Email", "Khoảng Cách", "Thiết Bị", "Tọa Độ GPS", "IP Máy"]
             ];
             (list || []).forEach((item, idx) => {
+                const act = actMap[String(item.code || '').trim().toUpperCase()];
+                const benefitVal = item.benefit || (act ? act.benefit : '') || '';
+                const titleVal = item.title || (act ? act.title : '') || '';
                 data.push([
                     idx + 1,
                     item.timestamp || '',
                     item.code || '',
-                    item.title || '',
+                    titleVal,
+                    benefitVal,
                     item.studentCode || '',
                     item.name || '',
                     item.className || '',
@@ -5274,7 +5300,7 @@
             const ws = XLSX.utils.aoa_to_sheet(matrix);
 
             if (matrix && matrix.length > 0) {
-                const minWidths = [8, 22, 16, 26, 18, 25, 16, 28, 16, 32, 22, 22, 25, 18];
+                const minWidths = [8, 22, 16, 26, 20, 18, 25, 16, 28, 16, 32, 22, 22, 25, 18];
                 const colWidths = matrix[0].map((header, colIdx) => {
                     let maxLen = header ? String(header).length : 10;
                     for (let rowIdx = 1; rowIdx < matrix.length; rowIdx++) {

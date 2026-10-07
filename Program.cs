@@ -114,20 +114,20 @@ app.MapGet("/api", (HttpContext context) =>
     {
         if (!File.Exists(recordsFile))
         {
-            var emptyCsv = Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes("STT,Thời Gian,Mã Sự Kiện,MSSV,Họ và Tên,Lớp,Khoa,Khoảng Cách,Thiết Bị,Tọa độ sự kiện,Số Điện Thoại,Gmail,Tên Sự Kiện,IP Máy\r\n")).ToArray();
+            var emptyCsv = Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes("STT,Thời Gian,Mã Sự Kiện,Tên Sự Kiện,Quyền Lợi,MSSV,Họ và Tên,Lớp,Khoa,Khoảng Cách,Thiết Bị,Tọa độ sự kiện,Số Điện Thoại,Gmail,IP Máy\r\n")).ToArray();
             return Results.File(emptyCsv, "text/csv;charset=utf-8", $"Danh_Sach_Diem_Danh_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
         }
 
         var json = File.ReadAllText(recordsFile);
         var list = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(json) ?? new();
         var sb = new StringBuilder();
-        sb.AppendLine("STT,Thời Gian,Mã Sự Kiện,MSSV,Họ và Tên,Lớp,Khoa,Khoảng Cách,Thiết Bị,Tọa độ sự kiện,Số Điện Thoại,Gmail,Tên Sự Kiện,IP Máy");
+        sb.AppendLine("STT,Thời Gian,Mã Sự Kiện,Tên Sự Kiện,Quyền Lợi,MSSV,Họ và Tên,Lớp,Khoa,Khoảng Cách,Thiết Bị,Tọa độ sự kiện,Số Điện Thoại,Gmail,IP Máy");
 
         int idx = 1;
         foreach (var item in list)
         {
             string GetVal(string k) => item.TryGetValue(k, out var v) && v != null ? v.ToString() ?? "" : "";
-            sb.AppendLine($"{idx++},\"{GetVal("timestamp")}\",\"{GetVal("code")}\",\"{GetVal("studentCode")}\",\"{GetVal("name")}\",\"{GetVal("className")}\",\"{GetVal("faculty")}\",\"{GetVal("distance")}\",\"{GetVal("device")}\",\"{GetVal("coords")}\",\"{GetVal("phoneNumber")}\",\"{GetVal("email")}\",\"{GetVal("title")}\",\"{GetVal("ip")}\"");
+            sb.AppendLine($"{idx++},\"{GetVal("timestamp")}\",\"{GetVal("code")}\",\"{GetVal("title")}\",\"{GetVal("benefit")}\",\"{GetVal("studentCode")}\",\"{GetVal("name")}\",\"{GetVal("className")}\",\"{GetVal("faculty")}\",\"{GetVal("distance")}\",\"{GetVal("device")}\",\"{GetVal("coords")}\",\"{GetVal("phoneNumber")}\",\"{GetVal("email")}\",\"{GetVal("ip")}\"");
         }
 
         var bytes = Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(sb.ToString())).ToArray();

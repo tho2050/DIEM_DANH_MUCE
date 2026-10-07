@@ -483,6 +483,17 @@ async function dbGetCheckins() {
         try { rows = JSON.parse(fs.readFileSync(RECORDS_FILE, 'utf8')); } catch (e) {}
     }
     const activities = await dbGetActivities();
+    const actMap = {};
+    (activities || []).forEach(a => {
+        if (a && a.code) {
+            actMap[String(a.code).trim().toUpperCase()] = a;
+        }
+    });
+    rows.forEach(r => {
+        const act = actMap[String(r.code || '').trim().toUpperCase()];
+        if (!r.benefit && act && act.benefit) r.benefit = act.benefit;
+        if (!r.title && act && act.title) r.title = act.title;
+    });
     return sortAttendanceRecords(rows, activities);
 }
 
@@ -1387,11 +1398,11 @@ const server = http.createServer(async (req, res) => {
             }
 
             if (action === 'exportCsv' || pathname === '/api/export-csv') {
-                let csv = '\uFEFFSTT,Thời Gian,Mã Sự Kiện,MSSV,Họ và Tên,Lớp,Khoa,Khoảng Cách,Thiết Bị,Tọa độ sự kiện,Số Điện Thoại,Gmail,Tên Sự Kiện,IP Máy\r\n';
+                let csv = '\uFEFFSTT,Thời Gian,Mã Sự Kiện,Tên Sự Kiện,Quyền Lợi,MSSV,Họ và Tên,Lớp,Khoa,Khoảng Cách,Thiết Bị,Tọa độ sự kiện,Số Điện Thoại,Gmail,IP Máy\r\n';
                 const list = await dbGetCheckins();
                 list.forEach((item, idx) => {
                     const val = (k) => item[k] || '';
-                    csv += `${idx + 1},"${val('timestamp')}","${val('code')}","${val('studentCode')}","${val('name')}","${val('className')}","${val('faculty')}","${val('distance')}","${val('device')}","${val('coords')}","${val('phoneNumber')}","${val('email')}","${val('title')}","${val('ip')}"\r\n`;
+                    csv += `${idx + 1},"${val('timestamp')}","${val('code')}","${val('title')}","${val('benefit')}","${val('studentCode')}","${val('name')}","${val('className')}","${val('faculty')}","${val('distance')}","${val('device')}","${val('coords')}","${val('phoneNumber')}","${val('email')}","${val('ip')}"\r\n`;
                 });
                 res.writeHead(200, {
                     'Content-Type': 'text/csv; charset=utf-8',
