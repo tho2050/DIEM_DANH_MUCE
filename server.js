@@ -35,6 +35,22 @@ function getVietnamTimestamp(d = new Date()) {
     }
 }
 
+// Helper giải mã chuỗi tiêu đề bị dính mã hóa URL (%20, %C3%A9, ...) thành tiếng Việt chuẩn
+function decodeTitle(s) {
+    if (!s) return '';
+    let res = String(s);
+    try {
+        while (res.includes('%20') || /%[0-9A-Fa-f]{2}/.test(res)) {
+            const decoded = decodeURIComponent(res);
+            if (decoded === res) break;
+            res = decoded;
+        }
+    } catch (e) {
+        res = res.replace(/%20/g, ' ');
+    }
+    return res.trim();
+}
+
 const PORT = process.env.PORT || 5252;
 const DATABASE_URL = process.env.DATABASE_URL;
 
@@ -165,6 +181,20 @@ if (DATABASE_URL) {
                 console.error("Lỗi cập nhật cột is_deleted và benefit cho activities:", e);
             }
 
+            // Tự động xóa sạch mã hóa %20 trong tiêu đề sự kiện và bản ghi điểm danh cũ
+            try {
+                await pool.query(`
+                    UPDATE checkins 
+                    SET title = REPLACE(title, '%20', ' ')
+                    WHERE title LIKE '%\\%20%';
+                    UPDATE activities 
+                    SET title = REPLACE(title, '%20', ' ')
+                    WHERE title LIKE '%\\%20%';
+                `);
+            } catch (e) {
+                console.error("Lỗi chuẩn hóa tiêu đề trong SQL:", e);
+            }
+
             // Đảm bảo các tài khoản Google cá nhân (không phải Super Admin) phải ở trạng thái CHỜ DUYỆT (pending)
             try {
                 await pool.query(`
@@ -207,13 +237,13 @@ async function dbGetActivities() {
     if (pool) {
         try {
             const res = await pool.query('SELECT code, title, description, location_address as "locationAddress", latitude, longitude, radius_meters as "radiusMeters", start_time as "startTime", end_time as "endTime", COALESCE(NULLIF(created_by, \'\'), \'hongnhung\') as "createdBy", COALESCE(benefit, \'\') as "benefit" FROM activities WHERE is_deleted IS NOT TRUE ORDER BY created_at DESC');
-            return res.rows;
+            return res.rows.map(a => ({ ...a, title: decodeTitle(a.title) }));
         } catch (e) { console.error('Lỗi đọc activities từ SQL:', e); }
     }
     if (fs.existsSync(ACTIVITIES_FILE)) {
         try { 
             const list = JSON.parse(fs.readFileSync(ACTIVITIES_FILE, 'utf8'));
-            if (Array.isArray(list)) return list.map(a => ({ ...a, createdBy: a.createdBy || 'hongnhung', benefit: a.benefit || '' }));
+            if (Array.isArray(list)) return list.map(a => ({ ...a, title: decodeTitle(a.title), createdBy: a.createdBy || 'hongnhung', benefit: a.benefit || '' }));
         } catch (e) {}
     }
     return [];
@@ -223,19 +253,22 @@ async function dbGetDeletedActivities() {
     if (pool) {
         try {
             const res = await pool.query('SELECT code, title, description, location_address as "locationAddress", latitude, longitude, radius_meters as "radiusMeters", start_time as "startTime", end_time as "endTime", COALESCE(NULLIF(created_by, \'\'), \'hongnhung\') as "createdBy", deleted_at as "deletedAt", COALESCE(benefit, \'\') as "benefit" FROM activities WHERE is_deleted = TRUE ORDER BY deleted_at DESC');
-            return res.rows;
+            return res.rows.map(a => ({ ...a, title: decodeTitle(a.title) }));
         } catch (e) { console.error('Lỗi đọc deleted activities từ SQL:', e); }
     }
     if (fs.existsSync(DELETED_ACTIVITIES_FILE)) {
         try { 
             const list = JSON.parse(fs.readFileSync(DELETED_ACTIVITIES_FILE, 'utf8'));
-            if (Array.isArray(list)) return list.map(a => ({ ...a, createdBy: a.createdBy || 'hongnhung', benefit: a.benefit || '' }));
+            if (Array.isArray(list)) return list.map(a => ({ ...a, title: decodeTitle(a.title), createdBy: a.createdBy || 'hongnhung', benefit: a.benefit || '' }));
         } catch (e) {}
     }
     return [];
 }
 
 async function dbSaveActivities(activitiesList) {
+    if (Array.isArray(activitiesList)) {
+        activitiesList.forEach(a => { if (a && a.title) a.title = decodeTitle(a.title); });
+    }
     if (pool) {
         try {
             const validCodes = (activitiesList || []).map(a => a ? a.code : null).filter(Boolean);
@@ -266,7 +299,7 @@ async function dbSaveActivities(activitiesList) {
                         is_deleted = FALSE,
                         deleted_at = NULL;
                 `, [
-                    act.code, act.title || '', act.description || '', act.locationAddress || '',
+                    act.code, decodeTitle(act.title || ''), act.description || '', act.locationAddress || '',
                     parseFloat(act.latitude) || 0, parseFloat(act.longitude) || 0,
                     parseInt(act.radiusMeters) || 50, act.startTime || '', act.endTime || '',
                     act.createdBy || 'hongnhung', act.benefit || ''
@@ -472,6 +505,7 @@ async function dbGetCheckins() {
         try {
             const res = await pool.query('SELECT id, timestamp, code, title, student_code as "studentCode", name, class_name as "className", faculty, phone_number as "phoneNumber", email, coords, distance, device, ip, device_uuid as "deviceUuid", created_at as "createdAt" FROM checkins ORDER BY id DESC');
             rows = res.rows.map(r => {
+                if (r.title) r.title = decodeTitle(r.title);
                 // Đảm bảo thời gian hiển thị luôn chuẩn giờ Việt Nam
                 if (r.createdAt && (!r.timestamp || r.timestamp.trim() === '' || /^\d{2}:\d{2}:\d{2}$/.test(r.timestamp.trim()))) {
                     r.timestamp = getVietnamTimestamp(r.createdAt);
@@ -480,7 +514,12 @@ async function dbGetCheckins() {
             });
         } catch (e) { console.error('Lỗi đọc checkins từ SQL:', e); }
     } else if (fs.existsSync(RECORDS_FILE)) {
-        try { rows = JSON.parse(fs.readFileSync(RECORDS_FILE, 'utf8')); } catch (e) {}
+        try { 
+            rows = JSON.parse(fs.readFileSync(RECORDS_FILE, 'utf8')); 
+            if (Array.isArray(rows)) {
+                rows.forEach(r => { if (r && r.title) r.title = decodeTitle(r.title); });
+            }
+        } catch (e) {}
     }
     const activities = await dbGetActivities();
     const actMap = {};
@@ -492,12 +531,14 @@ async function dbGetCheckins() {
     rows.forEach(r => {
         const act = actMap[String(r.code || '').trim().toUpperCase()];
         if (!r.benefit && act && act.benefit) r.benefit = act.benefit;
-        if (!r.title && act && act.title) r.title = act.title;
+        if (!r.title && act && act.title) r.title = decodeTitle(act.title);
+        else if (r.title) r.title = decodeTitle(r.title);
     });
     return sortAttendanceRecords(rows, activities);
 }
 
 async function dbUpdateCheckin(record) {
+    if (record.title) record.title = decodeTitle(record.title);
     if (pool && record.id) {
         try {
             await pool.query(`
@@ -507,7 +548,7 @@ async function dbUpdateCheckin(record) {
                     email = $9, distance = $10
                 WHERE id = $11
             `, [
-                record.timestamp || '', record.code || '', record.title || '',
+                record.timestamp || '', record.code || '', decodeTitle(record.title || ''),
                 record.studentCode || '', record.name || '', record.className || '',
                 record.faculty || '', record.phoneNumber || '', record.email || '',
                 record.distance !== undefined ? record.distance : 'Bổ sung thủ công (Admin)', record.id
@@ -559,6 +600,7 @@ async function dbDeleteCheckinRecord(id, studentCode, code) {
 }
 
 async function dbSaveCheckin(record) {
+    if (record.title) record.title = decodeTitle(record.title);
     if (pool) {
         try {
             await pool.query(`
@@ -566,7 +608,7 @@ async function dbSaveCheckin(record) {
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);
             `, [
                 record.timestamp || getVietnamTimestamp(),
-                record.code || '', record.title || '', record.studentCode || '',
+                record.code || '', decodeTitle(record.title || ''), record.studentCode || '',
                 record.name || '', record.className || '', record.faculty || '',
                 record.phoneNumber || '', record.email || '', record.coords || '',
                 record.distance || '', record.device || '', record.ip || '', record.deviceUuid || ''
@@ -588,6 +630,7 @@ async function dbSaveCheckin(record) {
 
 async function dbSaveBatchCheckins(records) {
     if (!Array.isArray(records) || records.length === 0) return { status: 'error', message: 'Dữ liệu danh sách rỗng!' };
+    records.forEach(r => { if (r && r.title) r.title = decodeTitle(r.title); });
     
     if (pool) {
         try {
@@ -598,7 +641,7 @@ async function dbSaveBatchCheckins(records) {
                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);
                 `, [
                     r.timestamp || getVietnamTimestamp(),
-                    r.code || '', r.title || '', r.studentCode || '',
+                    r.code || '', decodeTitle(r.title || ''), r.studentCode || '',
                     r.name || '', r.className || '', r.faculty || '',
                     r.phoneNumber || '', r.email || '', r.coords || 'Thủ công (Excel)',
                     r.distance || 'Nhập từ Excel (Admin)', r.device || 'Import Excel',

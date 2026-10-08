@@ -2645,6 +2645,22 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="config.js?v=2.7"></script>
     <script>
+        // Helper giải mã chuỗi tiêu đề bị dính mã hóa URL (%20, %C3%A9, ...) thành tiếng Việt chuẩn
+        function decodeTitle(s) {
+            if (!s) return '';
+            let res = String(s);
+            try {
+                while (res.includes('%20') || /%[0-9A-Fa-f]{2}/.test(res)) {
+                    const decoded = decodeURIComponent(res);
+                    if (decoded === res) break;
+                    res = decoded;
+                }
+            } catch (e) {
+                res = res.replace(/%20/g, ' ');
+            }
+            return res.trim();
+        }
+
         let selectMap, selectMarker;
         let serverIp = 'localhost';
 
@@ -3581,7 +3597,7 @@
                             </span>
                             ${item.benefit ? `<span class="badge bg-danger text-white rounded-pill fw-bold shadow-sm" title="Quyền lợi tham gia"><i class="fa-solid fa-gift me-1"></i>${item.benefit}</span>` : ''}
                         </div>
-                        <strong class="d-block mt-1 text-primary">${item.title}</strong>
+                        <strong class="d-block mt-1 text-primary">${decodeTitle(item.title)}</strong>
                         <span class="small text-muted d-block"><i class="fa-solid fa-location-dot"></i> ${item.locationAddress} (Bán kính: ${item.radiusMeters}m)</span>
                         ${item.benefit ? `<span class="small text-danger fw-semibold d-block mt-1" style="font-size: 0.82rem;"><i class="fa-solid fa-gift me-1"></i>Quyền lợi: <strong class="text-danger">${item.benefit}</strong></span>` : ''}
                         <span class="small text-secondary d-block mt-1" style="font-size: 0.8rem;">
@@ -3590,8 +3606,8 @@
                     </div>
                     <div class="d-flex gap-2">
                         <button class="btn btn-sm btn-primary fw-semibold" onclick="viewActivityAttendance('${item.code}')" title="Xem danh sách ${actCount} sinh viên sự kiện này"><i class="fa-solid fa-users-viewfinder me-1"></i>Xem DS (${actCount} SV)</button>
-                        <button class="btn btn-sm btn-outline-primary" onclick="printQr('${item.code}', '${(item.title || item.code).replace(/'/g, "\\'")}', ${item.radiusMeters})"><i class="fa-solid fa-print me-1"></i>In QR</button>
-                        <button class="btn btn-sm btn-outline-success fw-semibold" onclick="exportSingleActivityExcel('${item.code}', '${(item.title || item.code).replace(/'/g, "\\'")}')" title="Tải file Excel danh sách sinh viên sự kiện này"><i class="fa-solid fa-file-excel me-1"></i>Tải Excel</button>
+                        <button class="btn btn-sm btn-outline-primary" onclick="printQr('${item.code}', '${(decodeTitle(item.title) || item.code).replace(/'/g, "\\'")}', ${item.radiusMeters})"><i class="fa-solid fa-print me-1"></i>In QR</button>
+                        <button class="btn btn-sm btn-outline-success fw-semibold" onclick="exportSingleActivityExcel('${item.code}', '${(decodeTitle(item.title) || item.code).replace(/'/g, "\\'")}')" title="Tải file Excel danh sách sinh viên sự kiện này"><i class="fa-solid fa-file-excel me-1"></i>Tải Excel</button>
                         <button class="btn btn-sm btn-outline-info" onclick="editActivity(${idx})"><i class="fa-solid fa-pencil"></i> Sửa</button>
                         <button class="btn btn-sm btn-danger" onclick="deleteActivity(${idx})"><i class="fa-solid fa-trash"></i></button>
                     </div>
@@ -4427,6 +4443,7 @@
                         { timestamp: "27/08/2026 14:02:45", code: "WORKSHOP-AI", studentCode: "21000789", name: "Lê Văn Nam", className: "CNTT-K21B", faculty: "Điện - Điện tử", distance: "45.1m", device: "Xiaomi 14 Ultra" }
                     ];
                     // Sắp xếp theo Sự kiện -> Khoa (CNTT -> Kinh tế -> Xây dựng -> Kiến trúc) -> Lớp
+                    localRecords.forEach(r => { if (r && r.title) r.title = decodeTitle(r.title); });
                     attendanceData = sortAttendanceData([...localRecords, ...mockData]);
                     populateActivityFilterDropdown();
                     if (document.getElementById('attendanceSearch')?.value || document.getElementById('attendanceFacultyFilter')?.value || document.getElementById('attendanceActivityFilter')?.value) {
@@ -4443,7 +4460,8 @@
                 const res = await fetch(scriptUrl + (scriptUrl.includes('?') ? '&' : '?') + '_t=' + Date.now());
                 const sheetData = await res.json();
                 if (Array.isArray(sheetData)) {
-                    // Dữ liệu chuẩn trực tiếp từ máy chủ Database
+                    // Dữ liệu chuẩn trực tiếp từ máy chủ Database (tự động xóa sạch mã hóa %20)
+                    sheetData.forEach(r => { if (r && r.title) r.title = decodeTitle(r.title); });
                     attendanceData = sortAttendanceData(sheetData);
                     populateActivityFilterDropdown();
                     if (document.getElementById('attendanceSearch')?.value || document.getElementById('attendanceFacultyFilter')?.value || document.getElementById('attendanceActivityFilter')?.value) {
@@ -4455,6 +4473,7 @@
             } catch (err) {
                 console.error("Lỗi khi fetch dữ liệu từ Google Apps Script / API", err);
                 // Nếu lỗi, vẫn hiển thị các bản ghi cục bộ đã lưu
+                localRecords.forEach(r => { if (r && r.title) r.title = decodeTitle(r.title); });
                 attendanceData = sortAttendanceData(localRecords);
                 populateActivityFilterDropdown();
                 renderAttendanceTable(attendanceData);
@@ -4471,7 +4490,7 @@
             let html = `<option value="">-- Tất cả sự kiện (${total} SV) --</option>`;
             acts.forEach(a => {
                 const count = (attendanceData || []).filter(r => String(r.code || '').trim().toUpperCase() === String(a.code || '').trim().toUpperCase()).length;
-                html += `<option value="${a.code}">${a.code} - ${a.title}${a.benefit ? ` [🎁 ${a.benefit}]` : ''} (${count} SV)</option>`;
+                html += `<option value="${a.code}">${a.code} - ${decodeTitle(a.title)}${a.benefit ? ` [🎁 ${a.benefit}]` : ''} (${count} SV)</option>`;
             });
             filterSelect.innerHTML = html;
             if (currentVal) filterSelect.value = currentVal;
@@ -4827,6 +4846,7 @@
                 const res = await fetch(scriptUrl + (scriptUrl.includes('?') ? '&' : '?') + '_t=' + Date.now());
                 const sheetData = await res.json();
                 if (Array.isArray(sheetData)) {
+                    sheetData.forEach(r => { if (r && r.title) r.title = decodeTitle(r.title); });
                     attendanceData = sortAttendanceData(sheetData);
                     populateActivityFilterDropdown();
                     if (document.getElementById('attendanceSearch')?.value || document.getElementById('attendanceFacultyFilter')?.value || document.getElementById('attendanceActivityFilter')?.value) {
@@ -4886,7 +4906,7 @@
 
                 const matchedAct = actMap[String(item.code || '').trim().toUpperCase()];
                 const benefitVal = item.benefit || (matchedAct ? matchedAct.benefit : '') || '';
-                const titleVal = item.title || (matchedAct ? matchedAct.title : '--');
+                const titleVal = decodeTitle(item.title || (matchedAct ? matchedAct.title : '--'));
 
                 return `
                 <tr class="text-nowrap attendance-row-item ${isSelected ? 'row-selected' : ''}" onclick="selectStudentRow(this, ${idx})" title="Click để hiện viền xanh kiểm tra sinh viên này">
@@ -4950,7 +4970,7 @@
             if (acts.length === 0) {
                 actSelect.innerHTML = '<option value="">-- Chưa có sự kiện --</option>';
             } else {
-                actSelect.innerHTML = acts.map(a => `<option value="${a.code}">${a.code} - ${a.title}</option>`).join('');
+                actSelect.innerHTML = acts.map(a => `<option value="${a.code}">${a.code} - ${decodeTitle(a.title)}</option>`).join('');
             }
 
             if (!manualCheckinModalInstance) {
@@ -4987,9 +5007,9 @@
             const actSelect = document.getElementById('mcActivityCode');
             const acts = getActivities();
             if (acts.length === 0) {
-                actSelect.innerHTML = `<option value="${item.code}">${item.code} - ${item.title || item.code}</option>`;
+                actSelect.innerHTML = `<option value="${item.code}">${item.code} - ${decodeTitle(item.title) || item.code}</option>`;
             } else {
-                actSelect.innerHTML = acts.map(a => `<option value="${a.code}">${a.code} - ${a.title}${a.benefit ? ` [🎁 ${a.benefit}]` : ''}</option>`).join('');
+                actSelect.innerHTML = acts.map(a => `<option value="${a.code}">${a.code} - ${decodeTitle(a.title)}${a.benefit ? ` [🎁 ${a.benefit}]` : ''}</option>`).join('');
                 actSelect.value = item.code || '';
             }
 
@@ -5063,7 +5083,7 @@
 
             const acts = getActivities();
             const currentAct = acts.find(a => a.code === code) || {};
-            const title = currentAct.title || code;
+            const title = decodeTitle(currentAct.title || code);
             const coords = (currentAct.latitude && currentAct.longitude) ? `${currentAct.latitude}, ${currentAct.longitude}` : 'Thủ công (Admin)';
 
             const payload = {
@@ -5203,7 +5223,7 @@
             if (acts.length === 0) {
                 actSelect.innerHTML = '<option value="">-- Chưa có sự kiện --</option>';
             } else {
-                actSelect.innerHTML = acts.map(a => `<option value="${a.code}">${a.code} - ${a.title}${a.benefit ? ` [🎁 ${a.benefit}]` : ''}</option>`).join('');
+                actSelect.innerHTML = acts.map(a => `<option value="${a.code}">${a.code} - ${decodeTitle(a.title)}${a.benefit ? ` [🎁 ${a.benefit}]` : ''}</option>`).join('');
             }
 
             if (!importExcelModalInstance) {
@@ -5302,7 +5322,7 @@
                     const selectedCode = document.getElementById('importActivityCode').value;
                     const acts = getActivities();
                     const currentAct = acts.find(a => a.code === selectedCode) || {};
-                    const selectedTitle = currentAct.title || selectedCode;
+                    const selectedTitle = decodeTitle(currentAct.title || selectedCode);
                     const now = new Date();
                     const pad = (n) => String(n).padStart(2, '0');
                     const friendlyTime = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
@@ -5414,7 +5434,7 @@
             const code = document.getElementById('importActivityCode').value;
             const acts = getActivities();
             const currentAct = acts.find(a => a.code === code) || {};
-            const title = currentAct.title || code;
+            const title = decodeTitle(currentAct.title || code);
 
             pendingImportRecords.forEach(r => {
                 r.code = code;
@@ -5465,7 +5485,7 @@
             (list || []).forEach((item, idx) => {
                 const act = actMap[String(item.code || '').trim().toUpperCase()];
                 const benefitVal = item.benefit || (act ? act.benefit : '') || '';
-                const titleVal = item.title || (act ? act.title : '') || '';
+                const titleVal = decodeTitle(item.title || (act ? act.title : '') || '');
                 data.push([
                     idx + 1,
                     item.timestamp || '',
@@ -5526,7 +5546,7 @@
             if (actCode) {
                 const acts = getActivities();
                 const currentAct = acts.find(a => String(a.code).toLowerCase() === actCode.toLowerCase());
-                const actName = currentAct ? (currentAct.title || actCode) : actCode;
+                const actName = currentAct ? (decodeTitle(currentAct.title) || actCode) : actCode;
                 const shortName = actName.length > 22 ? actName.substring(0, 20) + '...' : actName;
 
                 if (btnMainText) {
@@ -6072,10 +6092,7 @@
                     if (!eventMap.has(actCode)) {
                         const matchedAct = actMap[actCode];
                         const benefitStr = (r.benefit || (matchedAct ? matchedAct.benefit : '') || '').trim();
-                        let eventTitle = r.title || (matchedAct ? matchedAct.title : actCode) || actCode;
-                        try {
-                            eventTitle = decodeURIComponent(eventTitle);
-                        } catch (e) {}
+                        let eventTitle = decodeTitle(r.title || (matchedAct ? matchedAct.title : actCode) || actCode);
 
                         const parsed = parseBenefitPoints(benefitStr);
                         eventMap.set(actCode, {
@@ -6361,10 +6378,11 @@
             const dirPath = currentPath.substring(0, currentPath.lastIndexOf('/'));
 
             // Mã hóa đầy đủ thông số vào URL QR code (gửi kèm qr=true để ẩn 3 nút điều hướng)
+            const cleanTitle = decodeTitle(title || (act ? act.title : code));
             const ben = act ? (act.benefit || '') : '';
             let checkinUrl = baseOrigin + (dirPath === '/' ? '' : dirPath) + '/checkin.html'
                 + '?code=' + encodeURIComponent(code)
-                + '&title=' + encodeURIComponent(title)
+                + '&title=' + encodeURIComponent(cleanTitle)
                 + '&lat=' + lat
                 + '&lng=' + lng
                 + '&radius=' + radius
@@ -6375,7 +6393,7 @@
             }
 
             // 1. Cập nhật và tạo QR cho trang In Bản Mềm (hidden on-screen)
-            document.getElementById('printTitle').textContent = title;
+            document.getElementById('printTitle').textContent = cleanTitle;
             document.getElementById('printCode').textContent = 'MÃ SỰ KIỆN: ' + code;
             document.getElementById('printRadius').textContent = radius + 'm';
             const printBenContainer = document.getElementById('printBenefitContainer');
