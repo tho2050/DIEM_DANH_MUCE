@@ -5902,7 +5902,41 @@
             });
         }
 
-        // Gom nhóm và tính tổng cho từng sinh viên
+        // Chuẩn hóa tên sinh viên (chữ thường, bỏ khoảng trắng thừa)
+        function normalizeStudentName(s) {
+            if (!s) return '';
+            return String(s).trim().toLowerCase().replace(/\s+/g, ' ');
+        }
+
+        // Chuẩn hóa tên lớp (bỏ khoảng trắng, dấu gạch, sửa lỗi gõ số 0 thay vì chữ O như C0K -> COK)
+        function normalizeClassName(s) {
+            if (!s) return '';
+            let c = String(s).trim().toUpperCase().replace(/[\s\-_.]/g, '');
+            c = c.replace(/^CNTT/g, '');
+            c = c.replace(/C0K/g, 'COK');
+            return c;
+        }
+
+        // Kiểm tra mã sinh viên hợp lệ (không chứa tiếng Việt có dấu, không chứa khoảng trắng, có số)
+        function isValidStudentCode(code) {
+            if (!code) return false;
+            const s = String(code).trim().toUpperCase();
+            if (s.length < 6 || s.length > 20) return false;
+            if (!/\d{4,}/.test(s)) return false;
+            if (/\s/.test(s)) return false;
+            if (/[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(s)) return false;
+            return true;
+        }
+
+        // Chuẩn hóa MSSV (sửa lỗi gõ số 0 thay vì chữ Q như 260751... -> 26Q751...)
+        function normalizeStudentCode(code) {
+            if (!isValidStudentCode(code)) return '';
+            let s = String(code).trim().toUpperCase().replace(/[\s\-_.]/g, '');
+            s = s.replace(/^(\d{2})0(\d{6,})/, '$1Q$2');
+            return s;
+        }
+
+        // Gom nhóm và tính tổng cho từng sinh viên thông minh (nhận diện đúng 1 người từ tất cả sự kiện)
         function getCalculatedStudentSummary() {
             if (!attendanceData || attendanceData.length === 0) return [];
 
@@ -5914,87 +5948,164 @@
                 }
             });
 
-            const studentMap = new Map();
+            // Thuật toán Union-Find để liên kết và dồn tất cả bản ghi của đúng 1 sinh viên lại với nhau
+            const n = attendanceData.length;
+            const parent = Array.from({ length: n }, (_, i) => i);
+            function find(i) {
+                if (parent[i] === i) return i;
+                return parent[i] = find(parent[i]);
+            }
+            function union(i, j) {
+                const rootI = find(i);
+                const rootJ = find(j);
+                if (rootI !== rootJ) parent[rootI] = rootJ;
+            }
 
-            attendanceData.forEach(r => {
-                const studentCode = String(r.studentCode || '').trim().toUpperCase();
-                const rawName = String(r.name || '').trim();
-                const rawClass = String(r.className || '').trim().toUpperCase();
-                const rawFaculty = String(r.faculty || '').trim();
+            // Bản đồ đối chiếu liên kết sinh viên:
+            // 1. Cùng Họ tên + Lớp (chuẩn hóa không phân biệt hoa/thường, khoảng trắng, C0K/COK) -> Cùng 1 sinh viên
+            // 2. Cùng MSSV hợp lệ (chuẩn hóa 260... -> 26Q...) -> Cùng 1 sinh viên
+            // 3. Cùng Số điện thoại + Họ tên -> Cùng 1 sinh viên
+            const nameClassMap = new Map();
+            const mssvMap = new Map();
+            const phoneNameMap = new Map();
 
-                // Nhận diện sinh viên duy nhất bằng MSSV hoặc Họ tên + Lớp
-                let key = studentCode;
-                if (!key || key.length < 4) {
-                    key = (rawName.toLowerCase().replace(/\s+/g, ' ') + '__' + rawClass.toLowerCase());
-                }
-                if (!key) return;
+            attendanceData.forEach((r, idx) => {
+                const nameKey = normalizeStudentName(r.name);
+                const classKey = normalizeClassName(r.className);
+                const mssvKey = normalizeStudentCode(r.studentCode);
+                const phoneKey = String(r.phoneNumber || '').trim().replace(/\D/g, '');
 
-                if (!studentMap.has(key)) {
-                    let faculty = rawFaculty;
-                    if (!faculty || faculty === 'Chưa rõ' || faculty === '--') {
-                        if (typeof detectFacultyFromClassName === 'function') {
-                            faculty = detectFacultyFromClassName(rawClass);
-                        }
-                    }
-                    studentMap.set(key, {
-                        studentCode: studentCode || '--',
-                        name: rawName,
-                        className: rawClass,
-                        faculty: faculty || 'Chưa rõ',
-                        eventsAttended: new Map(),
-                        totalNctxh: 0,
-                        totalDrl: 0
-                    });
-                }
-
-                const student = studentMap.get(key);
-
-                if ((!student.studentCode || student.studentCode === '--') && studentCode) {
-                    student.studentCode = studentCode;
-                }
-                if (!student.name && rawName) student.name = rawName;
-                if (!student.className && rawClass) student.className = rawClass;
-                if ((!student.faculty || student.faculty === 'Chưa rõ') && rawFaculty) {
-                    student.faculty = rawFaculty;
+                if (nameKey && classKey) {
+                    const nc = nameKey + '__' + classKey;
+                    if (nameClassMap.has(nc)) union(idx, nameClassMap.get(nc));
+                    else nameClassMap.set(nc, idx);
                 }
 
-                const actCode = String(r.code || '').trim().toUpperCase();
-                const matchedAct = actMap[actCode];
-                const benefitStr = (r.benefit || (matchedAct ? matchedAct.benefit : '') || '').trim();
-                const eventTitle = r.title || (matchedAct ? matchedAct.title : actCode) || actCode;
+                if (mssvKey) {
+                    if (mssvMap.has(mssvKey)) union(idx, mssvMap.get(mssvKey));
+                    else mssvMap.set(mssvKey, idx);
+                }
 
-                // Tránh cộng lặp điểm nếu sinh viên bấm điểm danh 2 lần cho cùng 1 sự kiện
-                if (!student.eventsAttended.has(actCode)) {
-                    const parsed = parseBenefitPoints(benefitStr);
-                    student.eventsAttended.set(actCode, {
-                        code: actCode,
-                        title: eventTitle,
-                        benefit: benefitStr,
-                        nctxh: parsed.nctxh,
-                        drl: parsed.drl,
-                        timestamp: r.timestamp || ''
-                    });
-                    student.totalNctxh += parsed.nctxh;
-                    student.totalDrl += parsed.drl;
+                if (phoneKey.length >= 9 && nameKey) {
+                    const pn = phoneKey + '__' + nameKey;
+                    if (phoneNameMap.has(pn)) union(idx, phoneNameMap.get(pn));
+                    else phoneNameMap.set(pn, idx);
                 }
             });
 
+            // Gom các bản ghi theo từng sinh viên
+            const clusters = new Map();
+            attendanceData.forEach((r, idx) => {
+                const root = find(idx);
+                if (!clusters.has(root)) clusters.set(root, []);
+                clusters.get(root).push(r);
+            });
+
             const resultList = [];
-            studentMap.forEach(s => {
-                const eventList = Array.from(s.eventsAttended.values());
+
+            clusters.forEach(records => {
+                // 1. Họ và tên: ưu tiên lấy bản ghi có viết hoa đẹp nhất
+                let bestName = '';
+                for (const r of records) {
+                    const n = String(r.name || '').trim();
+                    if (!bestName && n) bestName = n;
+                    if (/[A-ZÀÁẢÃẠĂẰẮẲẴẶÂẦẤẨẪẬÈÉẺẼẸÊỀẾỂỄỆÌÍỈĨỊÒÓỎÕỌÔỒỐỔỖỘƠỜỚỞỠỢÙÚỦŨỤƯỪỨỬỮỰỲÝỶỸỴĐ]/.test(n)) {
+                        bestName = n;
+                        break;
+                    }
+                }
+
+                // 2. MSSV: ưu tiên lấy MSSV chuẩn hợp lệ (ví dụ: 26Q75102051177)
+                let bestMssv = '';
+                for (const r of records) {
+                    const norm = normalizeStudentCode(r.studentCode);
+                    if (norm) {
+                        bestMssv = norm;
+                        break;
+                    }
+                }
+                if (!bestMssv) {
+                    for (const r of records) {
+                        const rawM = String(r.studentCode || '').trim();
+                        if (rawM && !rawM.toLowerCase().includes(normalizeStudentName(bestName))) {
+                            bestMssv = rawM;
+                            break;
+                        }
+                    }
+                }
+                if (!bestMssv) bestMssv = '--';
+
+                // 3. Tên lớp: lấy tên lớp chuẩn hóa
+                let bestClass = '';
+                for (const r of records) {
+                    const c = normalizeClassName(r.className);
+                    if (c) {
+                        bestClass = c;
+                        break;
+                    }
+                }
+                if (!bestClass) bestClass = '--';
+
+                // 4. Khoa: lấy khoa chuẩn hoặc tự động phát hiện theo lớp
+                let bestFaculty = '';
+                for (const r of records) {
+                    const f = String(r.faculty || '').trim();
+                    if (f && f !== 'Chưa rõ' && f !== '--') {
+                        bestFaculty = f;
+                        break;
+                    }
+                }
+                if (!bestFaculty || bestFaculty === 'Chưa rõ') {
+                    if (typeof detectFacultyFromClassName === 'function') {
+                        bestFaculty = detectFacultyFromClassName(bestClass);
+                    }
+                }
+                if (!bestFaculty) bestFaculty = 'Chưa rõ';
+
+                // 5. Tính tổng điểm và gom sự kiện (tránh cộng lặp nếu cùng 1 sự kiện)
+                const eventMap = new Map();
+                let totalNctxh = 0;
+                let totalDrl = 0;
+
+                records.forEach(r => {
+                    const actCode = String(r.code || '').trim().toUpperCase();
+                    if (!eventMap.has(actCode)) {
+                        const matchedAct = actMap[actCode];
+                        const benefitStr = (r.benefit || (matchedAct ? matchedAct.benefit : '') || '').trim();
+                        let eventTitle = r.title || (matchedAct ? matchedAct.title : actCode) || actCode;
+                        try {
+                            eventTitle = decodeURIComponent(eventTitle);
+                        } catch (e) {}
+
+                        const parsed = parseBenefitPoints(benefitStr);
+                        eventMap.set(actCode, {
+                            code: actCode,
+                            title: eventTitle,
+                            benefit: benefitStr,
+                            nctxh: parsed.nctxh,
+                            drl: parsed.drl,
+                            timestamp: r.timestamp || ''
+                        });
+
+                        totalNctxh += parsed.nctxh;
+                        totalDrl += parsed.drl;
+                    }
+                });
+
+                const eventList = Array.from(eventMap.values());
                 const eventDetails = eventList.map(e => {
                     const benPart = e.benefit ? ` [${e.benefit}]` : '';
                     return `${e.title || e.code}${benPart}`;
                 }).join('; ');
 
                 resultList.push({
-                    studentCode: s.studentCode,
-                    name: s.name,
-                    className: s.className,
-                    faculty: s.faculty,
+                    studentCode: bestMssv,
+                    name: bestName,
+                    className: bestClass,
+                    faculty: bestFaculty,
                     eventCount: eventList.length,
-                    totalNctxh: Math.round(s.totalNctxh * 10) / 10,
-                    totalDrl: Math.round(s.totalDrl * 10) / 10,
+                    totalNctxh: Math.round(totalNctxh * 10) / 10,
+                    totalDrl: Math.round(totalDrl * 10) / 10,
                     eventDetails: eventDetails,
                     eventList: eventList
                 });
