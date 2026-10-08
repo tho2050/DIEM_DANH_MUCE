@@ -2496,17 +2496,11 @@
                         </div>
                         <div class="d-flex align-items-center gap-2 flex-wrap ms-auto me-3">
                             <span class="badge bg-primary rounded-pill px-3 py-2 fs-6 shadow-sm"><i class="fa-solid fa-users me-1"></i><span id="bsTotalStudents">0</span> SV</span>
-                            <span class="badge bg-danger rounded-pill px-3 py-2 fs-6 shadow-sm"><i class="fa-solid fa-heart me-1"></i>Tổng NCTXH: <span id="bsTotalNctxh">0</span> ngày</span>
-                            <span class="badge bg-success rounded-pill px-3 py-2 fs-6 shadow-sm"><i class="fa-solid fa-star me-1"></i>Tổng ĐRL: <span id="bsTotalDrl">0</span> đ</span>
+                            <span class="badge bg-danger rounded-pill px-3 py-2 fs-6 shadow-sm">Tổng NCTXH: <span id="bsTotalNctxh">0</span> ngày</span>
+                            <span class="badge bg-success rounded-pill px-3 py-2 fs-6 shadow-sm">Tổng ĐRL: <span id="bsTotalDrl">0</span> đ</span>
                         </div>
                     </div>
                     <div class="d-flex align-items-center gap-2">
-                        <button type="button" class="btn btn-sm btn-outline-info text-white" onclick="openBenefitSummaryInNewWindow()" title="Mở trang toàn màn hình ở tab mới">
-                            <i class="fa-solid fa-arrow-up-right-from-square me-1"></i><span class="d-none d-md-inline">Mở Tab Mới</span>
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-light" id="btnToggleBsFullscreen" onclick="toggleBenefitModalFullscreen()" title="Chuyển đổi kích thước cửa sổ">
-                            <i class="fa-solid fa-compress me-1" id="iconBsFullscreen"></i><span class="d-none d-md-inline" id="textBsFullscreen">Thu nhỏ</span>
-                        </button>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" title="Đóng quay lại"></button>
                     </div>
                 </div>
@@ -2555,11 +2549,6 @@
                         </div>
                     </div>
 
-                    <div class="alert alert-info py-2 px-3 mb-2 d-flex align-items-center gap-2 small border-0 shadow-sm flex-shrink-0" style="background-color: #e8f4fd; color: #0d47a1; border-radius: 8px;">
-                        <i class="fa-solid fa-circle-info fs-5 text-primary flex-shrink-0"></i>
-                        <span>Thứ tự sắp xếp: <strong>Khoa Kỹ thuật Công nghệ &rarr; Kinh tế &rarr; Xây dựng &rarr; Kiến trúc</strong> &bull; Khóa: <strong>D17 &rarr; D26 (tăng dần)</strong> &bull; Lớp (A-Z) &bull; Tên (A-Z). Điểm quyền lợi từ tất cả sự kiện đã tham gia được tự động kiểm tra và cộng dồn cho mỗi sinh viên.</span>
-                    </div>
-
                     <!-- Bảng dữ liệu toàn màn hình -->
                     <div class="bs-table-container">
                         <table class="table table-hover align-middle mb-0" style="font-size: 0.88rem; min-width: 1000px;" id="bsTable">
@@ -2571,8 +2560,8 @@
                                     <th style="min-width: 110px;">Lớp</th>
                                     <th style="min-width: 200px;">Khoa</th>
                                     <th class="text-center" style="min-width: 100px;">Số Sự Kiện</th>
-                                    <th class="text-center text-danger fw-bold" style="min-width: 130px;"><i class="fa-solid fa-heart me-1"></i>Ngày CTXH</th>
-                                    <th class="text-center text-success fw-bold" style="min-width: 130px;"><i class="fa-solid fa-star me-1"></i>Điểm Rèn Luyện</th>
+                                    <th class="text-center text-danger fw-bold" style="min-width: 130px;">Ngày CTXH</th>
+                                    <th class="text-center text-success fw-bold" style="min-width: 130px;">Điểm Rèn Luyện</th>
                                     <th style="min-width: 320px;">Chi Tiết Sự Kiện Đã Tham Gia & Quyền Lợi</th>
                                 </tr>
                             </thead>
@@ -6054,11 +6043,11 @@
                 sumDrl += (item.totalDrl || 0);
 
                 const nctxhBadge = item.totalNctxh > 0
-                    ? `<span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill fw-bold px-2 py-1 fs-6"><i class="fa-solid fa-heart me-1"></i>+${item.totalNctxh} ngày</span>`
+                    ? `<span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill fw-bold px-2 py-1 fs-6">+${item.totalNctxh} ngày</span>`
                     : `<span class="text-muted">0 ngày</span>`;
 
                 const drlBadge = item.totalDrl > 0
-                    ? `<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill fw-bold px-2 py-1 fs-6"><i class="fa-solid fa-star me-1"></i>+${item.totalDrl} đ</span>`
+                    ? `<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill fw-bold px-2 py-1 fs-6">+${item.totalDrl} đ</span>`
                     : `<span class="text-muted">0 đ</span>`;
 
                 return `
