@@ -26,20 +26,20 @@ function formatCreatorName(creator) {
     return s;
 }
 
-// Helper giải mã chuỗi tiêu đề bị dính mã hóa URL (%20, %C3%A9, ...) thành tiếng Việt chuẩn
+// Helper giải mã chuỗi tiêu đề, mã sự kiện bị dính mã hóa URL (%20, %2F, %C3%A9, ...) thành chuỗi chuẩn
 function decodeTitleConfig(s) {
     if (!s) return '';
     let res = String(s);
     try {
-        while (res.includes('%20') || /%[0-9A-Fa-f]{2}/.test(res)) {
+        while (res.includes('%') && /%[0-9A-Fa-f]{2}/.test(res)) {
             const decoded = decodeURIComponent(res);
             if (decoded === res) break;
             res = decoded;
         }
     } catch (e) {
-        res = res.replace(/%20/g, ' ');
+        res = res.replace(/%20/g, ' ').replace(/%2F/gi, '/');
     }
-    return res.trim();
+    return res.replace(/%20/g, ' ').replace(/%2F/gi, '/').trim();
 }
 
 // Hàm lấy danh sách hoạt động (tự động lọc bỏ các sự kiện mẫu cũ nếu còn tồn tại trong bộ nhớ)
@@ -53,6 +53,13 @@ function getActivities() {
                 const filtered = parsed.filter(a => a && a.code !== "SVTN2026" && a.code !== "WORKSHOP-AI" && a.code !== "TINHOC-ABC");
                 let hasChanges = false;
                 filtered.forEach(a => {
+                    if (a.code) {
+                        const cleanC = decodeTitleConfig(a.code);
+                        if (cleanC !== a.code) {
+                            a.code = cleanC;
+                            hasChanges = true;
+                        }
+                    }
                     if (a.title) {
                         const cleanT = decodeTitleConfig(a.title);
                         if (cleanT !== a.title) {
@@ -81,6 +88,7 @@ function getActivities() {
 // Hàm lưu danh sách hoạt động mới vào localStorage và đồng bộ lên Google Sheet cloud
 function saveActivities(list) {
     const cleanList = (list || []).filter(a => a && a.code !== "SVTN2026" && a.code !== "WORKSHOP-AI" && a.code !== "TINHOC-ABC").map(a => {
+        if (a && a.code) a.code = decodeTitleConfig(a.code);
         if (a && a.title) a.title = decodeTitleConfig(a.title);
         if (!a.createdBy) a.createdBy = "hongnhung";
         return a;
@@ -112,6 +120,7 @@ function syncActivitiesFromCloud(callback) {
         .then(data => {
             if (Array.isArray(data)) {
                 const cleanData = data.filter(a => a && a.code !== "SVTN2026" && a.code !== "WORKSHOP-AI" && a.code !== "TINHOC-ABC").map(a => {
+                    if (a && a.code) a.code = decodeTitleConfig(a.code);
                     if (a && a.title) a.title = decodeTitleConfig(a.title);
                     if (!a.createdBy) a.createdBy = "hongnhung";
                     return a;

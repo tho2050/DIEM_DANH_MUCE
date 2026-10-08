@@ -2645,20 +2645,19 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="config.js?v=2.7"></script>
     <script>
-        // Helper giải mã chuỗi tiêu đề bị dính mã hóa URL (%20, %C3%A9, ...) thành tiếng Việt chuẩn
         function decodeTitle(s) {
             if (!s) return '';
             let res = String(s);
             try {
-                while (res.includes('%20') || /%[0-9A-Fa-f]{2}/.test(res)) {
+                while (res.includes('%') && /%[0-9A-Fa-f]{2}/.test(res)) {
                     const decoded = decodeURIComponent(res);
                     if (decoded === res) break;
                     res = decoded;
                 }
             } catch (e) {
-                res = res.replace(/%20/g, ' ');
+                res = res.replace(/%20/g, ' ').replace(/%2F/gi, '/');
             }
-            return res.trim();
+            return res.replace(/%20/g, ' ').replace(/%2F/gi, '/').trim();
         }
 
         let selectMap, selectMarker;
@@ -3585,7 +3584,7 @@
             }
 
             container.innerHTML = list.map((item, idx) => {
-                const actCount = (attendanceData || []).filter(r => String(r.code || '').trim().toUpperCase() === String(item.code || '').trim().toUpperCase()).length;
+                const actCount = (attendanceData || []).filter(r => decodeTitle(r.code || '').trim().toUpperCase() === decodeTitle(item.code || '').trim().toUpperCase()).length;
                 const rawCreator = item.createdBy || "hongnhung";
                 const displayCreator = typeof formatCreatorName === 'function' ? formatCreatorName(rawCreator) : (rawCreator.toLowerCase().includes('hongnhung2050') ? 'hongnhung' : rawCreator);
                 return `
@@ -4444,7 +4443,12 @@
                         { timestamp: "27/08/2026 14:02:45", code: "WORKSHOP-AI", studentCode: "21000789", name: "Lê Văn Nam", className: "CNTT-K21B", faculty: "Điện - Điện tử", distance: "45.1m", device: "Xiaomi 14 Ultra" }
                     ];
                     // Sắp xếp theo Sự kiện -> Khoa (CNTT -> Kinh tế -> Xây dựng -> Kiến trúc) -> Lớp
-                    localRecords.forEach(r => { if (r && r.title) r.title = decodeTitle(r.title); });
+                    localRecords.forEach(r => { 
+                        if (r) {
+                            if (r.code) r.code = decodeTitle(r.code);
+                            if (r.title) r.title = decodeTitle(r.title);
+                        }
+                    });
                     attendanceData = sortAttendanceData([...localRecords, ...mockData]);
                     populateActivityFilterDropdown();
                     if (document.getElementById('attendanceSearch')?.value || document.getElementById('attendanceFacultyFilter')?.value || document.getElementById('attendanceActivityFilter')?.value) {
@@ -4461,8 +4465,13 @@
                 const res = await fetch(scriptUrl + (scriptUrl.includes('?') ? '&' : '?') + '_t=' + Date.now());
                 const sheetData = await res.json();
                 if (Array.isArray(sheetData)) {
-                    // Dữ liệu chuẩn trực tiếp từ máy chủ Database (tự động xóa sạch mã hóa %20)
-                    sheetData.forEach(r => { if (r && r.title) r.title = decodeTitle(r.title); });
+                    // Dữ liệu chuẩn trực tiếp từ máy chủ Database (tự động xóa sạch mã hóa %20 và %2F)
+                    sheetData.forEach(r => { 
+                        if (r) {
+                            if (r.code) r.code = decodeTitle(r.code);
+                            if (r.title) r.title = decodeTitle(r.title);
+                        }
+                    });
                     attendanceData = sortAttendanceData(sheetData);
                     populateActivityFilterDropdown();
                     if (document.getElementById('attendanceSearch')?.value || document.getElementById('attendanceFacultyFilter')?.value || document.getElementById('attendanceActivityFilter')?.value) {
@@ -4474,7 +4483,12 @@
             } catch (err) {
                 console.error("Lỗi khi fetch dữ liệu từ Google Apps Script / API", err);
                 // Nếu lỗi, vẫn hiển thị các bản ghi cục bộ đã lưu
-                localRecords.forEach(r => { if (r && r.title) r.title = decodeTitle(r.title); });
+                localRecords.forEach(r => { 
+                    if (r) {
+                        if (r.code) r.code = decodeTitle(r.code);
+                        if (r.title) r.title = decodeTitle(r.title);
+                    }
+                });
                 attendanceData = sortAttendanceData(localRecords);
                 populateActivityFilterDropdown();
                 renderAttendanceTable(attendanceData);
@@ -4490,8 +4504,8 @@
 
             let html = `<option value="">-- Tất cả sự kiện (${total} SV) --</option>`;
             acts.forEach(a => {
-                const count = (attendanceData || []).filter(r => String(r.code || '').trim().toUpperCase() === String(a.code || '').trim().toUpperCase()).length;
-                html += `<option value="${a.code}">${a.code} - ${decodeTitle(a.title)}${a.benefit ? ` [🎁 ${a.benefit}]` : ''} (${count} SV)</option>`;
+                const count = (attendanceData || []).filter(r => decodeTitle(r.code || '').trim().toUpperCase() === decodeTitle(a.code || '').trim().toUpperCase()).length;
+                html += `<option value="${a.code}">${decodeTitle(a.code)} - ${decodeTitle(a.title)}${a.benefit ? ` [🎁 ${a.benefit}]` : ''} (${count} SV)</option>`;
             });
             filterSelect.innerHTML = html;
             if (currentVal) filterSelect.value = currentVal;
@@ -4577,14 +4591,14 @@
             if (Array.isArray(acts)) {
                 acts.forEach((act, idx) => {
                     if (act && act.code) {
-                        eventOrderMap[String(act.code).trim().toUpperCase()] = idx;
+                        eventOrderMap[decodeTitle(act.code).trim().toUpperCase()] = idx;
                     }
                 });
             }
 
             const eventMaxIdMap = {};
             records.forEach(r => {
-                const code = String(r.code || '').trim().toUpperCase();
+                const code = decodeTitle(r.code || '').trim().toUpperCase();
                 const id = parseInt(r.id) || 0;
                 if (!eventMaxIdMap[code] || id > eventMaxIdMap[code]) {
                     eventMaxIdMap[code] = id;
@@ -4601,8 +4615,8 @@
             });
 
             return records.slice().sort((a, b) => {
-                const codeA = String(a.code || '').trim().toUpperCase();
-                const codeB = String(b.code || '').trim().toUpperCase();
+                const codeA = decodeTitle(a.code || '').trim().toUpperCase();
+                const codeB = decodeTitle(b.code || '').trim().toUpperCase();
 
                 // 1. Gom nhóm theo Sự kiện
                 if (codeA !== codeB) {
@@ -4666,7 +4680,7 @@
                 const facultyStr = String(item.faculty || '').toLowerCase();
                 const phoneStr = String(item.phoneNumber || '').toLowerCase();
                 const emailStr = String(item.email || '').toLowerCase();
-                const actCodeStr = String(item.code || '').toLowerCase();
+                const actCodeStr = decodeTitle(item.code || '').toLowerCase();
 
                 const matchesSearch = !searchQuery ||
                     nameStr.includes(searchQuery) ||
@@ -4677,7 +4691,7 @@
                     emailStr.includes(searchQuery);
 
                 const matchesFaculty = !facultyFilter || facultyStr.includes(facultyFilter);
-                const matchesActivity = !actFilter || actCodeStr === actFilter;
+                const matchesActivity = !actFilter || actCodeStr === decodeTitle(actFilter).toLowerCase();
 
                 return matchesSearch && matchesFaculty && matchesActivity;
             });
@@ -4833,7 +4847,7 @@
             getActivities().forEach(act => {
                 const numEl = document.getElementById('act-count-' + act.code);
                 if (numEl) {
-                    const c = (attendanceData || []).filter(r => String(r.code || '').trim().toUpperCase() === String(act.code || '').trim().toUpperCase()).length;
+                    const c = (attendanceData || []).filter(r => decodeTitle(r.code || '').trim().toUpperCase() === decodeTitle(act.code || '').trim().toUpperCase()).length;
                     numEl.textContent = c;
                 }
             });
@@ -4847,7 +4861,12 @@
                 const res = await fetch(scriptUrl + (scriptUrl.includes('?') ? '&' : '?') + '_t=' + Date.now());
                 const sheetData = await res.json();
                 if (Array.isArray(sheetData)) {
-                    sheetData.forEach(r => { if (r && r.title) r.title = decodeTitle(r.title); });
+                    sheetData.forEach(r => { 
+                        if (r) {
+                            if (r.code) r.code = decodeTitle(r.code);
+                            if (r.title) r.title = decodeTitle(r.title);
+                        }
+                    });
                     attendanceData = sortAttendanceData(sheetData);
                     populateActivityFilterDropdown();
                     if (document.getElementById('attendanceSearch')?.value || document.getElementById('attendanceFacultyFilter')?.value || document.getElementById('attendanceActivityFilter')?.value) {
@@ -4892,7 +4911,7 @@
             const actMap = {};
             (acts || []).forEach(a => {
                 if (a && a.code) {
-                    actMap[String(a.code).trim().toUpperCase()] = a;
+                    actMap[decodeTitle(a.code).trim().toUpperCase()] = a;
                 }
             });
 
@@ -4905,7 +4924,8 @@
                     ? (item.timestamp.includes('T') ? getVietnamTimestamp(item.timestamp) : item.timestamp)
                     : '--';
 
-                const matchedAct = actMap[String(item.code || '').trim().toUpperCase()];
+                const codeVal = decodeTitle(item.code || '');
+                const matchedAct = actMap[codeVal.trim().toUpperCase()];
                 const benefitVal = item.benefit || (matchedAct ? matchedAct.benefit : '') || '';
                 const titleVal = decodeTitle(item.title || (matchedAct ? matchedAct.title : '--'));
 
@@ -4913,7 +4933,7 @@
                 <tr class="text-nowrap attendance-row-item ${isSelected ? 'row-selected' : ''}" onclick="selectStudentRow(this, ${idx})" title="Click để hiện viền xanh kiểm tra sinh viên này">
                     <td class="text-center">${idx + 1}</td>
                     <td class="small text-muted font-monospace">${displayTime}</td>
-                    <td><span class="badge bg-secondary">${item.code}</span></td>
+                    <td><span class="badge bg-secondary">${codeVal || '--'}</span></td>
                     <td>${titleVal}</td>
                     <td>${benefitVal ? `<span class="badge bg-danger text-white rounded-pill shadow-sm"><i class="fa-solid fa-gift me-1"></i>${benefitVal}</span>` : '<span class="text-muted">--</span>'}</td>
                     <td class="font-monospace fw-bold text-primary" style="min-width: 130px;">${item.studentCode || '--'}</td>
@@ -5766,7 +5786,7 @@
                 const classStr = String(item.className || '');
                 const facultyStr = String(item.faculty || '');
                 const phoneStr = String(item.phoneNumber || '');
-                const actCodeStr = String(item.code || '');
+                const actCodeStr = decodeTitle(item.code || '');
 
                 const matchesSearch = nameStr.toLowerCase().includes(searchQuery) ||
                     codeStr.toLowerCase().includes(searchQuery) ||
@@ -5775,7 +5795,7 @@
                     phoneStr.toLowerCase().includes(searchQuery);
 
                 const matchesFaculty = !facultyFilter || facultyStr.toLowerCase().includes(facultyFilter);
-                const matchesActivity = !actFilter || actCodeStr.toLowerCase() === actFilter;
+                const matchesActivity = !actFilter || actCodeStr.toLowerCase() === decodeTitle(actFilter).toLowerCase();
                 return matchesSearch && matchesFaculty && matchesActivity;
             });
 
@@ -5965,7 +5985,7 @@
             const actMap = {};
             (acts || []).forEach(a => {
                 if (a && a.code) {
-                    actMap[String(a.code).trim().toUpperCase()] = a;
+                    actMap[decodeTitle(a.code).trim().toUpperCase()] = a;
                 }
             });
 
@@ -6089,7 +6109,7 @@
                 let totalDrl = 0;
 
                 records.forEach(r => {
-                    const actCode = String(r.code || '').trim().toUpperCase();
+                    const actCode = decodeTitle(r.code || '').trim().toUpperCase();
                     if (!eventMap.has(actCode)) {
                         const matchedAct = actMap[actCode];
                         const benefitStr = (r.benefit || (matchedAct ? matchedAct.benefit : '') || '').trim();

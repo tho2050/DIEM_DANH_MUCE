@@ -1309,15 +1309,15 @@
             if (!s) return '';
             let res = String(s);
             try {
-                while (res.includes('%20') || /%[0-9A-Fa-f]{2}/.test(res)) {
+                while (res.includes('%') && /%[0-9A-Fa-f]{2}/.test(res)) {
                     const decoded = decodeURIComponent(res);
                     if (decoded === res) break;
                     res = decoded;
                 }
             } catch (e) {
-                res = res.replace(/%20/g, ' ');
+                res = res.replace(/%20/g, ' ').replace(/%2F/gi, '/');
             }
-            return res.trim();
+            return res.replace(/%20/g, ' ').replace(/%2F/gi, '/').trim();
         }
 
         // 1. Sinh UUID duy nhất cho thiết bị nếu chưa có để nhận diện chống gian lận
@@ -1342,7 +1342,7 @@
 
         // Extract Activity Code from URL
         const urlParams = new URLSearchParams(window.location.search);
-        let actCode = urlParams.get('code') || '';
+        let actCode = decodeTitle(urlParams.get('code') || '');
         
         // Lấy các tham số cấu hình động từ URL (nếu có) để hỗ trợ quét QR sự kiện mới tạo
         let actTitle = decodeTitle(urlParams.get('title') || '');
@@ -1355,16 +1355,16 @@
         // If code is defined by route format `/Activity/CheckIn/{code}`
         if (!actCode) {
             const paths = window.location.pathname.split('/');
-            actCode = paths[paths.length - 1];
+            actCode = decodeTitle(paths[paths.length - 1] || '');
         }
 
         const list = getActivities(); // Lấy danh sách hoạt động động từ localStorage/config
-        let activity = list.find(a => String(a.code || '').toLowerCase() === String(actCode || '').trim().toLowerCase());
+        let activity = list.find(a => decodeTitle(a.code || '').toLowerCase() === actCode.toLowerCase());
 
         // Nếu không tìm thấy trong LocalStorage nhưng URL có truyền đủ tọa độ và thông tin
         if (!activity && actCode && actTitle && actLat && actLng) {
             activity = {
-                code: actCode,
+                code: decodeTitle(actCode),
                 title: decodeTitle(actTitle),
                 description: "Sự kiện được đồng bộ động qua mã QR.",
                 locationAddress: actLoc || "Địa điểm trên mã QR",
@@ -1785,7 +1785,7 @@
             
             localRecords.unshift({
                 timestamp: getVietnamTimestamp(),
-                code: activity.code,
+                code: decodeTitle(activity.code || ''),
                 studentCode: studentCode,
                 name: fullName,
                 className: document.getElementById('className').value || '',
@@ -1900,7 +1900,7 @@
 
             const payload = {
                 timestamp: getVietnamTimestamp(),
-                code: activity.code,
+                code: decodeTitle(activity.code || ''),
                 title: decodeTitle(activity.title || ''), // Gửi kèm tên sự kiện đã được giải mã sạch
                 studentCode: studentCode,
                 name: fullName,
