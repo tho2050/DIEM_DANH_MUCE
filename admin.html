@@ -1680,6 +1680,10 @@
 
                         <!-- Thanh nút tác vụ -->
                         <div class="attendance-btn-toolbar" style="position: relative; z-index: 101;">
+                            <button type="button" class="btn btn-sm btn-warning text-dark fw-bold shadow-sm d-inline-flex align-items-center"
+                                onclick="openBenefitSummaryModal()" title="Tính tổng Ngày CTXH và Điểm Rèn Luyện của từng sinh viên">
+                                <i class="fa-solid fa-award me-1"></i><span class="d-none d-md-inline">Tổng Hợp NCTXH & ĐRL</span><span class="d-inline d-md-none">Tổng Điểm</span>
+                            </button>
                             <button type="button" id="btnAddManualCheckin" class="btn btn-sm btn-primary fw-bold d-none"
                                 onclick="openAddManualCheckinModal()" title="Thêm điểm danh thủ công">
                                 <i class="fa-solid fa-user-plus me-1"></i><span class="d-none d-md-inline">Thêm Điểm Danh</span><span class="d-inline d-md-none">Thêm</span>
@@ -1699,7 +1703,7 @@
                                     data-bs-toggle="dropdown" aria-expanded="false" title="Tùy chọn tải file Excel">
                                     <span class="visually-hidden">Tùy chọn</span>
                                 </button>
-                                <ul class="dropdown-menu dropdown-menu-end shadow" style="min-width: 320px;">
+                                <ul class="dropdown-menu dropdown-menu-end shadow" style="min-width: 330px;">
                                     <li><a class="dropdown-item py-2 fw-bold text-success" href="#" id="menuExportSelectedAct"
                                             onclick="handleSelectedActExport(event)"><i
                                                 class="fa-solid fa-file-excel me-2"></i>Xuất 1 File Excel Sự Kiện Này (4 Khoa + Tổng hợp)</a></li>
@@ -1711,6 +1715,12 @@
                                     </li>
                                     <li><a class="dropdown-item py-2 text-primary fw-semibold" href="#"
                                             onclick="exportToExcel(event)"><i class="fa-solid fa-filter me-2"></i>Xuất Theo Bảng Đang Lọc Trên Màn Hình</a></li>
+                                    <li>
+                                        <hr class="dropdown-divider my-1">
+                                    </li>
+                                    <li><a class="dropdown-item py-2 fw-bold text-danger" href="#"
+                                            onclick="exportBenefitSummaryExcel(event)"><i
+                                                class="fa-solid fa-award me-2 text-warning"></i>Xuất Bảng Tổng Điểm NCTXH & ĐRL (Từng SV)</a></li>
                                     <li>
                                         <hr class="dropdown-divider my-1">
                                     </li>
@@ -2419,6 +2429,98 @@
                             onclick="submitImportExcel()"><i class="fa-solid fa-cloud-arrow-up me-1"></i>Tải Hàng Loạt
                             Vào CSDL SQL</button>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Bảng Tổng Hợp Điểm Rèn Luyện & Ngày CTXH Từng Sinh Viên -->
+    <div class="modal fade" id="benefitSummaryModal" tabindex="-1" aria-labelledby="benefitSummaryModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+            <div class="modal-content shadow-lg border-0" style="border-radius: 16px;">
+                <div class="modal-header bg-dark text-white py-3" style="border-top-left-radius: 16px; border-top-right-radius: 16px;">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <h5 class="modal-title fw-bold mb-0" id="benefitSummaryModalLabel">
+                            <i class="fa-solid fa-award text-warning me-2"></i>Bảng Tổng Hợp Ngày CTXH & Điểm Rèn Luyện
+                        </h5>
+                        <span class="badge bg-primary rounded-pill"><i class="fa-solid fa-users me-1"></i><span id="bsTotalStudents">0</span> SV</span>
+                        <span class="badge bg-danger rounded-pill"><i class="fa-solid fa-heart me-1"></i>Tổng NCTXH: <span id="bsTotalNctxh">0</span> ngày</span>
+                        <span class="badge bg-success rounded-pill"><i class="fa-solid fa-star me-1"></i>Tổng ĐRL: <span id="bsTotalDrl">0</span> đ</span>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-3 p-md-4">
+                    <!-- Thanh bộ lọc & Xuất Excel bên trong Modal -->
+                    <div class="row g-2 mb-3 align-items-center">
+                        <div class="col-12 col-md-4">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-white"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+                                <input type="text" id="bsSearchInput" class="form-control" placeholder="Tìm MSSV, họ tên, lớp..." oninput="filterBenefitSummaryTable()" />
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <select id="bsFacultyFilter" class="form-select form-select-sm" onchange="filterBenefitSummaryTable()">
+                                <option value="">-- Tất cả khoa --</option>
+                                <option value="Khoa Kỹ thuật Công nghệ">1. Khoa Kỹ thuật Công nghệ</option>
+                                <option value="Khoa Kinh tế">2. Khoa Kinh tế</option>
+                                <option value="Khoa Xây dựng">3. Khoa Xây dựng</option>
+                                <option value="Khoa Kiến trúc">4. Khoa Kiến trúc</option>
+                            </select>
+                        </div>
+                        <div class="col-6 col-md-2">
+                            <select id="bsCohortFilter" class="form-select form-select-sm" onchange="filterBenefitSummaryTable()">
+                                <option value="">-- Khóa học --</option>
+                                <option value="17">D17</option>
+                                <option value="18">D18</option>
+                                <option value="19">D19</option>
+                                <option value="20">D20</option>
+                                <option value="21">D21</option>
+                                <option value="22">D22</option>
+                                <option value="23">D23</option>
+                                <option value="24">D24</option>
+                                <option value="25">D25</option>
+                                <option value="26">D26</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-3 text-md-end">
+                            <button type="button" class="btn btn-sm btn-success fw-bold w-100 w-md-auto shadow-sm" onclick="exportBenefitSummaryExcel(event)">
+                                <i class="fa-solid fa-file-excel me-1"></i>Xuất File Excel (5 Sheets)
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-light border small py-2 px-3 mb-3 d-flex align-items-center gap-2" style="border-radius: 8px;">
+                        <i class="fa-solid fa-circle-info text-primary fs-5"></i>
+                        <span>Thứ tự sắp xếp: <strong>Khoa KT Công nghệ &rarr; Kinh tế &rarr; Xây dựng &rarr; Kiến trúc</strong> &bull; Khóa: <strong>D17 &rarr; D26 (tăng dần)</strong> &bull; Lớp (A-Z). Điểm quyền lợi từ tất cả sự kiện đã tham gia được tự động cộng dồn cho mỗi sinh viên.</span>
+                    </div>
+
+                    <!-- Bảng dữ liệu -->
+                    <div class="table-responsive border rounded" style="max-height: 480px;">
+                        <table class="table table-sm table-striped table-hover align-middle mb-0" style="font-size: 0.82rem;" id="bsTable">
+                            <thead class="table-dark text-nowrap sticky-top" style="z-index: 10;">
+                                <tr>
+                                    <th class="text-center" style="width: 50px;">STT</th>
+                                    <th style="min-width: 110px;">MSSV</th>
+                                    <th style="min-width: 160px;">Họ và Tên</th>
+                                    <th style="min-width: 100px;">Lớp</th>
+                                    <th style="min-width: 180px;">Khoa</th>
+                                    <th class="text-center" style="min-width: 90px;">Số Sự Kiện</th>
+                                    <th class="text-center text-danger fw-bold" style="min-width: 120px;"><i class="fa-solid fa-heart me-1"></i>Ngày CTXH</th>
+                                    <th class="text-center text-success fw-bold" style="min-width: 120px;"><i class="fa-solid fa-star me-1"></i>Điểm Rèn Luyện</th>
+                                    <th style="min-width: 250px;">Chi Tiết Sự Kiện Đã Tham Gia</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bsTableBody">
+                                <tr><td colspan="9" class="text-center py-4 text-muted">Đang tính toán dữ liệu...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" class="btn btn-success btn-sm fw-bold shadow-sm" onclick="exportBenefitSummaryExcel(event)">
+                        <i class="fa-solid fa-file-excel me-1"></i>Tải File Excel Tổng Hợp
+                    </button>
                 </div>
             </div>
         </div>
@@ -5583,6 +5685,417 @@
             let actTag = actFilter ? actFilter.replace(/[\/\\:*?"<>|]/g, '-').toUpperCase() : 'Tat_Ca_Su_Kien';
             const filename = `Danh_Sach_Diem_Danh_${facTag}_${actTag}_${new Date().toISOString().slice(0, 10)}.xlsx`;
             XLSX.writeFile(wb, filename);
+        }
+
+        // ==========================================
+        // TÍNH TỔNG HỢP NGÀY CTXH & ĐIỂM RÈN LUYỆN
+        // ==========================================
+
+        function parseBenefitPoints(str) {
+            let nctxh = 0;
+            let drl = 0;
+            if (!str || typeof str !== 'string') return { nctxh, drl };
+
+            const raw = str.trim().toLowerCase();
+            if (!raw) return { nctxh, drl };
+
+            // Chuẩn hóa dấu phẩy thập phân: 0,5 -> 0.5
+            let text = raw.replace(/(\d+),(\d+)/g, '$1.$2');
+
+            // 1. Tìm Ngày công tác xã hội / NCTXH / CTXH
+            const nctxhPattern = /([+-]?\d+(?:\.\d+)?(?:\s*[-–~]\s*\d+(?:\.\d+)?)?)\s*(?:ngày\s*)?(?:nctxh|ctxh|công tác xã hội|ngày công tác)/i;
+            const nctxhPrefixPattern = /(?:nctxh|ctxh|ngày công tác xã hội|ngày ctxh)\s*[:=]?\s*([+-]?\d+(?:\.\d+)?(?:\s*[-–~]\s*\d+(?:\.\d+)?)?)/i;
+
+            let mN = text.match(nctxhPattern) || text.match(nctxhPrefixPattern);
+            if (mN) {
+                let numStr = mN[1].trim();
+                const range = numStr.match(/(\d+(?:\.\d+)?)\s*[-–~]\s*(\d+(?:\.\d+)?)/);
+                if (range) {
+                    nctxh += parseFloat(range[2]) || parseFloat(range[1]) || 0;
+                } else {
+                    const spaceRange = numStr.match(/(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)/);
+                    if (spaceRange) {
+                        nctxh += parseFloat(spaceRange[2]) || 0;
+                    } else {
+                        nctxh += parseFloat(numStr) || 0;
+                    }
+                }
+                text = text.replace(mN[0], ' ');
+            }
+
+            // 2. Tìm Điểm rèn luyện / ĐRL / DRL
+            const drlPattern = /([+-]?\d+(?:\.\d+)?(?:\s*[-–~]\s*\d+(?:\.\d+)?|\s+\d+(?:\.\d+)?)?)\s*(?:đrl|drl|đ rèn luyện|điểm rèn luyện|rèn luyện|điểm)/i;
+            const drlPrefixPattern = /(?:đrl|drl|điểm rèn luyện|rèn luyện)\s*[:=]?\s*([+-]?\d+(?:\.\d+)?(?:\s*[-–~]\s*\d+(?:\.\d+)?)?)/i;
+
+            let mD = text.match(drlPattern) || text.match(drlPrefixPattern);
+            if (mD) {
+                let numStr = mD[1].trim();
+                const range = numStr.match(/(\d+(?:\.\d+)?)\s*[-–~]\s*(\d+(?:\.\d+)?)/);
+                if (range) {
+                    drl += parseFloat(range[2]) || parseFloat(range[1]) || 0;
+                } else {
+                    const spaceRange = numStr.match(/(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)/);
+                    if (spaceRange) {
+                        drl += parseFloat(spaceRange[2]) || 0;
+                    } else {
+                        drl += parseFloat(numStr) || 0;
+                    }
+                }
+                text = text.replace(mD[0], ' ');
+            }
+
+            // 3. Dự phòng nếu chuỗi không có chữ NCTXH / ĐRL cụ thể nhưng có từ khóa
+            if (nctxh === 0 && drl === 0) {
+                if (raw.includes('nctxh') || raw.includes('ctxh') || raw.includes('ngày')) {
+                    const numMatch = raw.match(/([+-]?\d+(?:\.\d+)?)/);
+                    if (numMatch) nctxh += parseFloat(numMatch[1]) || 0;
+                } else if (raw.includes('rèn luyện') || raw.includes('drl') || raw.includes('đrl') || raw.includes('điểm')) {
+                    const numMatch = raw.match(/([+-]?\d+(?:\.\d+)?)/);
+                    if (numMatch) drl += parseFloat(numMatch[1]) || 0;
+                }
+            }
+
+            return {
+                nctxh: Math.round(nctxh * 10) / 10,
+                drl: Math.round(drl * 10) / 10
+            };
+        }
+
+        // Tách số khóa học từ tên lớp (D17..D26 hoặc K17..K26)
+        function extractCohortNumber(className) {
+            if (!className) return 999;
+            const s = String(className).trim().toUpperCase();
+            const mD = s.match(/D(\d{1,2})/);
+            if (mD) return parseInt(mD[1], 10);
+            const mK = s.match(/K(\d{1,2})/);
+            if (mK) return parseInt(mK[1], 10);
+            const mDigits = s.match(/(\d{2})/);
+            if (mDigits) return parseInt(mDigits[1], 10);
+            return 999;
+        }
+
+        // Sắp xếp danh sách tổng hợp theo đúng yêu cầu:
+        // 1. Khoa Kỹ thuật Công nghệ (1) -> Kinh tế (2) -> Xây dựng (3) -> Kiến trúc (4)
+        // 2. Khóa học tăng dần từ D17 -> D26 (17, 18, 19, 20, 21, 22, 23, 24, 25, 26...)
+        // 3. Tên lớp (A-Z)
+        // 4. Họ tên sinh viên (A-Z)
+        // 5. MSSV
+        function sortStudentSummaryList(list) {
+            return list.slice().sort((a, b) => {
+                // 1. Khoa
+                const facA = getFacultyPriority(a.faculty);
+                const facB = getFacultyPriority(b.faculty);
+                if (facA !== facB) return facA - facB;
+
+                // 2. Khóa học D17 -> D26
+                const cohortA = extractCohortNumber(a.className);
+                const cohortB = extractCohortNumber(b.className);
+                if (cohortA !== cohortB) return cohortA - cohortB;
+
+                // 3. Tên lớp (A-Z)
+                const classA = String(a.className || '').trim().toUpperCase();
+                const classB = String(b.className || '').trim().toUpperCase();
+                if (classA !== classB) {
+                    return classA.localeCompare(classB, 'vi', { numeric: true, sensitivity: 'base' });
+                }
+
+                // 4. Họ tên
+                const nameA = String(a.name || '').trim();
+                const nameB = String(b.name || '').trim();
+                if (nameA !== nameB) {
+                    return nameA.localeCompare(nameB, 'vi', { sensitivity: 'base' });
+                }
+
+                // 5. MSSV
+                return String(a.studentCode || '').localeCompare(String(b.studentCode || ''));
+            });
+        }
+
+        // Gom nhóm và tính tổng cho từng sinh viên
+        function getCalculatedStudentSummary() {
+            if (!attendanceData || attendanceData.length === 0) return [];
+
+            const acts = typeof getActivities === 'function' ? getActivities() : [];
+            const actMap = {};
+            (acts || []).forEach(a => {
+                if (a && a.code) {
+                    actMap[String(a.code).trim().toUpperCase()] = a;
+                }
+            });
+
+            const studentMap = new Map();
+
+            attendanceData.forEach(r => {
+                const studentCode = String(r.studentCode || '').trim().toUpperCase();
+                const rawName = String(r.name || '').trim();
+                const rawClass = String(r.className || '').trim().toUpperCase();
+                const rawFaculty = String(r.faculty || '').trim();
+
+                // Nhận diện sinh viên duy nhất bằng MSSV hoặc Họ tên + Lớp
+                let key = studentCode;
+                if (!key || key.length < 4) {
+                    key = (rawName.toLowerCase().replace(/\s+/g, ' ') + '__' + rawClass.toLowerCase());
+                }
+                if (!key) return;
+
+                if (!studentMap.has(key)) {
+                    let faculty = rawFaculty;
+                    if (!faculty || faculty === 'Chưa rõ' || faculty === '--') {
+                        if (typeof detectFacultyFromClassName === 'function') {
+                            faculty = detectFacultyFromClassName(rawClass);
+                        }
+                    }
+                    studentMap.set(key, {
+                        studentCode: studentCode || '--',
+                        name: rawName,
+                        className: rawClass,
+                        faculty: faculty || 'Chưa rõ',
+                        eventsAttended: new Map(),
+                        totalNctxh: 0,
+                        totalDrl: 0
+                    });
+                }
+
+                const student = studentMap.get(key);
+
+                if ((!student.studentCode || student.studentCode === '--') && studentCode) {
+                    student.studentCode = studentCode;
+                }
+                if (!student.name && rawName) student.name = rawName;
+                if (!student.className && rawClass) student.className = rawClass;
+                if ((!student.faculty || student.faculty === 'Chưa rõ') && rawFaculty) {
+                    student.faculty = rawFaculty;
+                }
+
+                const actCode = String(r.code || '').trim().toUpperCase();
+                const matchedAct = actMap[actCode];
+                const benefitStr = (r.benefit || (matchedAct ? matchedAct.benefit : '') || '').trim();
+                const eventTitle = r.title || (matchedAct ? matchedAct.title : actCode) || actCode;
+
+                // Tránh cộng lặp điểm nếu sinh viên bấm điểm danh 2 lần cho cùng 1 sự kiện
+                if (!student.eventsAttended.has(actCode)) {
+                    const parsed = parseBenefitPoints(benefitStr);
+                    student.eventsAttended.set(actCode, {
+                        code: actCode,
+                        title: eventTitle,
+                        benefit: benefitStr,
+                        nctxh: parsed.nctxh,
+                        drl: parsed.drl,
+                        timestamp: r.timestamp || ''
+                    });
+                    student.totalNctxh += parsed.nctxh;
+                    student.totalDrl += parsed.drl;
+                }
+            });
+
+            const resultList = [];
+            studentMap.forEach(s => {
+                const eventList = Array.from(s.eventsAttended.values());
+                const eventDetails = eventList.map(e => {
+                    const benPart = e.benefit ? ` [${e.benefit}]` : '';
+                    return `${e.title || e.code}${benPart}`;
+                }).join('; ');
+
+                resultList.push({
+                    studentCode: s.studentCode,
+                    name: s.name,
+                    className: s.className,
+                    faculty: s.faculty,
+                    eventCount: eventList.length,
+                    totalNctxh: Math.round(s.totalNctxh * 10) / 10,
+                    totalDrl: Math.round(s.totalDrl * 10) / 10,
+                    eventDetails: eventDetails,
+                    eventList: eventList
+                });
+            });
+
+            return sortStudentSummaryList(resultList);
+        }
+
+        let benefitSummaryModalInstance = null;
+        let currentBenefitSummaryList = [];
+
+        async function openBenefitSummaryModal() {
+            if (!attendanceData || attendanceData.length === 0) {
+                await fetchAttendanceDataSilently();
+            }
+
+            currentBenefitSummaryList = getCalculatedStudentSummary();
+
+            if (!benefitSummaryModalInstance) {
+                benefitSummaryModalInstance = new bootstrap.Modal(document.getElementById('benefitSummaryModal'));
+            }
+
+            renderBenefitSummaryTable(currentBenefitSummaryList);
+            benefitSummaryModalInstance.show();
+        }
+
+        function renderBenefitSummaryTable(list) {
+            const tbody = document.getElementById('bsTableBody');
+            const totalStudentsEl = document.getElementById('bsTotalStudents');
+            const totalNctxhEl = document.getElementById('bsTotalNctxh');
+            const totalDrlEl = document.getElementById('bsTotalDrl');
+
+            if (!list || list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-muted">Chưa có dữ liệu sinh viên nào để tổng hợp.</td></tr>`;
+                if (totalStudentsEl) totalStudentsEl.textContent = '0';
+                if (totalNctxhEl) totalNctxhEl.textContent = '0';
+                if (totalDrlEl) totalDrlEl.textContent = '0';
+                return;
+            }
+
+            let sumNctxh = 0;
+            let sumDrl = 0;
+
+            tbody.innerHTML = list.map((item, idx) => {
+                sumNctxh += (item.totalNctxh || 0);
+                sumDrl += (item.totalDrl || 0);
+
+                const nctxhBadge = item.totalNctxh > 0
+                    ? `<span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill fw-bold px-2 py-1 fs-6"><i class="fa-solid fa-heart me-1"></i>+${item.totalNctxh} ngày</span>`
+                    : `<span class="text-muted">0 ngày</span>`;
+
+                const drlBadge = item.totalDrl > 0
+                    ? `<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill fw-bold px-2 py-1 fs-6"><i class="fa-solid fa-star me-1"></i>+${item.totalDrl} đ</span>`
+                    : `<span class="text-muted">0 đ</span>`;
+
+                return `
+                <tr class="text-nowrap">
+                    <td class="text-center text-muted fw-bold">${idx + 1}</td>
+                    <td><span class="badge bg-light text-primary font-monospace border border-primary px-2 py-1 fs-6">${item.studentCode}</span></td>
+                    <td class="fw-bold text-dark">${item.name}</td>
+                    <td><span class="badge bg-secondary font-monospace">${item.className || '--'}</span></td>
+                    <td><small class="text-secondary">${item.faculty || '--'}</small></td>
+                    <td class="text-center"><span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-1">${item.eventCount} sự kiện</span></td>
+                    <td class="text-center">${nctxhBadge}</td>
+                    <td class="text-center">${drlBadge}</td>
+                    <td class="small text-truncate" style="max-width: 280px;" title="${item.eventDetails}">${item.eventDetails || '--'}</td>
+                </tr>
+                `;
+            }).join('');
+
+            if (totalStudentsEl) totalStudentsEl.textContent = list.length;
+            if (totalNctxhEl) totalNctxhEl.textContent = Math.round(sumNctxh * 10) / 10;
+            if (totalDrlEl) totalDrlEl.textContent = Math.round(sumDrl * 10) / 10;
+        }
+
+        function filterBenefitSummaryTable() {
+            const query = (document.getElementById('bsSearchInput')?.value || '').toLowerCase().trim();
+            const facultyFilter = (document.getElementById('bsFacultyFilter')?.value || '').toLowerCase().trim();
+            const cohortFilter = (document.getElementById('bsCohortFilter')?.value || '').trim();
+
+            const filtered = currentBenefitSummaryList.filter(item => {
+                const nameStr = String(item.name || '').toLowerCase();
+                const codeStr = String(item.studentCode || '').toLowerCase();
+                const classStr = String(item.className || '').toLowerCase();
+                const facultyStr = String(item.faculty || '').toLowerCase();
+
+                const matchesQuery = !query ||
+                    nameStr.includes(query) ||
+                    codeStr.includes(query) ||
+                    classStr.includes(query) ||
+                    facultyStr.includes(query);
+
+                const matchesFaculty = !facultyFilter || facultyStr.includes(facultyFilter);
+
+                let matchesCohort = true;
+                if (cohortFilter) {
+                    const cNum = extractCohortNumber(item.className);
+                    matchesCohort = (cNum === parseInt(cohortFilter, 10));
+                }
+
+                return matchesQuery && matchesFaculty && matchesCohort;
+            });
+
+            renderBenefitSummaryTable(filtered);
+        }
+
+        function prepareBenefitSummarySheetData(list) {
+            const data = [
+                ["STT", "MSSV", "Họ và Tên", "Lớp", "Khoa", "Số Sự Kiện Tham Gia", "Tổng Ngày CTXH (Ngày)", "Tổng Điểm Rèn Luyện (Điểm)", "Chi Tiết Sự Kiện Đã Tham Gia"]
+            ];
+            (list || []).forEach((item, idx) => {
+                data.push([
+                    idx + 1,
+                    item.studentCode || '',
+                    item.name || '',
+                    item.className || '',
+                    item.faculty || '',
+                    item.eventCount || 0,
+                    item.totalNctxh !== undefined ? item.totalNctxh : 0,
+                    item.totalDrl !== undefined ? item.totalDrl : 0,
+                    item.eventDetails || ''
+                ]);
+            });
+            return data;
+        }
+
+        function createFormattedBenefitWorksheet(listData) {
+            const matrix = prepareBenefitSummarySheetData(listData);
+            const ws = XLSX.utils.aoa_to_sheet(matrix);
+
+            if (matrix && matrix.length > 0) {
+                const minWidths = [8, 16, 25, 16, 26, 20, 22, 22, 45];
+                const colWidths = matrix[0].map((header, colIdx) => {
+                    let maxLen = header ? String(header).length : 10;
+                    for (let rowIdx = 1; rowIdx < matrix.length; rowIdx++) {
+                        const val = matrix[rowIdx][colIdx] !== null && matrix[rowIdx][colIdx] !== undefined ? String(matrix[rowIdx][colIdx]) : '';
+                        if (val.length > maxLen) {
+                            maxLen = val.length;
+                        }
+                    }
+                    const minW = minWidths[colIdx] || 15;
+                    return { wch: Math.min(Math.max(maxLen + 4, minW), 60) };
+                });
+                ws['!cols'] = colWidths;
+            }
+            return ws;
+        }
+
+        function exportBenefitSummaryExcel(e) {
+            if (e) e.preventDefault();
+            if (typeof XLSX === 'undefined') {
+                alert("Đang nạp thư viện Excel... Vui lòng thử lại sau vài giây!");
+                return;
+            }
+
+            const summaryList = getCalculatedStudentSummary();
+            if (!summaryList || summaryList.length === 0) {
+                alert("Chưa có dữ liệu sinh viên điểm danh để tổng hợp!");
+                return;
+            }
+
+            const wb = XLSX.utils.book_new();
+
+            // Sheet 1: Tổng hợp tất cả (All faculties, sorted by Faculty -> Cohort D17..D26 -> Class -> Name)
+            const wsAll = createFormattedBenefitWorksheet(summaryList);
+            XLSX.utils.book_append_sheet(wb, wsAll, "Tổng Hợp Tất Cả");
+
+            // Sheet 2: Khoa KT - Công Nghệ
+            const listKT = summaryList.filter(s => {
+                const f = String(s.faculty || '').toLowerCase();
+                return f.includes("kỹ thuật") || f.includes("công nghệ");
+            });
+            const wsKT = createFormattedBenefitWorksheet(listKT);
+            XLSX.utils.book_append_sheet(wb, wsKT, "Khoa KT - Công Nghệ");
+
+            // Sheet 3: Khoa Kinh Tế
+            const listEcon = summaryList.filter(s => String(s.faculty || '').toLowerCase().includes("kinh tế"));
+            const wsEcon = createFormattedBenefitWorksheet(listEcon);
+            XLSX.utils.book_append_sheet(wb, wsEcon, "Khoa Kinh Tế");
+
+            // Sheet 4: Khoa Xây Dựng
+            const listBuild = summaryList.filter(s => String(s.faculty || '').toLowerCase().includes("xây dựng"));
+            const wsBuild = createFormattedBenefitWorksheet(listBuild);
+            XLSX.utils.book_append_sheet(wb, wsBuild, "Khoa Xây Dựng");
+
+            // Sheet 5: Khoa Kiến Trúc
+            const listArch = summaryList.filter(s => String(s.faculty || '').toLowerCase().includes("kiến trúc"));
+            const wsArch = createFormattedBenefitWorksheet(listArch);
+            XLSX.utils.book_append_sheet(wb, wsArch, "Khoa Kiến Trúc");
+
+            const fileName = `Tong_Hop_Diem_NCTXH_DRL_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            XLSX.writeFile(wb, fileName);
         }
 
         function printQr(code, title, radius) {
