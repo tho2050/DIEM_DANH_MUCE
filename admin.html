@@ -2666,6 +2666,13 @@
 
         // Check login state
         window.addEventListener('DOMContentLoaded', () => {
+            // Tự động làm sạch URL nếu link mở từ shortcut/lịch sử cũ dính view=tonghop
+            try {
+                if (window.location.search.includes('view=tonghop') || window.location.hash.includes('tonghop')) {
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+            } catch (e) {}
+
             const isLogged = sessionStorage.getItem("admin_logged") || localStorage.getItem("admin_logged");
             if (isLogged === "true") {
                 if (!sessionStorage.getItem("admin_logged")) {
@@ -3488,19 +3495,13 @@
                 updateTrashCountBadge();
             });
 
-            // Tự động mở bảng tổng hợp toàn màn hình nếu truy cập URL có ?view=tonghop hoặc #tonghop
+            // Đảm bảo không bao giờ tự động mở hay chuyển đến bảng tổng hợp khi mới vào link hoặc mở app.
+            // Chỉ mở khi người dùng chủ động nhấn nút "Tổng Hợp NCTXH & ĐRL".
             try {
-                const urlParams = new URLSearchParams(window.location.search);
-                if (urlParams.get('view') === 'tonghop' || window.location.hash === '#tonghop') {
-                    setTimeout(() => {
-                        if (typeof openBenefitSummaryModal === 'function') {
-                            openBenefitSummaryModal();
-                        }
-                    }, 400);
+                if (window.location.search.includes('view=tonghop') || window.location.hash.includes('tonghop')) {
+                    window.history.replaceState({}, document.title, window.location.pathname);
                 }
-            } catch (err) {
-                console.error("Lỗi kiểm tra URL tổng hợp:", err);
-            }
+            } catch (err) {}
         }
 
         function initSelectMap() {
@@ -6255,8 +6256,7 @@
         }
 
         function openBenefitSummaryInNewWindow() {
-            const url = window.location.pathname + '?view=tonghop';
-            window.open(url, '_blank');
+            openBenefitSummaryModal();
         }
 
         function resetBenefitSummaryFilters() {
