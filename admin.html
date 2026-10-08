@@ -4916,7 +4916,7 @@
                     <td><span class="badge bg-secondary">${item.code}</span></td>
                     <td>${titleVal}</td>
                     <td>${benefitVal ? `<span class="badge bg-danger text-white rounded-pill shadow-sm"><i class="fa-solid fa-gift me-1"></i>${benefitVal}</span>` : '<span class="text-muted">--</span>'}</td>
-                    <td style="min-width: 130px;"><span class="badge bg-light text-primary font-monospace border border-primary px-2 py-1 fs-6">${item.studentCode || '--'}</span></td>
+                    <td class="font-monospace fw-bold text-primary" style="min-width: 130px;">${item.studentCode || '--'}</td>
                     <td class="fw-bold text-dark">${item.name}</td>
                     <td>${item.className || '--'}</td>
                     <td>${item.faculty || '--'}</td>
@@ -6182,9 +6182,9 @@
                 return `
                 <tr class="text-nowrap">
                     <td class="text-center text-muted fw-bold">${idx + 1}</td>
-                    <td><span class="badge bg-light text-primary font-monospace border border-primary px-2 py-1 fs-6">${item.studentCode}</span></td>
+                    <td class="font-monospace fw-bold text-primary">${item.studentCode}</td>
                     <td class="fw-bold text-dark">${item.name}</td>
-                    <td><span class="badge bg-secondary font-monospace">${item.className || '--'}</span></td>
+                    <td class="font-monospace">${item.className || '--'}</td>
                     <td><small class="text-secondary">${item.faculty || '--'}</small></td>
                     <td class="text-center"><span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-1">${item.eventCount} sự kiện</span></td>
                     <td class="text-center">${nctxhBadge}</td>
