@@ -1314,6 +1314,54 @@
                 justify-content: space-around !important;
             }
         }
+
+        /* PHÓNG TO TOÀN MÀN HÌNH NHƯ TRANG RIÊNG CHO BẢNG TỔNG HỢP */
+        #benefitSummaryModal .modal-dialog.modal-fullscreen {
+            width: 100vw !important;
+            max-width: 100vw !important;
+            height: 100vh !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        #benefitSummaryModal .modal-dialog.modal-fullscreen .modal-content {
+            border-radius: 0 !important;
+            height: 100vh !important;
+            display: flex !important;
+            flex-direction: column !important;
+            border: none !important;
+        }
+        #benefitSummaryModal .modal-header {
+            border-radius: 0 !important;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%) !important;
+            padding: 10px 18px !important;
+            flex-shrink: 0 !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+        }
+        #benefitSummaryModal .modal-body {
+            flex: 1 1 auto !important;
+            display: flex !important;
+            flex-direction: column !important;
+            overflow: hidden !important;
+            background: #f8fafc !important;
+            padding: 12px 18px !important;
+        }
+        #benefitSummaryModal .bs-table-container {
+            flex: 1 1 auto !important;
+            overflow-y: auto !important;
+            overflow-x: auto !important;
+            background: #fff !important;
+            border-radius: 8px !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important;
+            position: relative !important;
+            border: 1px solid #e2e8f0 !important;
+        }
+        #benefitSummaryModal .modal-footer {
+            border-radius: 0 !important;
+            flex-shrink: 0 !important;
+            background: #ffffff !important;
+            padding: 8px 18px !important;
+            border-top: 1px solid #e2e8f0 !important;
+        }
     </style>
 </head>
 
@@ -2434,80 +2482,98 @@
         </div>
     </div>
 
-    <!-- Modal Bảng Tổng Hợp Điểm Rèn Luyện & Ngày CTXH Từng Sinh Viên -->
-    <div class="modal fade" id="benefitSummaryModal" tabindex="-1" aria-labelledby="benefitSummaryModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
-            <div class="modal-content shadow-lg border-0" style="border-radius: 16px;">
-                <div class="modal-header bg-dark text-white py-3" style="border-top-left-radius: 16px; border-top-right-radius: 16px;">
-                    <div class="d-flex align-items-center gap-2 flex-wrap">
-                        <h5 class="modal-title fw-bold mb-0" id="benefitSummaryModalLabel">
-                            <i class="fa-solid fa-award text-warning me-2"></i>Bảng Tổng Hợp Ngày CTXH & Điểm Rèn Luyện
-                        </h5>
-                        <span class="badge bg-primary rounded-pill"><i class="fa-solid fa-users me-1"></i><span id="bsTotalStudents">0</span> SV</span>
-                        <span class="badge bg-danger rounded-pill"><i class="fa-solid fa-heart me-1"></i>Tổng NCTXH: <span id="bsTotalNctxh">0</span> ngày</span>
-                        <span class="badge bg-success rounded-pill"><i class="fa-solid fa-star me-1"></i>Tổng ĐRL: <span id="bsTotalDrl">0</span> đ</span>
+    <!-- Modal Bảng Tổng Hợp Điểm Rèn Luyện & Ngày CTXH Từng Sinh Viên (Toàn Màn Hình Như Trang Riêng) -->
+    <div class="modal fade" id="benefitSummaryModal" tabindex="-1" aria-labelledby="benefitSummaryModalLabel" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-fullscreen" id="bsModalDialog">
+            <div class="modal-content shadow-none border-0 h-100">
+                <div class="modal-header text-white">
+                    <div class="d-flex align-items-center gap-2 flex-wrap flex-grow-1">
+                        <div class="d-flex align-items-center">
+                            <i class="fa-solid fa-award text-warning me-2 fs-4"></i>
+                            <h5 class="modal-title fw-bold mb-0 text-white" id="benefitSummaryModalLabel">
+                                Bảng Tổng Hợp Ngày CTXH & Điểm Rèn Luyện
+                            </h5>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 flex-wrap ms-auto me-3">
+                            <span class="badge bg-primary rounded-pill px-3 py-2 fs-6 shadow-sm"><i class="fa-solid fa-users me-1"></i><span id="bsTotalStudents">0</span> SV</span>
+                            <span class="badge bg-danger rounded-pill px-3 py-2 fs-6 shadow-sm"><i class="fa-solid fa-heart me-1"></i>Tổng NCTXH: <span id="bsTotalNctxh">0</span> ngày</span>
+                            <span class="badge bg-success rounded-pill px-3 py-2 fs-6 shadow-sm"><i class="fa-solid fa-star me-1"></i>Tổng ĐRL: <span id="bsTotalDrl">0</span> đ</span>
+                        </div>
                     </div>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-info text-white" onclick="openBenefitSummaryInNewWindow()" title="Mở trang toàn màn hình ở tab mới">
+                            <i class="fa-solid fa-arrow-up-right-from-square me-1"></i><span class="d-none d-md-inline">Mở Tab Mới</span>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-light" id="btnToggleBsFullscreen" onclick="toggleBenefitModalFullscreen()" title="Chuyển đổi kích thước cửa sổ">
+                            <i class="fa-solid fa-compress me-1" id="iconBsFullscreen"></i><span class="d-none d-md-inline" id="textBsFullscreen">Thu nhỏ</span>
+                        </button>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" title="Đóng quay lại"></button>
+                    </div>
                 </div>
-                <div class="modal-body p-3 p-md-4">
+                <div class="modal-body">
                     <!-- Thanh bộ lọc & Xuất Excel bên trong Modal -->
-                    <div class="row g-2 mb-3 align-items-center">
-                        <div class="col-12 col-md-4">
-                            <div class="input-group input-group-sm">
-                                <span class="input-group-text bg-white"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
-                                <input type="text" id="bsSearchInput" class="form-control" placeholder="Tìm MSSV, họ tên, lớp..." oninput="filterBenefitSummaryTable()" />
+                    <div class="bg-white p-2 p-md-3 rounded shadow-sm border mb-2 flex-shrink-0">
+                        <div class="row g-2 align-items-center">
+                            <div class="col-12 col-md-4 col-lg-3">
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+                                    <input type="text" id="bsSearchInput" class="form-control" placeholder="Tìm kiếm MSSV, họ tên, lớp..." oninput="filterBenefitSummaryTable()" />
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3 col-lg-3">
+                                <select id="bsFacultyFilter" class="form-select" onchange="filterBenefitSummaryTable()">
+                                    <option value="">-- Tất cả các khoa --</option>
+                                    <option value="Khoa Kỹ thuật Công nghệ">1. Khoa Kỹ thuật Công nghệ</option>
+                                    <option value="Khoa Kinh tế">2. Khoa Kinh tế</option>
+                                    <option value="Khoa Xây dựng">3. Khoa Xây dựng</option>
+                                    <option value="Khoa Kiến trúc">4. Khoa Kiến trúc</option>
+                                </select>
+                            </div>
+                            <div class="col-6 col-md-2 col-lg-2">
+                                <select id="bsCohortFilter" class="form-select" onchange="filterBenefitSummaryTable()">
+                                    <option value="">-- Tất cả khóa --</option>
+                                    <option value="17">Khóa D17</option>
+                                    <option value="18">Khóa D18</option>
+                                    <option value="19">Khóa D19</option>
+                                    <option value="20">Khóa D20</option>
+                                    <option value="21">Khóa D21</option>
+                                    <option value="22">Khóa D22</option>
+                                    <option value="23">Khóa D23</option>
+                                    <option value="24">Khóa D24</option>
+                                    <option value="25">Khóa D25</option>
+                                    <option value="26">Khóa D26</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-3 col-lg-4 text-md-end d-flex gap-2 justify-content-md-end">
+                                <button type="button" class="btn btn-outline-secondary" onclick="resetBenefitSummaryFilters()" title="Đặt lại bộ lọc tìm kiếm">
+                                    <i class="fa-solid fa-arrow-rotate-left me-1"></i>Đặt lại
+                                </button>
+                                <button type="button" class="btn btn-success fw-bold px-3 shadow-sm" onclick="exportBenefitSummaryExcel(event)">
+                                    <i class="fa-solid fa-file-excel me-1"></i>Xuất File Excel (5 Sheets)
+                                </button>
                             </div>
                         </div>
-                        <div class="col-6 col-md-3">
-                            <select id="bsFacultyFilter" class="form-select form-select-sm" onchange="filterBenefitSummaryTable()">
-                                <option value="">-- Tất cả khoa --</option>
-                                <option value="Khoa Kỹ thuật Công nghệ">1. Khoa Kỹ thuật Công nghệ</option>
-                                <option value="Khoa Kinh tế">2. Khoa Kinh tế</option>
-                                <option value="Khoa Xây dựng">3. Khoa Xây dựng</option>
-                                <option value="Khoa Kiến trúc">4. Khoa Kiến trúc</option>
-                            </select>
-                        </div>
-                        <div class="col-6 col-md-2">
-                            <select id="bsCohortFilter" class="form-select form-select-sm" onchange="filterBenefitSummaryTable()">
-                                <option value="">-- Khóa học --</option>
-                                <option value="17">D17</option>
-                                <option value="18">D18</option>
-                                <option value="19">D19</option>
-                                <option value="20">D20</option>
-                                <option value="21">D21</option>
-                                <option value="22">D22</option>
-                                <option value="23">D23</option>
-                                <option value="24">D24</option>
-                                <option value="25">D25</option>
-                                <option value="26">D26</option>
-                            </select>
-                        </div>
-                        <div class="col-12 col-md-3 text-md-end">
-                            <button type="button" class="btn btn-sm btn-success fw-bold w-100 w-md-auto shadow-sm" onclick="exportBenefitSummaryExcel(event)">
-                                <i class="fa-solid fa-file-excel me-1"></i>Xuất File Excel (5 Sheets)
-                            </button>
-                        </div>
                     </div>
 
-                    <div class="alert alert-light border small py-2 px-3 mb-3 d-flex align-items-center gap-2" style="border-radius: 8px;">
-                        <i class="fa-solid fa-circle-info text-primary fs-5"></i>
-                        <span>Thứ tự sắp xếp: <strong>Khoa KT Công nghệ &rarr; Kinh tế &rarr; Xây dựng &rarr; Kiến trúc</strong> &bull; Khóa: <strong>D17 &rarr; D26 (tăng dần)</strong> &bull; Lớp (A-Z). Điểm quyền lợi từ tất cả sự kiện đã tham gia được tự động cộng dồn cho mỗi sinh viên.</span>
+                    <div class="alert alert-info py-2 px-3 mb-2 d-flex align-items-center gap-2 small border-0 shadow-sm flex-shrink-0" style="background-color: #e8f4fd; color: #0d47a1; border-radius: 8px;">
+                        <i class="fa-solid fa-circle-info fs-5 text-primary flex-shrink-0"></i>
+                        <span>Thứ tự sắp xếp: <strong>Khoa Kỹ thuật Công nghệ &rarr; Kinh tế &rarr; Xây dựng &rarr; Kiến trúc</strong> &bull; Khóa: <strong>D17 &rarr; D26 (tăng dần)</strong> &bull; Lớp (A-Z) &bull; Tên (A-Z). Điểm quyền lợi từ tất cả sự kiện đã tham gia được tự động kiểm tra và cộng dồn cho mỗi sinh viên.</span>
                     </div>
 
-                    <!-- Bảng dữ liệu -->
-                    <div class="table-responsive border rounded" style="max-height: 480px;">
-                        <table class="table table-sm table-striped table-hover align-middle mb-0" style="font-size: 0.82rem;" id="bsTable">
-                            <thead class="table-dark text-nowrap sticky-top" style="z-index: 10;">
+                    <!-- Bảng dữ liệu toàn màn hình -->
+                    <div class="bs-table-container">
+                        <table class="table table-hover align-middle mb-0" style="font-size: 0.88rem; min-width: 1000px;" id="bsTable">
+                            <thead class="table-dark text-nowrap sticky-top" style="z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.15);">
                                 <tr>
                                     <th class="text-center" style="width: 50px;">STT</th>
-                                    <th style="min-width: 110px;">MSSV</th>
-                                    <th style="min-width: 160px;">Họ và Tên</th>
-                                    <th style="min-width: 100px;">Lớp</th>
-                                    <th style="min-width: 180px;">Khoa</th>
-                                    <th class="text-center" style="min-width: 90px;">Số Sự Kiện</th>
-                                    <th class="text-center text-danger fw-bold" style="min-width: 120px;"><i class="fa-solid fa-heart me-1"></i>Ngày CTXH</th>
-                                    <th class="text-center text-success fw-bold" style="min-width: 120px;"><i class="fa-solid fa-star me-1"></i>Điểm Rèn Luyện</th>
-                                    <th style="min-width: 250px;">Chi Tiết Sự Kiện Đã Tham Gia</th>
+                                    <th style="min-width: 130px;">MSSV</th>
+                                    <th style="min-width: 180px;">Họ và Tên</th>
+                                    <th style="min-width: 110px;">Lớp</th>
+                                    <th style="min-width: 200px;">Khoa</th>
+                                    <th class="text-center" style="min-width: 100px;">Số Sự Kiện</th>
+                                    <th class="text-center text-danger fw-bold" style="min-width: 130px;"><i class="fa-solid fa-heart me-1"></i>Ngày CTXH</th>
+                                    <th class="text-center text-success fw-bold" style="min-width: 130px;"><i class="fa-solid fa-star me-1"></i>Điểm Rèn Luyện</th>
+                                    <th style="min-width: 320px;">Chi Tiết Sự Kiện Đã Tham Gia & Quyền Lợi</th>
                                 </tr>
                             </thead>
                             <tbody id="bsTableBody">
@@ -2516,11 +2582,16 @@
                         </table>
                     </div>
                 </div>
-                <div class="modal-footer bg-light py-2">
-                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
-                    <button type="button" class="btn btn-success btn-sm fw-bold shadow-sm" onclick="exportBenefitSummaryExcel(event)">
-                        <i class="fa-solid fa-file-excel me-1"></i>Tải File Excel Tổng Hợp
-                    </button>
+                <div class="modal-footer d-flex justify-content-between align-items-center">
+                    <div class="text-muted small">
+                        <i class="fa-solid fa-display text-primary me-1"></i>Chế độ toàn màn hình như 1 trang riêng biệt &bull; Nhấn <strong>ESC</strong> hoặc nút <strong>Đóng</strong> để trở về
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">Đóng</button>
+                        <button type="button" class="btn btn-success fw-bold px-3 shadow-sm" onclick="exportBenefitSummaryExcel(event)">
+                            <i class="fa-solid fa-file-excel me-1"></i>Tải File Excel Tổng Hợp
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2590,8 +2661,13 @@
 
         // Check login state
         window.addEventListener('DOMContentLoaded', () => {
-            const isLogged = sessionStorage.getItem("admin_logged");
+            const isLogged = sessionStorage.getItem("admin_logged") || localStorage.getItem("admin_logged");
             if (isLogged === "true") {
+                if (!sessionStorage.getItem("admin_logged")) {
+                    sessionStorage.setItem("admin_logged", "true");
+                    sessionStorage.setItem("admin_role", localStorage.getItem("admin_role") || "staff");
+                    sessionStorage.setItem("admin_user", localStorage.getItem("admin_user") || "");
+                }
                 showDashboard();
             }
 
@@ -2630,6 +2706,9 @@
                 sessionStorage.setItem("admin_logged", "true");
                 sessionStorage.setItem("admin_role", "super");
                 sessionStorage.setItem("admin_user", user);
+                localStorage.setItem("admin_logged", "true");
+                localStorage.setItem("admin_role", "super");
+                localStorage.setItem("admin_user", user);
                 showDashboard();
                 return;
             }
@@ -2637,6 +2716,9 @@
                 sessionStorage.setItem("admin_logged", "true");
                 sessionStorage.setItem("admin_role", "staff");
                 sessionStorage.setItem("admin_user", user);
+                localStorage.setItem("admin_logged", "true");
+                localStorage.setItem("admin_role", "staff");
+                localStorage.setItem("admin_user", user);
                 showDashboard();
                 return;
             }
@@ -2657,6 +2739,9 @@
                     sessionStorage.setItem("admin_logged", "true");
                     sessionStorage.setItem("admin_role", result.role);
                     sessionStorage.setItem("admin_user", user);
+                    localStorage.setItem("admin_logged", "true");
+                    localStorage.setItem("admin_role", result.role);
+                    localStorage.setItem("admin_user", user);
                     showDashboard();
                 } else {
                     document.getElementById('loginError').textContent = result.message || "Tài khoản hoặc mật khẩu không chính xác!";
@@ -2695,6 +2780,9 @@
             sessionStorage.removeItem("admin_logged");
             sessionStorage.removeItem("admin_role");
             sessionStorage.removeItem("admin_user");
+            localStorage.removeItem("admin_logged");
+            localStorage.removeItem("admin_role");
+            localStorage.removeItem("admin_user");
             window.location.reload();
         }
 
@@ -3394,6 +3482,20 @@
             syncDeletedActivitiesFromCloud(() => {
                 updateTrashCountBadge();
             });
+
+            // Tự động mở bảng tổng hợp toàn màn hình nếu truy cập URL có ?view=tonghop hoặc #tonghop
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('view') === 'tonghop' || window.location.hash === '#tonghop') {
+                    setTimeout(() => {
+                        if (typeof openBenefitSummaryModal === 'function') {
+                            openBenefitSummaryModal();
+                        }
+                    }, 400);
+                }
+            } catch (err) {
+                console.error("Lỗi kiểm tra URL tổng hợp:", err);
+            }
         }
 
         function initSelectMap() {
@@ -5969,7 +6071,7 @@
                     <td class="text-center"><span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-1">${item.eventCount} sự kiện</span></td>
                     <td class="text-center">${nctxhBadge}</td>
                     <td class="text-center">${drlBadge}</td>
-                    <td class="small text-truncate" style="max-width: 280px;" title="${item.eventDetails}">${item.eventDetails || '--'}</td>
+                    <td class="small" style="min-width: 280px; max-width: 480px; white-space: normal;" title="${item.eventDetails}">${item.eventDetails || '--'}</td>
                 </tr>
                 `;
             }).join('');
@@ -6008,6 +6110,46 @@
             });
 
             renderBenefitSummaryTable(filtered);
+        }
+
+        function toggleBenefitModalFullscreen() {
+            const dialog = document.getElementById('bsModalDialog');
+            const icon = document.getElementById('iconBsFullscreen');
+            const text = document.getElementById('textBsFullscreen');
+            if (!dialog) return;
+
+            if (dialog.classList.contains('modal-fullscreen')) {
+                dialog.classList.remove('modal-fullscreen');
+                dialog.classList.add('modal-xl', 'modal-dialog-centered', 'modal-dialog-scrollable');
+                if (icon) {
+                    icon.classList.remove('fa-compress');
+                    icon.classList.add('fa-expand');
+                }
+                if (text) text.textContent = 'Phóng to';
+            } else {
+                dialog.classList.remove('modal-xl', 'modal-dialog-centered', 'modal-dialog-scrollable');
+                dialog.classList.add('modal-fullscreen');
+                if (icon) {
+                    icon.classList.remove('fa-expand');
+                    icon.classList.add('fa-compress');
+                }
+                if (text) text.textContent = 'Thu nhỏ';
+            }
+        }
+
+        function openBenefitSummaryInNewWindow() {
+            const url = window.location.pathname + '?view=tonghop';
+            window.open(url, '_blank');
+        }
+
+        function resetBenefitSummaryFilters() {
+            const sInp = document.getElementById('bsSearchInput');
+            const fSel = document.getElementById('bsFacultyFilter');
+            const cSel = document.getElementById('bsCohortFilter');
+            if (sInp) sInp.value = '';
+            if (fSel) fSel.value = '';
+            if (cSel) cSel.value = '';
+            filterBenefitSummaryTable();
         }
 
         function prepareBenefitSummarySheetData(list) {
