@@ -1361,6 +1361,24 @@
         const list = getActivities(); // Lấy danh sách hoạt động động từ localStorage/config
         let activity = list.find(a => decodeTitle(a.code || '').toLowerCase() === actCode.toLowerCase());
 
+        // Nếu máy này chưa có sự kiện trong LocalStorage (máy mới / thiết bị khác), tự động tải ngay từ máy chủ Server
+        if (!activity && actCode) {
+            try {
+                const xhr = new XMLHttpRequest();
+                xhr.open('GET', (CONFIG.googleScriptUrl || '/api') + '?action=getActivities&_t=' + Date.now(), false);
+                xhr.send();
+                if (xhr.status === 200) {
+                    const serverList = JSON.parse(xhr.responseText);
+                    if (Array.isArray(serverList)) {
+                        localStorage.setItem("gps_attendance_activities", JSON.stringify(serverList));
+                        activity = serverList.find(a => decodeTitle(a.code || '').toLowerCase() === actCode.toLowerCase());
+                    }
+                }
+            } catch (e) {
+                console.warn("Lỗi tải activity từ server:", e);
+            }
+        }
+
         // Nếu không tìm thấy trong LocalStorage nhưng URL có truyền đủ tọa độ và thông tin
         if (!activity && actCode && actTitle && actLat && actLng) {
             activity = {

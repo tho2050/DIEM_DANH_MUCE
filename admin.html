@@ -3652,7 +3652,7 @@
 
         let editingIndex = -1; // -1 nếu là thêm mới, ngược lại là chỉ mục sự kiện đang chỉnh sửa
 
-        function handleCreateActivity(e) {
+        async function handleCreateActivity(e) {
             e.preventDefault();
             const list = getActivities();
 
@@ -3681,15 +3681,15 @@
                     return;
                 }
                 list.unshift(newAct);
-                alert('Đã tạo sự kiện mới thành công!');
             } else {
                 // Chế độ sửa đổi
                 list[editingIndex] = newAct;
-                alert('Đã cập nhật thông tin sự kiện thành công!');
                 editingIndex = -1; // Reset
             }
 
-            saveActivities(list);
+            // Lưu trực tiếp sự kiện lên máy chủ Backend (nguyên tử, an toàn trên nhiều máy)
+            await saveSingleActivity(newAct);
+            alert('Đã lưu sự kiện thành công!');
 
             // Mở khóa lại ô mã sự kiện
             document.getElementById('newCode').disabled = false;
@@ -4146,7 +4146,12 @@
 
             document.getElementById('tab-' + tabId).classList.remove('d-none');
 
-            if (tabId === 'add-activity') {
+            if (tabId === 'manage-activities') {
+                renderActivities();
+                syncActivitiesFromCloud(() => {
+                    renderActivities();
+                });
+            } else if (tabId === 'add-activity') {
                 if (editingIndex !== -1 && !isProgrammatic) {
                     // Nếu click thủ công menu mà đang dở việc sửa -> Hủy sửa để tạo mới
                     editingIndex = -1;
@@ -4878,10 +4883,13 @@
             } catch (e) {}
         }
 
-        // Tự động kiểm tra cập nhật số lượng sinh viên mỗi 15 giây khi đang mở trang Admin
+        // Tự động kiểm tra cập nhật số lượng sinh viên và sự kiện mới mỗi 15 giây khi đang mở trang Admin
         setInterval(() => {
             if (document.getElementById('adminDashboard') && !document.getElementById('adminDashboard').classList.contains('d-none')) {
                 fetchAttendanceDataSilently();
+                syncActivitiesFromCloud(() => {
+                    renderActivities();
+                });
             }
         }, 15000);
 

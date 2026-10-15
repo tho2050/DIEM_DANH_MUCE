@@ -85,8 +85,43 @@ function getActivities() {
     return CONFIG.activities;
 }
 
-// Hàm lưu danh sách hoạt động mới vào localStorage và đồng bộ lên Google Sheet cloud
-function saveActivities(list) {
+// Hàm lưu 1 sự kiện đơn lẻ (nguyên tử) - Không ghi đè danh sách toàn cục, an toàn trên nhiều thiết bị
+async function saveSingleActivity(activity) {
+    if (!activity || !activity.code) return false;
+    const cleanAct = { ...activity };
+    if (cleanAct.code) cleanAct.code = decodeTitleConfig(cleanAct.code);
+    if (cleanAct.title) cleanAct.title = decodeTitleConfig(cleanAct.title);
+    if (!cleanAct.createdBy) cleanAct.createdBy = "hongnhung";
+
+    // 1. Cập nhật ngay vào LocalStorage máy hiện tại
+    const currentList = getActivities();
+    const idx = currentList.findIndex(a => a.code === cleanAct.code);
+    if (idx >= 0) currentList[idx] = cleanAct;
+    else currentList.unshift(cleanAct);
+    localStorage.setItem("gps_attendance_activities", JSON.stringify(currentList));
+
+    // 2. Gửi đồng bộ lên Cloud Backend qua POST JSON an toàn
+    if (CONFIG.googleScriptUrl) {
+        try {
+            const res = await fetch(CONFIG.googleScriptUrl + '?action=saveActivity&_t=' + Date.now(), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(cleanAct)
+            });
+            const data = await res.json();
+            if (data && Array.isArray(data.activities)) {
+                localStorage.setItem("gps_attendance_activities", JSON.stringify(data.activities));
+            }
+            return true;
+        } catch (e) {
+            console.error("Lỗi đồng bộ single activity:", e);
+        }
+    }
+    return true;
+}
+
+// Hàm lưu danh sách hoạt động mới vào localStorage và đồng bộ lên Cloud Backend
+async function saveActivities(list) {
     const cleanList = (list || []).filter(a => a && a.code !== "SVTN2026" && a.code !== "WORKSHOP-AI" && a.code !== "TINHOC-ABC").map(a => {
         if (a && a.code) a.code = decodeTitleConfig(a.code);
         if (a && a.title) a.title = decodeTitleConfig(a.title);
@@ -96,19 +131,19 @@ function saveActivities(list) {
     localStorage.setItem("gps_attendance_activities", JSON.stringify(cleanList));
     
     if (CONFIG.googleScriptUrl) {
-        const encodedData = encodeURIComponent(JSON.stringify(cleanList));
-        
-        // 1. Đồng bộ qua GET parameter (Chống lỗi 302 redirect trên di động)
-        fetch(CONFIG.googleScriptUrl + '?action=saveActivities&data=' + encodedData + '&_t=' + Date.now())
-            .then(res => res.json())
-            .then(data => console.log("Đã đồng bộ sự kiện lên Google Sheets (GET):", data))
-            .catch(e => console.error("Lỗi đồng bộ GET:", e));
-
-        // 2. Đồng bộ qua POST payload dự phòng
-        fetch(CONFIG.googleScriptUrl + '?action=saveActivities', {
-            method: 'POST',
-            body: JSON.stringify(cleanList)
-        }).catch(e => console.error("Lỗi đồng bộ POST:", e));
+        try {
+            const res = await fetch(CONFIG.googleScriptUrl + '?action=saveActivities&_t=' + Date.now(), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(cleanList)
+            });
+            const data = await res.json();
+            if (data && Array.isArray(data.activities)) {
+                localStorage.setItem("gps_attendance_activities", JSON.stringify(data.activities));
+            }
+        } catch (e) {
+            console.error("Lỗi đồng bộ saveActivities:", e);
+        }
     }
 }
 

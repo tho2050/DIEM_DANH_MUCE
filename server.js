@@ -269,6 +269,47 @@ async function dbGetDeletedActivities() {
     return [];
 }
 
+async function dbSaveActivity(act) {
+    if (!act || !act.code) return false;
+    if (act.code) act.code = decodeTitle(act.code);
+    if (act.title) act.title = decodeTitle(act.title);
+    if (!act.createdBy) act.createdBy = 'hongnhung';
+
+    if (pool) {
+        try {
+            await pool.query(`
+                INSERT INTO activities (code, title, description, location_address, latitude, longitude, radius_meters, start_time, end_time, created_by, is_deleted, deleted_at, benefit)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, FALSE, NULL, $11)
+                ON CONFLICT (code) DO UPDATE SET
+                    title = EXCLUDED.title,
+                    description = EXCLUDED.description,
+                    location_address = EXCLUDED.location_address,
+                    latitude = EXCLUDED.latitude,
+                    longitude = EXCLUDED.longitude,
+                    radius_meters = EXCLUDED.radius_meters,
+                    start_time = EXCLUDED.start_time,
+                    end_time = EXCLUDED.end_time,
+                    created_by = COALESCE(NULLIF(EXCLUDED.created_by, ''), activities.created_by),
+                    benefit = EXCLUDED.benefit,
+                    is_deleted = FALSE,
+                    deleted_at = NULL;
+            `, [
+                act.code, decodeTitle(act.title || ''), act.description || '', act.locationAddress || '',
+                parseFloat(act.latitude) || 0, parseFloat(act.longitude) || 0,
+                parseInt(act.radiusMeters) || 50, act.startTime || '', act.endTime || '',
+                act.createdBy || 'hongnhung', act.benefit || ''
+            ]);
+            return true;
+        } catch (e) { console.error('Lỗi ghi activity đơn vào SQL:', e); }
+    }
+    let list = await dbGetActivities();
+    const idx = list.findIndex(a => a.code === act.code);
+    if (idx >= 0) list[idx] = act;
+    else list.unshift(act);
+    fs.writeFileSync(ACTIVITIES_FILE, JSON.stringify(list, null, 2), 'utf8');
+    return true;
+}
+
 async function dbSaveActivities(activitiesList) {
     if (Array.isArray(activitiesList)) {
         activitiesList.forEach(a => { 
@@ -280,15 +321,8 @@ async function dbSaveActivities(activitiesList) {
     }
     if (pool) {
         try {
-            const validCodes = (activitiesList || []).map(a => a ? a.code : null).filter(Boolean);
-            if (validCodes.length > 0) {
-                // Đánh dấu is_deleted = TRUE cho các sự kiện không còn trong danh sách (để có thể khôi phục)
-                await pool.query(
-                    'UPDATE activities SET is_deleted = TRUE, deleted_at = $1 WHERE (is_deleted IS NOT TRUE) AND code NOT IN (' + validCodes.map((_, i) => '$' + (i + 2)).join(',') + ')',
-                    [getVietnamTimestamp(), ...validCodes]
-                );
-            }
-
+            // Lưu và cập nhật các sự kiện (UPSERT). 
+            // KHÔNG tự động xóa sự kiện bằng 'code NOT IN' để tránh ghi đè làm mất sự kiện tạo từ thiết bị khác.
             for (const act of activitiesList) {
                 if (!act || !act.code) continue;
                 await pool.query(`
@@ -1352,8 +1386,9 @@ const server = http.createServer(async (req, res) => {
                     const parsed = JSON.parse(dataStr);
                     await dbSaveActivities(parsed);
                 } catch (e) {}
+                const list = await dbGetActivities();
                 res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-                res.end(JSON.stringify({ status: 'success', message: 'Đã lưu danh sách sự kiện' }));
+                res.end(JSON.stringify({ status: 'success', message: 'Đã lưu danh sách sự kiện', activities: list }));
                 return;
             }
 
@@ -1504,15 +1539,17 @@ const server = http.createServer(async (req, res) => {
         }
 
         if (req.method === 'POST') {
-            let body = '';
-            req.on('data', chunk => { body += chunk.toString(); });
+            const chunks = [];
+            req.on('data', chunk => { chunks.push(chunk); });
             req.on('end', async () => {
                 try {
+                    const body = Buffer.concat(chunks).toString('utf8');
                     if (body.trim().startsWith('[')) {
                         const parsed = JSON.parse(body);
                         await dbSaveActivities(parsed);
+                        const list = await dbGetActivities();
                         res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-                        res.end(JSON.stringify({ status: 'success', message: 'Đã lưu danh sách sự kiện' }));
+                        res.end(JSON.stringify({ status: 'success', message: 'Đã lưu danh sách sự kiện', activities: list }));
                         return;
                     }
 
@@ -1638,11 +1675,21 @@ const server = http.createServer(async (req, res) => {
                         return;
                     }
 
-                    if (json.action === 'saveActivities') {
+                    if (action === 'saveActivity' || json.action === 'saveActivity') {
+                        const act = json.activity || json;
+                        await dbSaveActivity(act);
+                        const list = await dbGetActivities();
+                        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                        res.end(JSON.stringify({ status: 'success', message: 'Đã lưu sự kiện thành công', activities: list }));
+                        return;
+                    }
+
+                    if (action === 'saveActivities' || json.action === 'saveActivities') {
                         const toSave = Array.isArray(json) ? json : (json.activities || []);
                         await dbSaveActivities(toSave);
+                        const list = await dbGetActivities();
                         res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-                        res.end(JSON.stringify({ status: 'success', message: 'Đã lưu danh sách sự kiện' }));
+                        res.end(JSON.stringify({ status: 'success', message: 'Đã lưu danh sách sự kiện', activities: list }));
                         return;
                     }
 
