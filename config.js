@@ -42,6 +42,21 @@ function decodeTitleConfig(s) {
     return res.replace(/%20/g, ' ').replace(/%2F/gi, '/').trim();
 }
 
+// Helper chuẩn hóa mã sự kiện loại bỏ khác biệt dấu gạch, khoảng trắng thừa
+function normalizeActivityCode(s) {
+    if (!s) return '';
+    let res = (typeof decodeTitleConfig === 'function' ? decodeTitleConfig(s) : String(s)).trim().toUpperCase();
+    // 1. Chuẩn hóa tất cả các loại gạch ngang (hyphen, en-dash, em-dash, minus) thành '-'
+    res = res.replace(/[\u2010-\u2015\u2212–—]/g, '-');
+    // 2. Xóa khoảng trắng thừa quanh dấu '-', '/', '(', ')'
+    res = res.replace(/\s*-\s*/g, '-').replace(/\s*\/\s*/g, '/').replace(/\s*\(\s*/g, '(').replace(/\s*\)\s*/g, ')');
+    // 3. Xóa dấu chấm hoặc khoảng trắng ở cuối chuỗi
+    res = res.replace(/[\.\s]+$/, '');
+    // 4. Chuẩn hóa khoảng trắng kép
+    res = res.replace(/\s+/g, ' ').trim();
+    return res;
+}
+
 // Helper so sánh 2 mã sự kiện hỗ trợ các biến thể (dấu gạch ngang, khoảng trắng, viết hoa/thường, en-dash, hoặc lỗi gõ phím)
 function isSameActivity(codeA, codeB) {
     if (!codeA || !codeB) return false;
@@ -49,15 +64,24 @@ function isSameActivity(codeA, codeB) {
     const b = (typeof decodeTitleConfig === 'function' ? decodeTitleConfig(codeB) : String(codeB)).trim().toUpperCase();
     if (a === b) return true;
 
-    // Chuẩn hóa dấu gạch ngang (hyphen -, en-dash –, em-dash —) và khoảng trắng thừa
-    const normA = a.replace(/[\u2010-\u2015\u2212-]/g, '-').replace(/\s+/g, ' ');
-    const normB = b.replace(/[\u2010-\u2015\u2212-]/g, '-').replace(/\s+/g, ' ');
+    const normA = normalizeActivityCode(a);
+    const normB = normalizeActivityCode(b);
     if (normA === normB) return true;
+
+    // Chuẩn hóa thay thế '-' và '/' để ngày tháng khớp nhau ('15-10-2026' khớp '15/10/2026')
+    const slashA = normA.replace(/-/g, '/');
+    const slashB = normB.replace(/-/g, '/');
+    if (slashA === slashB) return true;
 
     // Tương thích tối đa biến thể sự kiện chuyển đổi số chiều 15/10 (15/10–PPHƯỜNG CHIỀU vs 15/10- PHƯỜNG ( CHIỀU ))
     const isPm15_A = (a.includes('15/10') || a.includes('15-10')) && (a.includes('CHIỀU') || a.includes('CHIEU')) && !a.includes('SÁNG') && !a.includes('SANG');
     const isPm15_B = (b.includes('15/10') || b.includes('15-10')) && (b.includes('CHIỀU') || b.includes('CHIEU')) && !b.includes('SÁNG') && !b.includes('SANG');
     if (isPm15_A && isPm15_B) return true;
+
+    // Tương thích sáng 15/10
+    const isAm15_A = (a.includes('15/10') || a.includes('15-10')) && (a.includes('SÁNG') || a.includes('SANG'));
+    const isAm15_B = (b.includes('15/10') || b.includes('15-10')) && (b.includes('SÁNG') || b.includes('SANG'));
+    if (isAm15_A && isAm15_B) return true;
 
     return false;
 }

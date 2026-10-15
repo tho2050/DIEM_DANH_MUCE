@@ -3660,8 +3660,12 @@
             const defaultAdmin = sessionStorage.getItem("admin_user") || "hongnhung2050py@gmail.com";
             const creatorVal = (creatorInput && creatorInput.value.trim()) ? creatorInput.value.trim() : defaultAdmin;
 
+            let rawCode = document.getElementById('newCode').value.trim().toUpperCase();
+            // Tự động chuẩn hóa mã sự kiện: đổi các loại gạch ngang về chuẩn '-', xóa khoảng trắng thừa
+            const cleanCode = typeof normalizeActivityCode === 'function' ? normalizeActivityCode(rawCode) : rawCode.replace(/[\u2010-\u2015\u2212–—]/g, '-').replace(/\s+/g, ' ');
+
             const newAct = {
-                code: document.getElementById('newCode').value.trim().toUpperCase(),
+                code: cleanCode,
                 title: document.getElementById('newTitle').value.trim(),
                 benefit: (document.getElementById('newBenefit')?.value || '').trim(),
                 description: document.getElementById('newDescription').value.trim(),
@@ -3675,9 +3679,9 @@
             };
 
             if (editingIndex === -1) {
-                // Check duplicate code
-                if (list.some(a => a.code === newAct.code)) {
-                    alert('Mã sự kiện này đã tồn tại!');
+                // Check duplicate code (dùng isSameActivity để tránh trùng lặp biến thể)
+                if (list.some(a => typeof isSameActivity === 'function' ? isSameActivity(a.code, newAct.code) : a.code === newAct.code)) {
+                    alert('Mã sự kiện này đã tồn tại hoặc trùng lặp với một sự kiện đã có!');
                     return;
                 }
                 list.unshift(newAct);
