@@ -1720,10 +1720,15 @@
                                     <i class="fa-solid fa-users me-1"></i><span id="attendanceCountText">0 SV</span>
                                 </span>
                             </div>
-                            <!-- Nút Tải lại chỉ hiện trên Điện thoại ở góc trên bên phải -->
-                            <button class="btn btn-sm btn-outline-secondary btn-reload-attendance d-inline-flex d-md-none align-items-center" onclick="fetchAttendanceData()" title="Làm mới dữ liệu điểm danh">
-                                <i class="fa-solid fa-rotate me-1"></i><span>Tải lại</span>
-                            </button>
+                            <!-- Nút Thùng Rác và Tải lại trên Điện thoại ở góc trên bên phải -->
+                            <div class="d-flex align-items-center gap-1 d-md-none">
+                                <button type="button" class="btn btn-sm btn-outline-danger btn-reload-attendance d-inline-flex align-items-center d-none" onclick="openStudentTrashModal()" id="btnOpenStudentTrashMobile" title="Thùng rác sinh viên (tự hủy sau 30 ngày)">
+                                    <i class="fa-solid fa-trash-can-arrow-up me-1"></i><span>Thùng rác</span> <span class="badge bg-danger text-white rounded-pill ms-1 d-none" id="studentTrashCountBadgeMobile">0</span>
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary btn-reload-attendance d-inline-flex align-items-center" onclick="fetchAttendanceData()" title="Làm mới dữ liệu điểm danh">
+                                    <i class="fa-solid fa-rotate me-1"></i><span>Tải lại</span>
+                                </button>
+                            </div>
                         </div>
 
                         <!-- Thanh nút tác vụ -->
@@ -1774,8 +1779,16 @@
                                     </li>
                                     <li><a class="dropdown-item py-2 text-secondary small" href="#"
                                             onclick="exportAllEventsExcel(event)"><i class="fa-solid fa-database me-2"></i>Xuất Toàn Bộ Lịch Sử (Tất Cả Mọi Sự Kiện)</a></li>
-                                </ul>
+                                 </ul>
                             </div>
+                            <!-- Nút Thùng Rác Sinh Viên -->
+                            <button type="button" class="btn btn-sm btn-outline-danger fw-semibold d-inline-flex align-items-center shadow-sm d-none"
+                                onclick="openStudentTrashModal()" id="btnOpenStudentTrash" title="Xem và khôi phục sinh viên đã xóa (tự động xóa sau 30 ngày)">
+                                <i class="fa-solid fa-trash-can-arrow-up me-1"></i>
+                                <span class="d-none d-md-inline">Thùng Rác Sinh Viên</span>
+                                <span class="d-inline d-md-none">Thùng Rác</span>
+                                <span class="badge bg-danger text-white rounded-pill ms-1 d-none" id="studentTrashCountBadge">0</span>
+                            </button>
                             <!-- Nút Tải lại chỉ hiện trên Máy tính trong hàng nút -->
                             <button class="btn btn-sm btn-outline-secondary btn-reload-attendance d-none d-md-inline-flex fw-semibold align-items-center" onclick="fetchAttendanceData()" title="Làm mới dữ liệu điểm danh">
                                 <i class="fa-solid fa-rotate me-1"></i> Tải lại
@@ -2639,6 +2652,55 @@
         </div>
     </div>
 
+    <!-- Modal Thùng Rác & Khôi Phục Sinh Viên Điểm Danh (Tự Động Xóa Sau 30 Ngày) -->
+    <div class="modal fade" id="studentTrashModal" tabindex="-1" aria-labelledby="studentTrashModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content shadow-lg border-0" style="border-radius: 16px;">
+                <div class="modal-header bg-dark text-white py-3"
+                    style="border-top-left-radius: 16px; border-top-right-radius: 16px;">
+                    <h5 class="modal-title fw-bold" id="studentTrashModalLabel">
+                        <i class="fa-solid fa-trash-can-arrow-up text-danger me-2"></i>Thùng Rác Sinh Viên & Khôi Phục Điểm Danh
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="alert alert-warning py-2 small mb-3 d-flex align-items-center gap-2">
+                        <i class="fa-solid fa-triangle-exclamation fs-5 text-warning flex-shrink-0"></i>
+                        <div>
+                            Sinh viên bị xóa sẽ được lưu giữ an toàn tại Thùng Rác trong vòng <strong>30 ngày</strong>. Trong thời gian này, bạn có thể <strong>Khôi phục</strong> bất cứ lúc nào hoặc <strong>Xóa vĩnh viễn</strong> ngay lập tức. Sau 30 ngày, hệ thống sẽ <strong>tự động xóa vĩnh viễn</strong>.
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-12 col-md-6">
+                            <input type="text" id="studentTrashSearch" class="form-control form-control-sm"
+                                placeholder="🔍 Tìm tên, MSSV, lớp, khoa, sự kiện trong thùng rác..." oninput="filterStudentTrashList()" />
+                        </div>
+                        <div class="col-12 col-md-6 text-md-end text-muted small d-flex align-items-center justify-content-md-end">
+                            <span id="studentTrashCountInfo">Đang tải danh sách...</span>
+                        </div>
+                    </div>
+
+                    <div id="studentTrashListContainer">
+                        <!-- Rendered by JS -->
+                    </div>
+                </div>
+                <div class="modal-footer bg-light d-flex justify-content-between p-3"
+                    style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-danger fw-bold" onclick="emptyStudentTrash()" id="btnEmptyStudentTrash" title="Xóa vĩnh viễn toàn bộ sinh viên trong thùng rác">
+                            <i class="fa-solid fa-fire me-1"></i>Dọn Sạch Thùng Rác
+                        </button>
+                        <button type="button" class="btn btn-sm btn-success fw-bold" onclick="restoreAllStudentCheckins()" id="btnRestoreAllStudentTrash" title="Khôi phục toàn bộ sinh viên từ thùng rác">
+                            <i class="fa-solid fa-rotate-left me-1"></i>Khôi Phục Tất Cả
+                        </button>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-secondary px-3" data-bs-dismiss="modal">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://unpkg.com/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -3442,6 +3504,8 @@
             const btnManual = document.getElementById('btnAddManualCheckin');
             const btnImport = document.getElementById('btnImportExcel');
             const thActions = document.getElementById('thAttendanceActions');
+            const btnStudentTrash = document.getElementById('btnOpenStudentTrash');
+            const btnStudentTrashMobile = document.getElementById('btnOpenStudentTrashMobile');
 
             if (btnManual) {
                 if (isSpecial) btnManual.classList.remove('d-none');
@@ -3454,6 +3518,14 @@
             if (thActions) {
                 if (isSpecial) thActions.classList.remove('d-none');
                 else thActions.classList.add('d-none');
+            }
+            if (btnStudentTrash) {
+                if (isSpecial) btnStudentTrash.classList.remove('d-none');
+                else btnStudentTrash.classList.add('d-none');
+            }
+            if (btnStudentTrashMobile) {
+                if (isSpecial) btnStudentTrashMobile.classList.remove('d-none');
+                else btnStudentTrashMobile.classList.add('d-none');
             }
         }
 
@@ -3485,6 +3557,7 @@
 
             renderActivities();
             updateTrashCountBadge();
+            updateStudentTrashCountBadge();
 
             // Đồng bộ ngầm danh sách sự kiện từ Google Sheet về
             syncActivitiesFromCloud(() => {
@@ -3493,6 +3566,11 @@
             syncDeletedActivitiesFromCloud(() => {
                 updateTrashCountBadge();
             });
+            if (typeof syncDeletedCheckinsFromCloud === 'function') {
+                syncDeletedCheckinsFromCloud(() => {
+                    updateStudentTrashCountBadge();
+                });
+            }
 
             // Đảm bảo không bao giờ tự động mở hay chuyển đến bảng tổng hợp khi mới vào link hoặc mở app.
             // Chỉ mở khi người dùng chủ động nhấn nút "Tổng Hợp NCTXH & ĐRL".
@@ -4518,6 +4596,8 @@
                 attendanceData = sortAttendanceData(localRecords);
                 populateActivityFilterDropdown();
                 renderAttendanceTable(attendanceData);
+            } finally {
+                updateStudentTrashCountBadge();
             }
         }
 
@@ -5206,9 +5286,9 @@
             const cleanName = String(item.name || '').trim() || cleanSc;
             const recordId = item.id;
 
-            if (!confirm(`Bạn có chắc chắn muốn XÓA lượt điểm danh của sinh viên "${cleanName}" (MSSV: ${cleanSc})?`)) return;
+            if (!confirm(`Bạn có chắc chắn muốn chuyển sinh viên "${cleanName}" (MSSV: ${cleanSc}) vào Thùng Rác?\n(Sinh viên có thể khôi phục bất cứ lúc nào hoặc sẽ tự động xóa vĩnh viễn sau 30 ngày)`)) return;
 
-            // 1. Xóa ngay lập tức khỏi localStorage trên máy duyệt này nếu có lưu vết thử nghiệm
+            // 1. Chuyển vào thùng rác trên localStorage nếu có lưu vết thử nghiệm
             try {
                 const rawLocal = localStorage.getItem("gps_attendance_local_records");
                 if (rawLocal) {
@@ -5219,6 +5299,11 @@
                     );
                     localStorage.setItem("gps_attendance_local_records", JSON.stringify(updatedLocal));
                 }
+                const deletedItem = { ...item, deletedAt: getVietnamTimestamp(), deletedAtTime: new Date().toISOString() };
+                const rawTrash = localStorage.getItem("gps_deleted_checkins");
+                const trashList = rawTrash ? JSON.parse(rawTrash) : [];
+                trashList.unshift(deletedItem);
+                localStorage.setItem("gps_deleted_checkins", JSON.stringify(trashList));
             } catch (e) {}
 
             // 2. Xóa khỏi mảng dữ liệu bộ nhớ đang hiển thị ngay trên giao diện
@@ -5239,7 +5324,7 @@
             }
             updateAttendanceCountBadges();
 
-            // 3. Gửi yêu cầu xóa lên máy chủ (Server Database)
+            // 3. Gửi yêu cầu chuyển vào thùng rác lên máy chủ (Server Database)
             try {
                 const res = await fetch('/api?action=deleteCheckin', {
                     method: 'POST',
@@ -5248,8 +5333,9 @@
                 });
                 const data = await res.json();
                 if (data.status === 'success') {
-                    alert(`Đã xóa lượt điểm danh của sinh viên "${cleanName}"!`);
+                    alert(`Đã chuyển sinh viên "${cleanName}" vào Thùng Rác thành công!\n(Có thể khôi phục trong vòng 30 ngày hoặc tự hủy sau 30 ngày)`);
                     await fetchAttendanceData();
+                    updateStudentTrashCountBadge();
                 } else {
                     alert('Lỗi xóa: ' + (data.message || 'Thất bại'));
                     await fetchAttendanceData();
@@ -5258,6 +5344,316 @@
                 alert('Lỗi kết nối máy chủ!');
                 console.error(err);
                 await fetchAttendanceData();
+            }
+        }
+
+        // ==========================================
+        // QUẢN LÝ THÙNG RÁC & KHÔI PHỤC SINH VIÊN (30 NGÀY TỰ HỦY)
+        // ==========================================
+        let studentTrashModalInstance = null;
+        let studentTrashData = [];
+
+        function openStudentTrashModal() {
+            if (!studentTrashModalInstance) {
+                studentTrashModalInstance = new bootstrap.Modal(document.getElementById('studentTrashModal'));
+            }
+            loadStudentTrashData();
+            studentTrashModalInstance.show();
+        }
+
+        async function loadStudentTrashData() {
+            const container = document.getElementById('studentTrashListContainer');
+            const countInfo = document.getElementById('studentTrashCountInfo');
+            if (container) {
+                container.innerHTML = `<div class="text-center py-4 text-muted"><i class="fa-solid fa-spinner fa-spin me-2"></i>Đang tải danh sách thùng rác sinh viên...</div>`;
+            }
+
+            try {
+                const res = await fetch('/api?action=getDeletedCheckins&_t=' + Date.now());
+                const data = await res.json();
+                if (Array.isArray(data)) {
+                    studentTrashData = data;
+                    if (typeof saveDeletedCheckins === 'function') {
+                        saveDeletedCheckins(data);
+                    }
+                } else {
+                    studentTrashData = (typeof getDeletedCheckins === 'function') ? getDeletedCheckins() : [];
+                }
+            } catch (err) {
+                console.error("Lỗi tải thùng rác sinh viên từ server:", err);
+                studentTrashData = (typeof getDeletedCheckins === 'function') ? getDeletedCheckins() : [];
+            }
+
+            renderStudentTrashList(studentTrashData);
+            updateStudentTrashCountBadge();
+        }
+
+        function calculateDaysRemaining(deletedAtTime, deletedAt) {
+            let delDate = null;
+            if (deletedAtTime) {
+                delDate = new Date(deletedAtTime);
+            }
+            if (!delDate || isNaN(delDate.getTime())) {
+                if (typeof parseVietnamDate === 'function') {
+                    delDate = parseVietnamDate(deletedAt);
+                }
+            }
+            if (!delDate || isNaN(delDate.getTime())) {
+                return { daysLeft: 30, text: 'Còn 30 ngày', badgeClass: 'bg-info-subtle text-info-emphasis border border-info-subtle' };
+            }
+
+            const diffMs = Date.now() - delDate.getTime();
+            const daysPassed = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+            const daysLeft = Math.max(0, 30 - daysPassed);
+
+            if (daysLeft === 0) {
+                return { daysLeft: 0, text: 'Hết hạn (Sẽ tự xóa)', badgeClass: 'bg-danger text-white' };
+            } else if (daysLeft <= 3) {
+                return { daysLeft, text: `Còn ${daysLeft} ngày (Sắp xóa)`, badgeClass: 'bg-warning text-dark fw-bold' };
+            } else {
+                return { daysLeft, text: `Còn ${daysLeft} ngày`, badgeClass: 'bg-success-subtle text-success border border-success-subtle fw-semibold' };
+            }
+        }
+
+        function renderStudentTrashList(list) {
+            const container = document.getElementById('studentTrashListContainer');
+            const countInfo = document.getElementById('studentTrashCountInfo');
+            const btnEmpty = document.getElementById('btnEmptyStudentTrash');
+            const btnRestoreAll = document.getElementById('btnRestoreAllStudentTrash');
+
+            if (!container) return;
+
+            if (!Array.isArray(list) || list.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-5 text-muted">
+                        <i class="fa-solid fa-trash-can mb-3" style="font-size: 3rem; opacity: 0.3;"></i>
+                        <h6 class="fw-bold">Thùng rác sinh viên đang trống</h6>
+                        <p class="small mb-0">Chưa có sinh viên nào bị xóa hoặc tất cả đã được khôi phục/tự hủy.</p>
+                    </div>
+                `;
+                if (countInfo) countInfo.textContent = 'Tổng số: 0 sinh viên';
+                if (btnEmpty) btnEmpty.disabled = true;
+                if (btnRestoreAll) btnRestoreAll.disabled = true;
+                return;
+            }
+
+            if (countInfo) countInfo.textContent = `Tổng số: ${list.length} sinh viên trong thùng rác`;
+            if (btnEmpty) btnEmpty.disabled = false;
+            if (btnRestoreAll) btnRestoreAll.disabled = false;
+
+            container.innerHTML = `
+                <div class="table-responsive border rounded shadow-sm" style="max-height: 480px;">
+                    <table class="table table-hover align-middle mb-0 small">
+                        <thead class="table-dark sticky-top">
+                            <tr>
+                                <th style="width: 50px;" class="text-center">STT</th>
+                                <th style="min-width: 170px;">MSSV & Họ Tên</th>
+                                <th style="min-width: 140px;">Lớp & Khoa</th>
+                                <th style="min-width: 200px;">Sự Kiện Điểm Danh</th>
+                                <th style="width: 150px;">Thời Gian Xóa</th>
+                                <th style="width: 140px;" class="text-center">Hạn Tự Hủy</th>
+                                <th class="text-center" style="width: 180px;">Thao Tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${list.map((item, idx) => {
+                                const expiry = calculateDaysRemaining(item.deletedAtTime, item.deletedAt);
+                                const safeName = String(item.name || '').replace(/'/g, "\\'");
+                                const safeCode = String(item.code || '').replace(/'/g, "\\'");
+                                const safeSc = String(item.studentCode || '').replace(/'/g, "\\'");
+                                const itemId = item.id || '';
+                                return `
+                                    <tr>
+                                        <td class="text-center text-muted fw-bold">${idx + 1}</td>
+                                        <td>
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace d-block mb-1" style="width: fit-content;">${item.studentCode || '--'}</span>
+                                            <strong class="text-dark d-block">${item.name || '--'}</strong>
+                                            ${item.phoneNumber ? `<span class="small text-muted d-block" style="font-size: 0.78rem;"><i class="fa-solid fa-phone me-1"></i>${item.phoneNumber}</span>` : ''}
+                                        </td>
+                                        <td>
+                                            <span class="fw-semibold text-dark d-block">${item.className || '--'}</span>
+                                            <span class="text-secondary small d-block" style="font-size: 0.78rem;">${item.faculty || '--'}</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-secondary font-monospace d-block mb-1" style="width: fit-content;">${item.code || '--'}</span>
+                                            <span class="text-dark fw-semibold d-block small">${item.title || item.code || '--'}</span>
+                                            ${item.benefit ? `<span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill mt-1 d-inline-block" style="font-size: 0.75rem;"><i class="fa-solid fa-gift me-1"></i>${item.benefit}</span>` : ''}
+                                        </td>
+                                        <td>
+                                            <span class="text-danger fw-semibold d-block" style="font-size: 0.82rem;">
+                                                <i class="fa-solid fa-clock me-1"></i>${item.deletedAt || 'Gần đây'}
+                                            </span>
+                                            ${item.timestamp ? `<span class="text-muted small d-block" style="font-size: 0.75rem;" title="Thời gian điểm danh gốc">Gốc: ${item.timestamp}</span>` : ''}
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge ${expiry.badgeClass} rounded-pill px-2 py-1" title="Tự động xóa vĩnh viễn sau 30 ngày kể từ lúc xóa">
+                                                <i class="fa-solid fa-hourglass-half me-1"></i>${expiry.text}
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <button class="btn btn-sm btn-success fw-bold px-2 py-1 me-1 shadow-sm" onclick="restoreSingleStudentCheckin('${itemId}', '${safeSc}', '${safeCode}', '${safeName}')" title="Khôi phục lại lượt điểm danh">
+                                                <i class="fa-solid fa-rotate-left me-1"></i>Khôi phục
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger px-2 py-1" onclick="permanentDeleteSingleStudentCheckin('${itemId}', '${safeSc}', '${safeCode}', '${safeName}')" title="Xóa vĩnh viễn sinh viên này ngay lập tức">
+                                                <i class="fa-solid fa-trash me-1"></i>Xóa luôn
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function filterStudentTrashList() {
+            const query = (document.getElementById('studentTrashSearch')?.value || '').trim().toLowerCase();
+            if (!query) {
+                renderStudentTrashList(studentTrashData);
+                return;
+            }
+            const filtered = studentTrashData.filter(item => {
+                const text = `${item.studentCode || ''} ${item.name || ''} ${item.className || ''} ${item.faculty || ''} ${item.code || ''} ${item.title || ''} ${item.phoneNumber || ''}`.toLowerCase();
+                return text.includes(query);
+            });
+            renderStudentTrashList(filtered);
+        }
+
+        async function restoreSingleStudentCheckin(id, studentCode, code, name) {
+            if (!isSpecialAdmin()) {
+                alert('Chức năng Khôi phục lượt điểm danh chỉ dành riêng cho tài khoản hongnhung2050py@gmail.com!');
+                return;
+            }
+            if (!confirm(`Khôi phục lượt điểm danh cho sinh viên "${name || studentCode}" (MSSV: ${studentCode})?`)) return;
+
+            try {
+                const res = await fetch('/api?action=restoreCheckin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: id ? parseInt(id) : undefined, studentCode, code })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    alert(`Đã khôi phục thành công sinh viên "${name || studentCode}"!`);
+                    await loadStudentTrashData();
+                    await fetchAttendanceData();
+                } else {
+                    alert('Lỗi: ' + (data.message || 'Thất bại'));
+                }
+            } catch (err) {
+                alert('Lỗi kết nối máy chủ!');
+                console.error(err);
+            }
+        }
+
+        async function restoreAllStudentCheckins() {
+            if (!isSpecialAdmin()) {
+                alert('Chức năng Khôi phục toàn bộ sinh viên chỉ dành riêng cho tài khoản hongnhung2050py@gmail.com!');
+                return;
+            }
+            if (!studentTrashData || studentTrashData.length === 0) return;
+
+            if (!confirm(`Bạn có chắc muốn KHÔI PHỤC TOÀN BỘ ${studentTrashData.length} sinh viên từ thùng rác trở lại danh sách điểm danh?`)) return;
+
+            try {
+                const res = await fetch('/api?action=restoreAllCheckins', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    alert(`Đã khôi phục toàn bộ sinh viên thành công!`);
+                    await loadStudentTrashData();
+                    await fetchAttendanceData();
+                } else {
+                    alert('Lỗi: ' + (data.message || 'Thất bại'));
+                }
+            } catch (err) {
+                alert('Lỗi kết nối máy chủ!');
+                console.error(err);
+            }
+        }
+
+        async function permanentDeleteSingleStudentCheckin(id, studentCode, code, name) {
+            if (!isSpecialAdmin()) {
+                alert('Chức năng Xóa vĩnh viễn sinh viên chỉ dành riêng cho tài khoản hongnhung2050py@gmail.com!');
+                return;
+            }
+            if (!confirm(`⚠️ CẢNH BÁO: Bạn có chắc chắn muốn XÓA VĨNH VIỄN sinh viên "${name || studentCode}" (MSSV: ${studentCode})?\n\nHành động này KHÔNG THỂ HOÀN TÁC!`)) return;
+
+            try {
+                const res = await fetch('/api?action=permanentDeleteCheckin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: id ? parseInt(id) : undefined, studentCode, code })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    alert(`Đã xóa vĩnh viễn sinh viên "${name || studentCode}" khỏi hệ thống!`);
+                    await loadStudentTrashData();
+                } else {
+                    alert('Lỗi: ' + (data.message || 'Thất bại'));
+                }
+            } catch (err) {
+                alert('Lỗi kết nối máy chủ!');
+                console.error(err);
+            }
+        }
+
+        async function emptyStudentTrash() {
+            if (!isSpecialAdmin()) {
+                alert('Chức năng Dọn sạch thùng rác chỉ dành riêng cho tài khoản hongnhung2050py@gmail.com!');
+                return;
+            }
+            if (!studentTrashData || studentTrashData.length === 0) return;
+
+            if (!confirm(`⚠️ CẢNH BÁO NGUY HIỂM: Bạn có chắc chắn muốn DỌN SẠCH THÙNG RÁC?\n\nToàn bộ ${studentTrashData.length} sinh viên trong thùng rác sẽ bị XÓA VĨNH VIỄN khỏi cơ sở dữ liệu và KHÔNG THỂ KHÔI PHỤC LẠI!`)) return;
+
+            try {
+                const res = await fetch('/api?action=emptyTrashCheckins', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    alert(`Đã dọn sạch thùng rác sinh viên thành công!`);
+                    await loadStudentTrashData();
+                } else {
+                    alert('Lỗi: ' + (data.message || 'Thất bại'));
+                }
+            } catch (err) {
+                alert('Lỗi kết nối máy chủ!');
+                console.error(err);
+            }
+        }
+
+        async function updateStudentTrashCountBadge() {
+            const badge = document.getElementById('studentTrashCountBadge');
+            const badgeMobile = document.getElementById('studentTrashCountBadgeMobile');
+            try {
+                const res = await fetch('/api?action=getDeletedCheckins&_t=' + Date.now());
+                const data = await res.json();
+                const count = Array.isArray(data) ? data.length : 0;
+                [badge, badgeMobile].forEach(b => {
+                    if (b) {
+                        b.textContent = count;
+                        if (count > 0) b.classList.remove('d-none');
+                        else b.classList.add('d-none');
+                    }
+                });
+            } catch (e) {
+                const local = (typeof getDeletedCheckins === 'function') ? getDeletedCheckins() : [];
+                const count = local.length;
+                [badge, badgeMobile].forEach(b => {
+                    if (b) {
+                        b.textContent = count;
+                        if (count > 0) b.classList.remove('d-none');
+                        else b.classList.add('d-none');
+                    }
+                });
             }
         }
 

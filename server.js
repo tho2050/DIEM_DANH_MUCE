@@ -170,6 +170,7 @@ if (!fs.existsSync(DATA_DIR)) {
 const ACTIVITIES_FILE = path.join(DATA_DIR, 'activities.json');
 const DELETED_ACTIVITIES_FILE = path.join(DATA_DIR, 'deleted_activities.json');
 const RECORDS_FILE = path.join(DATA_DIR, 'records.json');
+const DELETED_RECORDS_FILE = path.join(DATA_DIR, 'deleted_records.json');
 const ACCOUNTS_FILE = path.join(DATA_DIR, 'accounts.json');
 const CONFIG_FILE = path.join(DATA_DIR, 'admin_config.json');
 
@@ -228,7 +229,10 @@ if (DATABASE_URL) {
             device TEXT,
             ip TEXT,
             device_uuid TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            is_deleted BOOLEAN DEFAULT FALSE,
+            deleted_at TEXT,
+            deleted_at_time TIMESTAMP
         );
 
         CREATE TABLE IF NOT EXISTS accounts (
@@ -284,10 +288,16 @@ if (DATABASE_URL) {
                     ALTER TABLE activities ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE;
                     ALTER TABLE activities ADD COLUMN IF NOT EXISTS deleted_at TEXT;
                     ALTER TABLE activities ADD COLUMN IF NOT EXISTS benefit TEXT;
+                    ALTER TABLE checkins ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE;
+                    ALTER TABLE checkins ADD COLUMN IF NOT EXISTS deleted_at TEXT;
+                    ALTER TABLE checkins ADD COLUMN IF NOT EXISTS deleted_at_time TIMESTAMP;
                 `);
             } catch (e) {
-                console.error("Lỗi cập nhật cột is_deleted và benefit cho activities:", e);
+                console.error("Lỗi cập nhật cột is_deleted và deleted_at cho activities/checkins:", e);
             }
+
+            // Tự động dọn dẹp các bản ghi trong thùng rác đã quá 30 ngày (SQL & JSON)
+            cleanupExpiredTrash().catch(err => console.error("Lỗi dọn rác 30 ngày ban đầu:", err));
 
             // Tự động xóa sạch mã hóa %20 và %2F trong mã và tiêu đề sự kiện cũ trong database
             try {
@@ -345,6 +355,82 @@ if (DATABASE_URL) {
         .catch(err => console.error('❌ Lỗi khởi tạo PostgreSQL Tables:', err));
 } else {
     console.log('ℹ️ Không tìm thấy DATABASE_URL, đang chạy chế độ lưu file JSON nội bộ.');
+    cleanupExpiredTrash().catch(() => {});
+}
+
+// Chạy dọn dẹp định kỳ các bản ghi trong thùng rác đã quá 30 ngày (mỗi 1 giờ)
+setInterval(() => {
+    cleanupExpiredTrash().catch(err => console.error("Lỗi dọn rác 30 ngày định kỳ:", err));
+}, 60 * 60 * 1000);
+
+// Helper tự động dọn sạch các bản ghi và sự kiện trong thùng rác đã quá 30 ngày
+async function cleanupExpiredTrash() {
+    const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+    const nowMs = Date.now();
+
+    if (pool) {
+        try {
+            const resCheckins = await pool.query(`
+                DELETE FROM checkins 
+                WHERE is_deleted = TRUE 
+                  AND (
+                    (deleted_at_time IS NOT NULL AND deleted_at_time < NOW() - INTERVAL '30 days')
+                    OR (deleted_at_time IS NULL AND created_at < NOW() - INTERVAL '30 days')
+                  )
+            `);
+            if (resCheckins.rowCount > 0) {
+                console.log(`🧹 [Auto-Cleanup 30 ngày] Đã tự động dọn sạch vĩnh viễn ${resCheckins.rowCount} lượt điểm danh trong thùng rác quá 30 ngày.`);
+            }
+
+            const resActs = await pool.query(`
+                DELETE FROM activities 
+                WHERE is_deleted = TRUE 
+                  AND created_at < NOW() - INTERVAL '30 days'
+            `);
+            if (resActs.rowCount > 0) {
+                console.log(`🧹 [Auto-Cleanup 30 ngày] Đã tự động dọn sạch vĩnh viễn ${resActs.rowCount} sự kiện trong thùng rác quá 30 ngày.`);
+            }
+        } catch (e) {
+            console.error('Lỗi khi tự động dọn thùng rác 30 ngày trong SQL:', e.message);
+        }
+    }
+
+    // Dọn dẹp trên chế độ lưu file JSON nội bộ
+    if (fs.existsSync(DELETED_RECORDS_FILE)) {
+        try {
+            let delList = JSON.parse(fs.readFileSync(DELETED_RECORDS_FILE, 'utf8'));
+            if (Array.isArray(delList)) {
+                const initialLen = delList.length;
+                delList = delList.filter(item => {
+                    const d = item.deletedAtTime ? new Date(item.deletedAtTime) : parseVietnamDate(item.deletedAt);
+                    if (!d || isNaN(d.getTime())) return true;
+                    return (nowMs - d.getTime()) <= thirtyDaysMs;
+                });
+                if (delList.length !== initialLen) {
+                    fs.writeFileSync(DELETED_RECORDS_FILE, JSON.stringify(delList, null, 2), 'utf8');
+                    console.log(`🧹 [Auto-Cleanup Local] Đã dọn sạch ${initialLen - delList.length} lượt điểm danh quá 30 ngày.`);
+                }
+            }
+        } catch (e) {}
+    }
+
+    if (fs.existsSync(DELETED_ACTIVITIES_FILE)) {
+        try {
+            let delActs = JSON.parse(fs.readFileSync(DELETED_ACTIVITIES_FILE, 'utf8'));
+            if (Array.isArray(delActs)) {
+                const initialLen = delActs.length;
+                delActs = delActs.filter(item => {
+                    const d = item.deletedAt ? parseVietnamDate(item.deletedAt) : null;
+                    if (!d || isNaN(d.getTime())) return true;
+                    return (nowMs - d.getTime()) <= thirtyDaysMs;
+                });
+                if (delActs.length !== initialLen) {
+                    fs.writeFileSync(DELETED_ACTIVITIES_FILE, JSON.stringify(delActs, null, 2), 'utf8');
+                    console.log(`🧹 [Auto-Cleanup Local] Đã dọn sạch ${initialLen - delActs.length} sự kiện quá 30 ngày.`);
+                }
+            }
+        } catch (e) {}
+    }
 }
 
 function getLocalIp() {
@@ -669,7 +755,7 @@ async function dbGetCheckins() {
     let rows = [];
     if (pool) {
         try {
-            const res = await pool.query('SELECT id, timestamp, code, title, student_code as "studentCode", name, class_name as "className", faculty, phone_number as "phoneNumber", email, coords, distance, device, ip, device_uuid as "deviceUuid", created_at as "createdAt" FROM checkins ORDER BY id DESC');
+            const res = await pool.query('SELECT id, timestamp, code, title, student_code as "studentCode", name, class_name as "className", faculty, phone_number as "phoneNumber", email, coords, distance, device, ip, device_uuid as "deviceUuid", created_at as "createdAt" FROM checkins WHERE is_deleted IS NOT TRUE ORDER BY id DESC');
             rows = res.rows.map(r => {
                 if (r.code) r.code = decodeTitle(r.code);
                 if (r.title) r.title = decodeTitle(r.title);
@@ -689,6 +775,7 @@ async function dbGetCheckins() {
         try { 
             rows = JSON.parse(fs.readFileSync(RECORDS_FILE, 'utf8')); 
             if (Array.isArray(rows)) {
+                rows = rows.filter(r => !r.isDeleted);
                 rows.forEach(r => { 
                     if (r && r.code) r.code = decodeTitle(r.code);
                     if (r && r.title) r.title = decodeTitle(r.title); 
@@ -718,6 +805,58 @@ async function dbGetCheckins() {
         else if (r.title) r.title = decodeTitle(r.title);
     });
     return sortAttendanceRecords(rows, activities);
+}
+
+async function dbGetDeletedCheckins() {
+    let rows = [];
+    if (pool) {
+        try {
+            const res = await pool.query(`
+                SELECT id, timestamp, code, title, student_code as "studentCode", name, 
+                       class_name as "className", faculty, phone_number as "phoneNumber", 
+                       email, coords, distance, device, ip, device_uuid as "deviceUuid", 
+                       created_at as "createdAt", deleted_at as "deletedAt", 
+                       deleted_at_time as "deletedAtTime"
+                FROM checkins 
+                WHERE is_deleted = TRUE 
+                ORDER BY COALESCE(deleted_at_time, created_at) DESC, id DESC
+            `);
+            rows = res.rows.map(r => {
+                if (r.code) r.code = decodeTitle(r.code);
+                if (r.title) r.title = decodeTitle(r.title);
+                if (r.createdAt && (!r.timestamp || r.timestamp.trim() === '' || /^\d{2}:\d{2}:\d{2}$/.test(r.timestamp.trim()))) {
+                    r.timestamp = getVietnamTimestamp(r.createdAt);
+                }
+                return r;
+            });
+        } catch (e) { console.error('Lỗi đọc deleted checkins từ SQL:', e); }
+    } else if (fs.existsSync(DELETED_RECORDS_FILE)) {
+        try {
+            rows = JSON.parse(fs.readFileSync(DELETED_RECORDS_FILE, 'utf8'));
+            if (Array.isArray(rows)) {
+                rows.forEach(r => {
+                    if (r && r.code) r.code = decodeTitle(r.code);
+                    if (r && r.title) r.title = decodeTitle(r.title);
+                });
+            }
+        } catch (e) {}
+    }
+    const activities = await dbGetActivities();
+    const actMap = {};
+    (activities || []).forEach(a => {
+        if (a && a.code) {
+            actMap[decodeTitle(a.code).trim().toUpperCase()] = a;
+        }
+    });
+    rows.forEach(r => {
+        let act = actMap[decodeTitle(r.code || '').trim().toUpperCase()];
+        if (!act) {
+            act = (activities || []).find(a => isSameActivity(a.code, r.code));
+        }
+        if (!r.benefit && act && act.benefit) r.benefit = act.benefit;
+        if (!r.title && act && act.title) r.title = decodeTitle(act.title);
+    });
+    return rows;
 }
 
 async function dbUpdateCheckin(record) {
@@ -753,34 +892,172 @@ async function dbDeleteCheckinRecord(id, studentCode, code) {
     const cleanSc = String(studentCode || '').trim();
     const cleanCode = String(code || '').trim();
     const numId = parseInt(id) || null;
+    const delTime = getVietnamTimestamp();
 
     if (pool) {
         try {
             if (numId && cleanSc) {
                 await pool.query(`
-                    DELETE FROM checkins 
-                    WHERE id = $1 
-                       OR (LOWER(TRIM(student_code)) = LOWER($2) AND (UPPER(TRIM(code)) = UPPER($3) OR $3 = ''))
-                `, [numId, cleanSc, cleanCode]);
+                    UPDATE checkins 
+                    SET is_deleted = TRUE, deleted_at = $1, deleted_at_time = CURRENT_TIMESTAMP
+                    WHERE id = $2 
+                       OR (LOWER(TRIM(student_code)) = LOWER($3) AND (UPPER(TRIM(code)) = UPPER($4) OR $4 = ''))
+                `, [delTime, numId, cleanSc, cleanCode]);
             } else if (numId) {
+                await pool.query('UPDATE checkins SET is_deleted = TRUE, deleted_at = $1, deleted_at_time = CURRENT_TIMESTAMP WHERE id = $2', [delTime, numId]);
+            } else if (cleanSc && cleanCode) {
+                await pool.query('UPDATE checkins SET is_deleted = TRUE, deleted_at = $1, deleted_at_time = CURRENT_TIMESTAMP WHERE LOWER(TRIM(student_code)) = LOWER($2) AND UPPER(TRIM(code)) = UPPER($3)', [delTime, cleanSc, cleanCode]);
+            } else if (cleanSc) {
+                await pool.query('UPDATE checkins SET is_deleted = TRUE, deleted_at = $1, deleted_at_time = CURRENT_TIMESTAMP WHERE LOWER(TRIM(student_code)) = LOWER($2)', [delTime, cleanSc]);
+            }
+            return { status: 'success', message: 'Đã chuyển sinh viên vào thùng rác (sẽ tự hủy sau 30 ngày)!' };
+        } catch (e) { console.error('Lỗi soft delete checkin SQL:', e); }
+    }
+
+    // Fallback local
+    let list = [];
+    if (fs.existsSync(RECORDS_FILE)) {
+        try { list = JSON.parse(fs.readFileSync(RECORDS_FILE, 'utf8')); } catch (e) {}
+    }
+    const toDelete = [];
+    list = list.filter(r => {
+        const match = (numId && r.id == numId) ||
+            (cleanSc && cleanCode && String(r.studentCode || '').trim().toLowerCase() === cleanSc.toLowerCase() && String(r.code || '').trim().toUpperCase() === cleanCode.toUpperCase()) ||
+            (cleanSc && !cleanCode && String(r.studentCode || '').trim().toLowerCase() === cleanSc.toLowerCase());
+        if (match) toDelete.push({ ...r, deletedAt: delTime, deletedAtTime: new Date().toISOString() });
+        return !match;
+    });
+    fs.writeFileSync(RECORDS_FILE, JSON.stringify(list, null, 2), 'utf8');
+
+    if (toDelete.length > 0) {
+        let delList = [];
+        if (fs.existsSync(DELETED_RECORDS_FILE)) {
+            try { delList = JSON.parse(fs.readFileSync(DELETED_RECORDS_FILE, 'utf8')); } catch (e) {}
+        }
+        delList.unshift(...toDelete);
+        fs.writeFileSync(DELETED_RECORDS_FILE, JSON.stringify(delList, null, 2), 'utf8');
+    }
+    return { status: 'success', message: 'Đã chuyển sinh viên vào thùng rác (sẽ tự hủy sau 30 ngày)!' };
+}
+
+async function dbRestoreCheckin(id, studentCode, code) {
+    const cleanSc = String(studentCode || '').trim();
+    const cleanCode = String(code || '').trim();
+    const numId = parseInt(id) || null;
+
+    if (pool) {
+        try {
+            if (numId) {
+                await pool.query('UPDATE checkins SET is_deleted = FALSE, deleted_at = NULL, deleted_at_time = NULL WHERE id = $1', [numId]);
+            } else if (cleanSc && cleanCode) {
+                await pool.query('UPDATE checkins SET is_deleted = FALSE, deleted_at = NULL, deleted_at_time = NULL WHERE LOWER(TRIM(student_code)) = LOWER($1) AND UPPER(TRIM(code)) = UPPER($2)', [cleanSc, cleanCode]);
+            } else if (cleanSc) {
+                await pool.query('UPDATE checkins SET is_deleted = FALSE, deleted_at = NULL, deleted_at_time = NULL WHERE LOWER(TRIM(student_code)) = LOWER($1)', [cleanSc]);
+            }
+            return { status: 'success', message: 'Đã khôi phục lượt điểm danh thành công!' };
+        } catch (e) { console.error('Lỗi restore checkin SQL:', e); }
+    }
+
+    // Fallback local
+    let delList = [];
+    if (fs.existsSync(DELETED_RECORDS_FILE)) {
+        try { delList = JSON.parse(fs.readFileSync(DELETED_RECORDS_FILE, 'utf8')); } catch (e) {}
+    }
+    const restored = [];
+    delList = delList.filter(r => {
+        const match = (numId && r.id == numId) ||
+            (cleanSc && cleanCode && String(r.studentCode || '').trim().toLowerCase() === cleanSc.toLowerCase() && String(r.code || '').trim().toUpperCase() === cleanCode.toUpperCase()) ||
+            (cleanSc && !cleanCode && String(r.studentCode || '').trim().toLowerCase() === cleanSc.toLowerCase());
+        if (match) {
+            const cleanItem = { ...r };
+            delete cleanItem.deletedAt;
+            delete cleanItem.deletedAtTime;
+            restored.push(cleanItem);
+        }
+        return !match;
+    });
+    fs.writeFileSync(DELETED_RECORDS_FILE, JSON.stringify(delList, null, 2), 'utf8');
+
+    if (restored.length > 0) {
+        let list = [];
+        if (fs.existsSync(RECORDS_FILE)) {
+            try { list = JSON.parse(fs.readFileSync(RECORDS_FILE, 'utf8')); } catch (e) {}
+        }
+        list.unshift(...restored);
+        fs.writeFileSync(RECORDS_FILE, JSON.stringify(list, null, 2), 'utf8');
+    }
+    return { status: 'success', message: 'Đã khôi phục lượt điểm danh thành công!' };
+}
+
+async function dbRestoreAllCheckins() {
+    if (pool) {
+        try {
+            await pool.query('UPDATE checkins SET is_deleted = FALSE, deleted_at = NULL, deleted_at_time = NULL WHERE is_deleted = TRUE');
+            return { status: 'success', message: 'Đã khôi phục toàn bộ sinh viên từ thùng rác!' };
+        } catch (e) { console.error('Lỗi restore all checkins SQL:', e); }
+    }
+    if (fs.existsSync(DELETED_RECORDS_FILE)) {
+        try {
+            const delList = JSON.parse(fs.readFileSync(DELETED_RECORDS_FILE, 'utf8')) || [];
+            let list = [];
+            if (fs.existsSync(RECORDS_FILE)) {
+                try { list = JSON.parse(fs.readFileSync(RECORDS_FILE, 'utf8')); } catch (e) {}
+            }
+            delList.forEach(r => {
+                delete r.deletedAt;
+                delete r.deletedAtTime;
+                list.unshift(r);
+            });
+            fs.writeFileSync(RECORDS_FILE, JSON.stringify(list, null, 2), 'utf8');
+            fs.writeFileSync(DELETED_RECORDS_FILE, JSON.stringify([], null, 2), 'utf8');
+        } catch (e) {}
+    }
+    return { status: 'success', message: 'Đã khôi phục toàn bộ sinh viên từ thùng rác!' };
+}
+
+async function dbPermanentDeleteCheckin(id, studentCode, code) {
+    const cleanSc = String(studentCode || '').trim();
+    const cleanCode = String(code || '').trim();
+    const numId = parseInt(id) || null;
+
+    if (pool) {
+        try {
+            if (numId) {
                 await pool.query('DELETE FROM checkins WHERE id = $1', [numId]);
             } else if (cleanSc && cleanCode) {
                 await pool.query('DELETE FROM checkins WHERE LOWER(TRIM(student_code)) = LOWER($1) AND UPPER(TRIM(code)) = UPPER($2)', [cleanSc, cleanCode]);
             } else if (cleanSc) {
                 await pool.query('DELETE FROM checkins WHERE LOWER(TRIM(student_code)) = LOWER($1)', [cleanSc]);
             }
-            return { status: 'success', message: 'Đã xóa lượt điểm danh thành công!' };
-        } catch (e) { console.error('Lỗi delete checkin SQL:', e); }
+            return { status: 'success', message: 'Đã xóa vĩnh viễn sinh viên khỏi hệ thống!' };
+        } catch (e) { console.error('Lỗi permanent delete checkin SQL:', e); }
     }
-    let list = await dbGetCheckins();
-    list = list.filter(r => {
-        if (numId && r.id == numId) return false;
-        if (cleanSc && cleanCode && String(r.studentCode || '').trim().toLowerCase() === cleanSc.toLowerCase() && String(r.code || '').trim().toUpperCase() === cleanCode.toUpperCase()) return false;
-        if (cleanSc && !cleanCode && String(r.studentCode || '').trim().toLowerCase() === cleanSc.toLowerCase()) return false;
-        return true;
-    });
-    fs.writeFileSync(RECORDS_FILE, JSON.stringify(list, null, 2), 'utf8');
-    return { status: 'success', message: 'Đã xóa bản ghi điểm danh!' };
+    if (fs.existsSync(DELETED_RECORDS_FILE)) {
+        try {
+            let delList = JSON.parse(fs.readFileSync(DELETED_RECORDS_FILE, 'utf8')) || [];
+            delList = delList.filter(r => {
+                if (numId && r.id == numId) return false;
+                if (cleanSc && cleanCode && String(r.studentCode || '').trim().toLowerCase() === cleanSc.toLowerCase() && String(r.code || '').trim().toUpperCase() === cleanCode.toUpperCase()) return false;
+                if (cleanSc && !cleanCode && String(r.studentCode || '').trim().toLowerCase() === cleanSc.toLowerCase()) return false;
+                return true;
+            });
+            fs.writeFileSync(DELETED_RECORDS_FILE, JSON.stringify(delList, null, 2), 'utf8');
+        } catch (e) {}
+    }
+    return { status: 'success', message: 'Đã xóa vĩnh viễn sinh viên khỏi hệ thống!' };
+}
+
+async function dbEmptyTrashCheckins() {
+    if (pool) {
+        try {
+            await pool.query('DELETE FROM checkins WHERE is_deleted = TRUE');
+            return { status: 'success', message: 'Đã dọn sạch thùng rác sinh viên!' };
+        } catch (e) { console.error('Lỗi empty trash checkins SQL:', e); }
+    }
+    if (fs.existsSync(DELETED_RECORDS_FILE)) {
+        fs.writeFileSync(DELETED_RECORDS_FILE, JSON.stringify([], null, 2), 'utf8');
+    }
+    return { status: 'success', message: 'Đã dọn sạch thùng rác sinh viên!' };
 }
 
 async function dbSaveCheckin(record) {
@@ -1620,6 +1897,47 @@ const server = http.createServer(async (req, res) => {
                 return;
             }
 
+            if (action === 'getDeletedCheckins' || pathname === '/api/deleted-checkins') {
+                const list = await dbGetDeletedCheckins();
+                res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                res.end(JSON.stringify(list));
+                return;
+            }
+
+            if (action === 'restoreCheckin') {
+                const id = parsedUrl.searchParams.get('id') || '';
+                const sc = parsedUrl.searchParams.get('studentCode') || '';
+                const code = parsedUrl.searchParams.get('code') || '';
+                const result = await dbRestoreCheckin(id, sc, code);
+                res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                res.end(JSON.stringify(result));
+                return;
+            }
+
+            if (action === 'restoreAllCheckins') {
+                const result = await dbRestoreAllCheckins();
+                res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                res.end(JSON.stringify(result));
+                return;
+            }
+
+            if (action === 'permanentDeleteCheckin') {
+                const id = parsedUrl.searchParams.get('id') || '';
+                const sc = parsedUrl.searchParams.get('studentCode') || '';
+                const code = parsedUrl.searchParams.get('code') || '';
+                const result = await dbPermanentDeleteCheckin(id, sc, code);
+                res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                res.end(JSON.stringify(result));
+                return;
+            }
+
+            if (action === 'emptyTrashCheckins') {
+                const result = await dbEmptyTrashCheckins();
+                res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                res.end(JSON.stringify(result));
+                return;
+            }
+
             if (action === 'getAdminCode') {
                 const code = await dbGetAdminCode();
                 res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
@@ -1794,6 +2112,41 @@ const server = http.createServer(async (req, res) => {
 
                     if (action === 'deleteCheckin' || json.action === 'deleteCheckin' || action === 'deleteCheckinRecord') {
                         const result = await dbDeleteCheckinRecord(json.id, json.studentCode, json.code);
+                        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                        res.end(JSON.stringify(result));
+                        return;
+                    }
+
+                    if (action === 'getDeletedCheckins' || json.action === 'getDeletedCheckins') {
+                        const list = await dbGetDeletedCheckins();
+                        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                        res.end(JSON.stringify(list));
+                        return;
+                    }
+
+                    if (action === 'restoreCheckin' || json.action === 'restoreCheckin') {
+                        const result = await dbRestoreCheckin(json.id, json.studentCode, json.code);
+                        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                        res.end(JSON.stringify(result));
+                        return;
+                    }
+
+                    if (action === 'restoreAllCheckins' || json.action === 'restoreAllCheckins') {
+                        const result = await dbRestoreAllCheckins();
+                        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                        res.end(JSON.stringify(result));
+                        return;
+                    }
+
+                    if (action === 'permanentDeleteCheckin' || json.action === 'permanentDeleteCheckin') {
+                        const result = await dbPermanentDeleteCheckin(json.id, json.studentCode, json.code);
+                        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                        res.end(JSON.stringify(result));
+                        return;
+                    }
+
+                    if (action === 'emptyTrashCheckins' || json.action === 'emptyTrashCheckins') {
+                        const result = await dbEmptyTrashCheckins();
                         res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
                         res.end(JSON.stringify(result));
                         return;

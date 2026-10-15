@@ -306,6 +306,37 @@ function syncDeletedActivitiesFromCloud(callback) {
         .catch(err => console.error("Lỗi đồng bộ thùng rác từ cloud:", err));
 }
 
+// 3.1. QUẢN LÝ THÙNG RÁC & KHÔI PHỤC SINH VIÊN ĐIỂM DANH ĐÃ XÓA
+function getDeletedCheckins() {
+    const local = localStorage.getItem("gps_deleted_checkins");
+    if (local) {
+        try {
+            const parsed = JSON.parse(local);
+            if (Array.isArray(parsed)) return parsed;
+        } catch (e) {
+            console.error("Lỗi đọc gps_deleted_checkins:", e);
+        }
+    }
+    return [];
+}
+
+function saveDeletedCheckins(list) {
+    localStorage.setItem("gps_deleted_checkins", JSON.stringify(list || []));
+}
+
+function syncDeletedCheckinsFromCloud(callback) {
+    if (!CONFIG.googleScriptUrl) return;
+    fetch(CONFIG.googleScriptUrl + "?action=getDeletedCheckins&_t=" + Date.now())
+        .then(res => res.json())
+        .then(data => {
+            if (Array.isArray(data)) {
+                localStorage.setItem("gps_deleted_checkins", JSON.stringify(data));
+                if (callback) callback(data);
+            }
+        })
+        .catch(err => console.error("Lỗi đồng bộ thùng rác sinh viên từ cloud:", err));
+}
+
 // 4. BẢNG TRA CỨU & TỰ ĐỘNG NHẬN DIỆN KHOA DỰA TRÊN KÝ HIỆU LỚP
 function detectFacultyFromClassName(className) {
     if (!className) return '';
