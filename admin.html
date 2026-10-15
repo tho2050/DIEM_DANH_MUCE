@@ -3587,6 +3587,17 @@
                 const actCount = (attendanceData || []).filter(r => typeof isSameActivity === 'function' ? isSameActivity(r.code, item.code) : decodeTitle(r.code || '').trim().toUpperCase() === decodeTitle(item.code || '').trim().toUpperCase()).length;
                 const rawCreator = item.createdBy || "hongnhung";
                 const displayCreator = typeof formatCreatorName === 'function' ? formatCreatorName(rawCreator) : (rawCreator.toLowerCase().includes('hongnhung2050') ? 'hongnhung' : rawCreator);
+
+                const tStatus = typeof checkActivityTimeStatus === 'function' ? checkActivityTimeStatus(item) : { status: 'OPEN' };
+                let timeBadgeHtml = '';
+                if (tStatus.status === 'EXPIRED') {
+                    timeBadgeHtml = `<span class="badge bg-danger text-white rounded-pill fw-bold shadow-sm" title="${tStatus.message}"><i class="fa-solid fa-lock me-1"></i>Đã kết thúc (Khóa)</span>`;
+                } else if (tStatus.status === 'NOT_STARTED') {
+                    timeBadgeHtml = `<span class="badge bg-warning text-dark rounded-pill fw-bold shadow-sm" title="${tStatus.message}"><i class="fa-solid fa-hourglass-start me-1"></i>Chưa bắt đầu</span>`;
+                } else if (item.startTime || item.endTime) {
+                    timeBadgeHtml = `<span class="badge bg-success text-white rounded-pill fw-bold shadow-sm" title="Cổng điểm danh đang mở"><i class="fa-solid fa-door-open me-1"></i>Đang mở điểm danh</span>`;
+                }
+
                 return `
                 <div class="activity-item-row d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <div style="cursor: pointer;" onclick="viewActivityAttendance('${item.code}')" title="Nhấn vào để xem danh sách ${actCount} sinh viên điểm danh sự kiện này">
@@ -3595,10 +3606,12 @@
                             <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill fw-bold" id="act-count-badge-${item.code}">
                                 <i class="fa-solid fa-users me-1"></i><span id="act-count-${item.code}">${actCount}</span> SV
                             </span>
+                            ${timeBadgeHtml}
                             ${item.benefit ? `<span class="badge bg-danger text-white rounded-pill fw-bold shadow-sm" title="Quyền lợi tham gia"><i class="fa-solid fa-gift me-1"></i>${item.benefit}</span>` : ''}
                         </div>
                         <strong class="d-block mt-1 text-primary">${decodeTitle(item.title)}</strong>
                         <span class="small text-muted d-block"><i class="fa-solid fa-location-dot"></i> ${item.locationAddress} (Bán kính: ${item.radiusMeters}m)</span>
+                        ${(item.startTime || item.endTime) ? `<span class="small text-muted d-block mt-1"><i class="fa-regular fa-clock text-primary me-1"></i>Khung giờ: <strong>${item.startTime || '--'}</strong> ➔ <strong>${item.endTime || '--'}</strong></span>` : ''}
                         ${item.benefit ? `<span class="small text-danger fw-semibold d-block mt-1" style="font-size: 0.82rem;"><i class="fa-solid fa-gift me-1"></i>Quyền lợi: <strong class="text-danger">${item.benefit}</strong></span>` : ''}
                         <span class="small text-secondary d-block mt-1" style="font-size: 0.8rem;">
                             <i class="fa-solid fa-user-pen text-primary me-1"></i>Tài khoản tạo: <strong class="text-dark">${displayCreator}</strong>
@@ -6433,6 +6446,12 @@
                 + '&qr=true';
             if (ben) {
                 checkinUrl += '&benefit=' + encodeURIComponent(ben);
+            }
+            if (act && act.startTime) {
+                checkinUrl += '&start=' + encodeURIComponent(act.startTime);
+            }
+            if (act && act.endTime) {
+                checkinUrl += '&end=' + encodeURIComponent(act.endTime);
             }
 
             // 1. Cập nhật và tạo QR cho trang In Bản Mềm (hidden on-screen)

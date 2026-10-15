@@ -1017,10 +1017,13 @@
                         <span class="meta-item"><i class="fa-solid fa-bullseye"></i> Bán kính cho phép: <strong id="actRadius">---</strong></span>
                         <span class="meta-item"><i class="fa-solid fa-user-pen"></i> Tài khoản tạo: <strong id="actCreatedBy">---</strong></span>
                         <span class="meta-item benefit d-none" id="actBenefitItem" style="color: #dc2626;"><i class="fa-solid fa-gift text-danger"></i> Quyền lợi: <strong id="actBenefit" class="text-danger">---</strong></span>
+                        <span class="meta-item time d-none" id="actTimeMeta"><i class="fa-regular fa-clock text-primary"></i> Khung giờ: <strong id="actTimeText" class="text-dark">---</strong><span id="actTimeBadge" class="badge ms-1"></span></span>
                     </div>
                 </div>
                 <a href="index.html" class="btn btn-outline-secondary btn-sm" id="btnBackList"><i class="fa-solid fa-arrow-left"></i> Danh Sách Sự Kiện</a>
             </div>
+            <!-- Banner thông báo khóa cổng khi hết giờ hoặc chưa đến giờ -->
+            <div id="activityTimeBanner" class="alert d-none mt-3 mb-0 shadow-sm" role="alert"></div>
         </div>
 
         <!-- 2 Columns -->
@@ -1351,6 +1354,8 @@
         let actRadius = parseInt(urlParams.get('radius')) || 50;
         let actLoc = urlParams.get('loc') || '';
         let actBenefit = urlParams.get('benefit') || '';
+        let actStart = urlParams.get('start') || '';
+        let actEnd = urlParams.get('end') || '';
         
         // If code is defined by route format `/Activity/CheckIn/{code}`
         if (!actCode) {
@@ -1389,8 +1394,13 @@
                 latitude: actLat,
                 longitude: actLng,
                 radiusMeters: actRadius,
-                benefit: actBenefit
+                benefit: actBenefit,
+                startTime: decodeTitle(actStart),
+                endTime: decodeTitle(actEnd)
             };
+        } else if (activity) {
+            if (!activity.startTime && actStart) activity.startTime = decodeTitle(actStart);
+            if (!activity.endTime && actEnd) activity.endTime = decodeTitle(actEnd);
         }
 
         // Nếu URL có truyền bán kính qua mã QR thì đồng bộ theo bán kính của mã QR
@@ -1429,6 +1439,106 @@
             if (benItem) benItem.classList.add('d-none');
             if (benBadge) benBadge.classList.add('d-none');
         }
+
+        const timeMetaEl = document.getElementById('actTimeMeta');
+        const timeTextEl = document.getElementById('actTimeText');
+        if (activity && (activity.startTime || activity.endTime)) {
+            if (timeTextEl) {
+                timeTextEl.textContent = `${activity.startTime || '---'} ➔ ${activity.endTime || '---'}`;
+            }
+            if (timeMetaEl) timeMetaEl.classList.remove('d-none');
+        } else if (timeMetaEl) {
+            timeMetaEl.classList.add('d-none');
+        }
+
+        // Hàm kiểm tra và khóa form/nút nếu hết giờ hoặc chưa tới giờ
+        function updateActivityTimeStatus() {
+            if (!activity) return { status: 'OPEN' };
+            const timeStatus = typeof checkActivityTimeStatus === 'function' 
+                ? checkActivityTimeStatus(activity) 
+                : { status: 'OPEN', message: '' };
+
+            const banner = document.getElementById('activityTimeBanner');
+            const submitBtn = document.getElementById('btnSubmit');
+            const formStatusBadge = document.getElementById('formStatusBadge');
+            const formGpsAlert = document.getElementById('formGpsAlert');
+            const timeBadgeEl = document.getElementById('actTimeBadge');
+
+            if (timeStatus.status === 'EXPIRED') {
+                if (timeBadgeEl) {
+                    timeBadgeEl.className = 'badge bg-danger text-white rounded-pill ms-2 px-2 py-1';
+                    timeBadgeEl.innerHTML = '<i class="fa-solid fa-lock me-1"></i>Đã hết giờ (Khóa)';
+                }
+                if (banner) {
+                    banner.className = 'alert alert-danger d-flex align-items-center mt-3 mb-0 shadow-sm border border-danger';
+                    banner.innerHTML = `
+                        <i class="fa-solid fa-clock-rotate-left text-danger fs-3 me-3 flex-shrink-0"></i>
+                        <div>
+                            <strong class="d-block text-danger fs-6 mb-1"><i class="fa-solid fa-lock me-1"></i>CỔNG ĐIỂM DANH ĐÃ KHÓA (HẾT GIỜ)</strong>
+                            <span class="small text-dark">${timeStatus.message}</span>
+                        </div>
+                    `;
+                    banner.classList.remove('d-none');
+                }
+                if (formStatusBadge) {
+                    formStatusBadge.className = 'badge bg-danger text-white px-3 py-1 rounded-pill fw-bold';
+                    formStatusBadge.innerHTML = '<i class="fa-solid fa-lock me-1"></i>HẾT GIỜ ĐIỂM DANH';
+                }
+                if (formGpsAlert) {
+                    formGpsAlert.className = 'alert alert-danger py-2 px-3 small mb-3 border border-danger';
+                    formGpsAlert.innerHTML = `<div><i class="fa-solid fa-triangle-exclamation text-danger me-2"></i><strong>Cổng điểm danh đã bị khóa:</strong> Sự kiện đã kết thúc lúc ${activity.endTime || ''}. Bạn không thể tiếp tục gửi thông tin.</div>`;
+                }
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.className = 'btn-submit-checkin bg-danger text-white opacity-75';
+                    submitBtn.style.cursor = 'not-allowed';
+                    submitBtn.innerHTML = '<i class="fa-solid fa-lock me-2"></i>ĐÃ HẾT GIỜ ĐIỂM DANH (CỔNG ĐÃ KHÓA)';
+                }
+                document.querySelectorAll('#studentForm .form-control').forEach(el => el.disabled = true);
+                return timeStatus;
+            } else if (timeStatus.status === 'NOT_STARTED') {
+                if (timeBadgeEl) {
+                    timeBadgeEl.className = 'badge bg-warning text-dark rounded-pill ms-2 px-2 py-1';
+                    timeBadgeEl.innerHTML = '<i class="fa-solid fa-hourglass-start me-1"></i>Chưa đến giờ';
+                }
+                if (banner) {
+                    banner.className = 'alert alert-warning d-flex align-items-center mt-3 mb-0 shadow-sm border border-warning';
+                    banner.innerHTML = `
+                        <i class="fa-solid fa-hourglass-half text-warning fs-3 me-3 flex-shrink-0"></i>
+                        <div>
+                            <strong class="d-block text-dark fs-6 mb-1"><i class="fa-solid fa-clock me-1"></i>CHƯA ĐẾN THỜI GIAN ĐIỂM DANH</strong>
+                            <span class="small text-dark">${timeStatus.message}</span>
+                        </div>
+                    `;
+                    banner.classList.remove('d-none');
+                }
+                if (formStatusBadge) {
+                    formStatusBadge.className = 'badge bg-warning text-dark px-3 py-1 rounded-pill fw-bold';
+                    formStatusBadge.innerHTML = '<i class="fa-solid fa-hourglass-start me-1"></i>CHƯA ĐẾN GIỜ';
+                }
+                if (formGpsAlert) {
+                    formGpsAlert.className = 'alert alert-warning py-2 px-3 small mb-3 border border-warning';
+                    formGpsAlert.innerHTML = `<div><i class="fa-solid fa-info-circle text-warning me-2"></i><strong>Chưa mở cổng:</strong> Sự kiện sẽ mở cổng điểm danh vào lúc ${activity.startTime || ''}. Vui lòng quay lại sau.</div>`;
+                }
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.className = 'btn-submit-checkin bg-secondary text-white';
+                    submitBtn.style.cursor = 'not-allowed';
+                    submitBtn.innerHTML = '<i class="fa-solid fa-hourglass-start me-2"></i>CHƯA ĐẾN GIỜ ĐIỂM DANH';
+                }
+                document.querySelectorAll('#studentForm .form-control').forEach(el => el.disabled = true);
+                return timeStatus;
+            } else {
+                if (timeBadgeEl) {
+                    timeBadgeEl.className = 'badge bg-success text-white rounded-pill ms-2 px-2 py-1';
+                    timeBadgeEl.innerHTML = '<i class="fa-solid fa-door-open me-1"></i>Đang mở điểm danh';
+                }
+                if (banner) banner.classList.add('d-none');
+                return timeStatus;
+            }
+        }
+        updateActivityTimeStatus();
+        setInterval(updateActivityTimeStatus, 2000);
         if (document.getElementById('subBarRadius')) {
             document.getElementById('subBarRadius').textContent = activity.radiusMeters;
         }
@@ -1557,7 +1667,13 @@
                 btn.innerHTML = '<i class="fa-solid fa-check-circle"></i> ĐÃ XÁC THỰC - VỊ TRÍ HỢP LỆ';
                 btn.disabled = true;
 
-                // Mở khóa Form
+                // Kiểm tra khung giờ điểm danh trước khi mở khóa Form
+                const tStatus = updateActivityTimeStatus();
+                if (tStatus && tStatus.status !== 'OPEN') {
+                    return; // Đã hết giờ hoặc chưa đến giờ -> GIỮ NGUYÊN KHÓA FORM!
+                }
+
+                // Mở khóa Form nếu còn trong giờ
                 document.getElementById('formStatusBadge').className = 'badge-form-status unlocked';
                 document.getElementById('formStatusBadge').innerHTML = '<i class="fa-solid fa-lock-open me-1"></i>ĐÃ MỞ KHÓA FORM';
                 document.getElementById('formGpsAlert').className = 'gps-alert success';
@@ -1838,6 +1954,21 @@
             // Khơi tạo lại engine speech trong context user click để mobile (iOS/Android) cho phép phát âm thanh
             if ('speechSynthesis' in window && window.speechSynthesis.paused) {
                 window.speechSynthesis.resume();
+            }
+
+            // 0. Kiểm tra khung giờ diễn ra sự kiện
+            const timeCheck = updateActivityTimeStatus();
+            if (timeCheck && timeCheck.status === 'EXPIRED') {
+                const msg = `⚠️ ĐÃ HẾT GIỜ ĐIỂM DANH!\nSự kiện đã kết thúc lúc ${activity.endTime || ''}.\nCổng điểm danh đã bị KHÓA tự động.`;
+                showVoiceToast(msg, 'danger');
+                speakFemaleVoice('Đã hết thời gian điểm danh. Cổng điểm danh hiện đã bị khóa.');
+                return;
+            }
+            if (timeCheck && timeCheck.status === 'NOT_STARTED') {
+                const msg = `⚠️ CHƯA ĐẾN GIỜ ĐIỂM DANH!\nSự kiện sẽ bắt đầu mở cổng lúc ${activity.startTime || ''}.`;
+                showVoiceToast(msg, 'warning');
+                speakFemaleVoice('Chưa đến giờ điểm danh cho sự kiện này.');
+                return;
             }
 
             // Kiểm tra xem máy này đã điểm danh sự kiện này chưa (Client-side fast prevention)

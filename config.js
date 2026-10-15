@@ -86,6 +86,70 @@ function isSameActivity(codeA, codeB) {
     return false;
 }
 
+// Helper chuyển đổi chuỗi ngày giờ sự kiện (ví dụ "18:15 15/10/2026" hoặc "2026-10-15T18:15") thành Date theo múi giờ Việt Nam (UTC+7)
+function parseVietnamDate(str) {
+    if (!str) return null;
+    str = String(str).trim();
+    if (!str) return null;
+
+    // Định dạng: 'HH:mm DD/MM/YYYY' hoặc 'HH:mm:ss DD/MM/YYYY'
+    let m = str.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s+(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (m) {
+        const [, hh, mm, ss, d, mo, y] = m;
+        return new Date(Date.UTC(parseInt(y), parseInt(mo) - 1, parseInt(d), parseInt(hh) - 7, parseInt(mm), parseInt(ss || 0)));
+    }
+
+    // Định dạng: 'DD/MM/YYYY HH:mm' hoặc 'DD/MM/YYYY HH:mm:ss'
+    m = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+    if (m) {
+        const [, d, mo, y, hh, mm, ss] = m;
+        return new Date(Date.UTC(parseInt(y), parseInt(mo) - 1, parseInt(d), parseInt(hh) - 7, parseInt(mm), parseInt(ss || 0)));
+    }
+
+    // Định dạng ISO: 'YYYY-MM-DDTHH:mm' hoặc 'YYYY-MM-DD HH:mm'
+    m = str.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})(?::(\d{2}))?$/);
+    if (m) {
+        const [, y, mo, d, hh, mm, ss] = m;
+        return new Date(Date.UTC(parseInt(y), parseInt(mo) - 1, parseInt(d), parseInt(hh) - 7, parseInt(mm), parseInt(ss || 0)));
+    }
+
+    const d = new Date(str);
+    return isNaN(d.getTime()) ? null : d;
+}
+
+// Helper kiểm tra trạng thái thời gian điểm danh của sự kiện
+function checkActivityTimeStatus(act) {
+    if (!act) return { status: 'OPEN', message: '' };
+    const now = new Date();
+    const startDate = parseVietnamDate(act.startTime);
+    const endDate = parseVietnamDate(act.endTime);
+
+    if (endDate && now.getTime() > endDate.getTime()) {
+        return {
+            status: 'EXPIRED',
+            message: `Sự kiện đã kết thúc thời gian điểm danh lúc ${act.endTime || ''}. Cổng điểm danh hiện đã bị KHÓA.`,
+            startDate,
+            endDate
+        };
+    }
+
+    if (startDate && now.getTime() < startDate.getTime()) {
+        return {
+            status: 'NOT_STARTED',
+            message: `Chưa đến thời gian điểm danh! Sự kiện sẽ mở cổng vào lúc ${act.startTime || ''}.`,
+            startDate,
+            endDate
+        };
+    }
+
+    return {
+        status: 'OPEN',
+        message: 'Cổng điểm danh đang mở.',
+        startDate,
+        endDate
+    };
+}
+
 // Hàm lấy danh sách hoạt động (tự động lọc bỏ các sự kiện mẫu cũ nếu còn tồn tại trong bộ nhớ)
 function getActivities() {
     const local = localStorage.getItem("gps_attendance_activities");
