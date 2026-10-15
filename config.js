@@ -42,6 +42,26 @@ function decodeTitleConfig(s) {
     return res.replace(/%20/g, ' ').replace(/%2F/gi, '/').trim();
 }
 
+// Helper so sánh 2 mã sự kiện hỗ trợ các biến thể (dấu gạch ngang, khoảng trắng, viết hoa/thường, en-dash, hoặc lỗi gõ phím)
+function isSameActivity(codeA, codeB) {
+    if (!codeA || !codeB) return false;
+    const a = (typeof decodeTitleConfig === 'function' ? decodeTitleConfig(codeA) : String(codeA)).trim().toUpperCase();
+    const b = (typeof decodeTitleConfig === 'function' ? decodeTitleConfig(codeB) : String(codeB)).trim().toUpperCase();
+    if (a === b) return true;
+
+    // Chuẩn hóa dấu gạch ngang (hyphen -, en-dash –, em-dash —) và khoảng trắng thừa
+    const normA = a.replace(/[\u2010-\u2015\u2212-]/g, '-').replace(/\s+/g, ' ');
+    const normB = b.replace(/[\u2010-\u2015\u2212-]/g, '-').replace(/\s+/g, ' ');
+    if (normA === normB) return true;
+
+    // Tương thích tối đa biến thể sự kiện chuyển đổi số chiều 15/10 (15/10–PPHƯỜNG CHIỀU vs 15/10- PHƯỜNG ( CHIỀU ))
+    const isPm15_A = (a.includes('15/10') || a.includes('15-10')) && (a.includes('CHIỀU') || a.includes('CHIEU')) && !a.includes('SÁNG') && !a.includes('SANG');
+    const isPm15_B = (b.includes('15/10') || b.includes('15-10')) && (b.includes('CHIỀU') || b.includes('CHIEU')) && !b.includes('SÁNG') && !b.includes('SANG');
+    if (isPm15_A && isPm15_B) return true;
+
+    return false;
+}
+
 // Hàm lấy danh sách hoạt động (tự động lọc bỏ các sự kiện mẫu cũ nếu còn tồn tại trong bộ nhớ)
 function getActivities() {
     const local = localStorage.getItem("gps_attendance_activities");

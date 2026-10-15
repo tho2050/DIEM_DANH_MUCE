@@ -3584,7 +3584,7 @@
             }
 
             container.innerHTML = list.map((item, idx) => {
-                const actCount = (attendanceData || []).filter(r => decodeTitle(r.code || '').trim().toUpperCase() === decodeTitle(item.code || '').trim().toUpperCase()).length;
+                const actCount = (attendanceData || []).filter(r => typeof isSameActivity === 'function' ? isSameActivity(r.code, item.code) : decodeTitle(r.code || '').trim().toUpperCase() === decodeTitle(item.code || '').trim().toUpperCase()).length;
                 const rawCreator = item.createdBy || "hongnhung";
                 const displayCreator = typeof formatCreatorName === 'function' ? formatCreatorName(rawCreator) : (rawCreator.toLowerCase().includes('hongnhung2050') ? 'hongnhung' : rawCreator);
                 return `
@@ -4475,6 +4475,10 @@
                         if (r) {
                             if (r.code) r.code = decodeTitle(r.code);
                             if (r.title) r.title = decodeTitle(r.title);
+                            if (r.code && (r.code.includes('15/10') || r.code.includes('15-10')) && (r.code.toLowerCase().includes('chiều') || r.code.toLowerCase().includes('chieu') || (r.title && r.title.toLowerCase().includes('chiều'))) && !r.code.toLowerCase().includes('sáng')) {
+                                r.code = '15/10–PPHƯỜNG CHIỀU';
+                                r.title = 'Hỗ trợ hộ chuyển đổi số tại phường buổi chiều';
+                            }
                         }
                     });
                     attendanceData = sortAttendanceData(sheetData);
@@ -4509,7 +4513,7 @@
 
             let html = `<option value="">-- Tất cả sự kiện (${total} SV) --</option>`;
             acts.forEach(a => {
-                const count = (attendanceData || []).filter(r => decodeTitle(r.code || '').trim().toUpperCase() === decodeTitle(a.code || '').trim().toUpperCase()).length;
+                const count = (attendanceData || []).filter(r => typeof isSameActivity === 'function' ? isSameActivity(r.code, a.code) : decodeTitle(r.code || '').trim().toUpperCase() === decodeTitle(a.code || '').trim().toUpperCase()).length;
                 html += `<option value="${a.code}">${decodeTitle(a.code)} - ${decodeTitle(a.title)}${a.benefit ? ` [🎁 ${a.benefit}]` : ''} (${count} SV)</option>`;
             });
             filterSelect.innerHTML = html;
@@ -4624,7 +4628,7 @@
                 const codeB = decodeTitle(b.code || '').trim().toUpperCase();
 
                 // 1. Gom nhóm theo Sự kiện
-                if (codeA !== codeB) {
+                if (codeA !== codeB && (typeof isSameActivity === 'function' ? !isSameActivity(codeA, codeB) : true)) {
                     const rankA = eventOrderMap[codeA] !== undefined ? eventOrderMap[codeA] : 99999;
                     const rankB = eventOrderMap[codeB] !== undefined ? eventOrderMap[codeB] : 99999;
                     if (rankA !== rankB) return rankA - rankB;
@@ -4696,7 +4700,7 @@
                     emailStr.includes(searchQuery);
 
                 const matchesFaculty = !facultyFilter || facultyStr.includes(facultyFilter);
-                const matchesActivity = !actFilter || actCodeStr === decodeTitle(actFilter).toLowerCase();
+                const matchesActivity = !actFilter || (typeof isSameActivity === 'function' ? isSameActivity(item.code, actFilter) : actCodeStr === decodeTitle(actFilter).toLowerCase());
 
                 return matchesSearch && matchesFaculty && matchesActivity;
             });
@@ -4852,7 +4856,7 @@
             getActivities().forEach(act => {
                 const numEl = document.getElementById('act-count-' + act.code);
                 if (numEl) {
-                    const c = (attendanceData || []).filter(r => decodeTitle(r.code || '').trim().toUpperCase() === decodeTitle(act.code || '').trim().toUpperCase()).length;
+                    const c = (attendanceData || []).filter(r => typeof isSameActivity === 'function' ? isSameActivity(r.code, act.code) : decodeTitle(r.code || '').trim().toUpperCase() === decodeTitle(act.code || '').trim().toUpperCase()).length;
                     numEl.textContent = c;
                 }
             });
@@ -4870,6 +4874,10 @@
                         if (r) {
                             if (r.code) r.code = decodeTitle(r.code);
                             if (r.title) r.title = decodeTitle(r.title);
+                            if (r.code && (r.code.includes('15/10') || r.code.includes('15-10')) && (r.code.toLowerCase().includes('chiều') || r.code.toLowerCase().includes('chieu') || (r.title && r.title.toLowerCase().includes('chiều'))) && !r.code.toLowerCase().includes('sáng')) {
+                                r.code = '15/10–PPHƯỜNG CHIỀU';
+                                r.title = 'Hỗ trợ hộ chuyển đổi số tại phường buổi chiều';
+                            }
                         }
                     });
                     attendanceData = sortAttendanceData(sheetData);
@@ -4933,7 +4941,10 @@
                     : '--';
 
                 const codeVal = decodeTitle(item.code || '');
-                const matchedAct = actMap[codeVal.trim().toUpperCase()];
+                let matchedAct = actMap[codeVal.trim().toUpperCase()];
+                if (!matchedAct && typeof isSameActivity === 'function') {
+                    matchedAct = (acts || []).find(a => isSameActivity(a.code, codeVal));
+                }
                 const benefitVal = item.benefit || (matchedAct ? matchedAct.benefit : '') || '';
                 const titleVal = decodeTitle(item.title || (matchedAct ? matchedAct.title : '--'));
 
@@ -5636,7 +5647,7 @@
             }
 
             // Lọc ra các bản ghi của đúng sự kiện này
-            const actData = attendanceData.filter(i => String(i.code || '').toLowerCase() === String(actCode || '').toLowerCase());
+            const actData = attendanceData.filter(i => typeof isSameActivity === 'function' ? isSameActivity(i.code, actCode) : String(i.code || '').toLowerCase() === String(actCode || '').toLowerCase());
 
             if (!actData || actData.length === 0) {
                 alert(`Sự kiện "${actTitle || actCode}" hiện chưa có sinh viên nào điểm danh!`);

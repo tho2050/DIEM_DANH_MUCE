@@ -51,6 +51,24 @@ function decodeTitle(s) {
     return res.trim();
 }
 
+// Helper so sánh 2 mã sự kiện hỗ trợ các biến thể (dấu gạch ngang, khoảng trắng, viết hoa/thường, en-dash, hoặc lỗi gõ phím)
+function isSameActivity(codeA, codeB) {
+    if (!codeA || !codeB) return false;
+    const a = decodeTitle(codeA).trim().toUpperCase();
+    const b = decodeTitle(codeB).trim().toUpperCase();
+    if (a === b) return true;
+
+    const normA = a.replace(/[\u2010-\u2015\u2212-]/g, '-').replace(/\s+/g, ' ');
+    const normB = b.replace(/[\u2010-\u2015\u2212-]/g, '-').replace(/\s+/g, ' ');
+    if (normA === normB) return true;
+
+    const isPm15_A = (a.includes('15/10') || a.includes('15-10')) && (a.includes('CHIỀU') || a.includes('CHIEU')) && !a.includes('SÁNG') && !a.includes('SANG');
+    const isPm15_B = (b.includes('15/10') || b.includes('15-10')) && (b.includes('CHIỀU') || b.includes('CHIEU')) && !b.includes('SÁNG') && !b.includes('SANG');
+    if (isPm15_A && isPm15_B) return true;
+
+    return false;
+}
+
 const PORT = process.env.PORT || 5252;
 const DATABASE_URL = process.env.DATABASE_URL;
 
@@ -197,6 +215,21 @@ if (DATABASE_URL) {
                 console.log('✅ Đã chuẩn hóa mã sự kiện và tiêu đề trong SQL Database');
             } catch (e) {
                 console.error("Lỗi chuẩn hóa tiêu đề và mã sự kiện trong SQL:", e);
+            }
+
+            // Tự động chuẩn hóa các biến thể mã sự kiện chiều 15/10/2026 về mã chuẩn '15/10–PPHƯỜNG CHIỀU'
+            try {
+                await pool.query(`
+                    UPDATE checkins 
+                    SET code = '15/10–PPHƯỜNG CHIỀU', 
+                        title = 'Hỗ trợ hộ chuyển đổi số tại phường buổi chiều'
+                    WHERE (code ILIKE '%15/10%' OR code ILIKE '%15-10%')
+                      AND (code ILIKE '%CHI%U%' OR code ILIKE '%CHIEU%' OR title ILIKE '%chi%u%')
+                      AND code NOT ILIKE '%S%NG%';
+                `);
+                console.log('✅ Đã chuẩn hóa các bản ghi điểm danh chiều 15/10 về mã 15/10–PPHƯỜNG CHIỀU');
+            } catch (e) {
+                console.error("Lỗi chuẩn hóa mã sự kiện chiều 15/10 trong SQL:", e);
             }
 
             // Đảm bảo các tài khoản Google cá nhân (không phải Super Admin) phải ở trạng thái CHỜ DUYỆT (pending)
@@ -501,7 +534,7 @@ function sortAttendanceRecords(records, activities = []) {
         const codeB = decodeTitle(b.code || '').trim().toUpperCase();
 
         // 1. Gom nhóm theo Sự kiện
-        if (codeA !== codeB) {
+        if (codeA !== codeB && !isSameActivity(codeA, codeB)) {
             const rankA = eventOrderMap[codeA] !== undefined ? eventOrderMap[codeA] : 99999;
             const rankB = eventOrderMap[codeB] !== undefined ? eventOrderMap[codeB] : 99999;
             if (rankA !== rankB) return rankA - rankB;
@@ -550,6 +583,11 @@ async function dbGetCheckins() {
             rows = res.rows.map(r => {
                 if (r.code) r.code = decodeTitle(r.code);
                 if (r.title) r.title = decodeTitle(r.title);
+                // Chuẩn hóa đồng bộ biến thể mã sự kiện chiều 15/10
+                if (r.code && (r.code.includes('15/10') || r.code.includes('15-10')) && (r.code.toLowerCase().includes('chiều') || r.code.toLowerCase().includes('chieu') || (r.title && r.title.toLowerCase().includes('chiều'))) && !r.code.toLowerCase().includes('sáng')) {
+                    r.code = '15/10–PPHƯỜNG CHIỀU';
+                    r.title = 'Hỗ trợ hộ chuyển đổi số tại phường buổi chiều';
+                }
                 // Đảm bảo thời gian hiển thị luôn chuẩn giờ Việt Nam
                 if (r.createdAt && (!r.timestamp || r.timestamp.trim() === '' || /^\d{2}:\d{2}:\d{2}$/.test(r.timestamp.trim()))) {
                     r.timestamp = getVietnamTimestamp(r.createdAt);
@@ -564,6 +602,10 @@ async function dbGetCheckins() {
                 rows.forEach(r => { 
                     if (r && r.code) r.code = decodeTitle(r.code);
                     if (r && r.title) r.title = decodeTitle(r.title); 
+                    if (r && r.code && (r.code.includes('15/10') || r.code.includes('15-10')) && (r.code.toLowerCase().includes('chiều') || r.code.toLowerCase().includes('chieu') || (r.title && r.title.toLowerCase().includes('chiều'))) && !r.code.toLowerCase().includes('sáng')) {
+                        r.code = '15/10–PPHƯỜNG CHIỀU';
+                        r.title = 'Hỗ trợ hộ chuyển đổi số tại phường buổi chiều';
+                    }
                 });
             }
         } catch (e) {}
@@ -577,7 +619,10 @@ async function dbGetCheckins() {
     });
     rows.forEach(r => {
         if (r.code) r.code = decodeTitle(r.code);
-        const act = actMap[decodeTitle(r.code || '').trim().toUpperCase()];
+        let act = actMap[decodeTitle(r.code || '').trim().toUpperCase()];
+        if (!act) {
+            act = (activities || []).find(a => isSameActivity(a.code, r.code));
+        }
         if (!r.benefit && act && act.benefit) r.benefit = act.benefit;
         if (!r.title && act && act.title) r.title = decodeTitle(act.title);
         else if (r.title) r.title = decodeTitle(r.title);
@@ -651,6 +696,10 @@ async function dbDeleteCheckinRecord(id, studentCode, code) {
 async function dbSaveCheckin(record) {
     if (record.code) record.code = decodeTitle(record.code);
     if (record.title) record.title = decodeTitle(record.title);
+    if (record.code && (record.code.includes('15/10') || record.code.includes('15-10')) && (record.code.toLowerCase().includes('chiều') || record.code.toLowerCase().includes('chieu') || (record.title && record.title.toLowerCase().includes('chiều'))) && !record.code.toLowerCase().includes('sáng')) {
+        record.code = '15/10–PPHƯỜNG CHIỀU';
+        record.title = 'Hỗ trợ hộ chuyển đổi số tại phường buổi chiều';
+    }
     if (pool) {
         try {
             await pool.query(`

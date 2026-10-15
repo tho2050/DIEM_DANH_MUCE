@@ -1359,7 +1359,7 @@
         }
 
         const list = getActivities(); // Lấy danh sách hoạt động động từ localStorage/config
-        let activity = list.find(a => decodeTitle(a.code || '').toLowerCase() === actCode.toLowerCase());
+        let activity = list.find(a => typeof isSameActivity === 'function' ? isSameActivity(a.code, actCode) : decodeTitle(a.code || '').toLowerCase() === actCode.toLowerCase());
 
         // Nếu máy này chưa có sự kiện trong LocalStorage (máy mới / thiết bị khác), tự động tải ngay từ máy chủ Server
         if (!activity && actCode) {
@@ -1371,7 +1371,7 @@
                     const serverList = JSON.parse(xhr.responseText);
                     if (Array.isArray(serverList)) {
                         localStorage.setItem("gps_attendance_activities", JSON.stringify(serverList));
-                        activity = serverList.find(a => decodeTitle(a.code || '').toLowerCase() === actCode.toLowerCase());
+                        activity = serverList.find(a => typeof isSameActivity === 'function' ? isSameActivity(a.code, actCode) : decodeTitle(a.code || '').toLowerCase() === actCode.toLowerCase());
                     }
                 }
             } catch (e) {
