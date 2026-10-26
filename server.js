@@ -1,5 +1,10 @@
 process.env.TZ = 'Asia/Ho_Chi_Minh';
 
+const dns = require('dns');
+if (dns && dns.setDefaultResultOrder) {
+    dns.setDefaultResultOrder('ipv4first');
+}
+
 const http = require('http');
 const https = require('https');
 const fs = require('fs');
@@ -1393,10 +1398,11 @@ async function sendRealOtpEmail(recipientEmail, otpCode, username) {
                 port: 587,
                 secure: false,
                 requireTLS: true,
+                family: 4,
                 auth: { user, pass },
-                connectionTimeout: 8000,
-                greetingTimeout: 6000,
-                socketTimeout: 10000,
+                connectionTimeout: 10000,
+                greetingTimeout: 8000,
+                socketTimeout: 15000,
                 tls: { rejectUnauthorized: false }
             }
         },
@@ -1404,23 +1410,11 @@ async function sendRealOtpEmail(recipientEmail, otpCode, username) {
             name: 'Gmail Service',
             config: {
                 service: 'gmail',
+                family: 4,
                 auth: { user, pass },
-                connectionTimeout: 8000,
-                greetingTimeout: 6000,
-                socketTimeout: 10000
-            }
-        },
-        {
-            name: 'Gmail Port 465 (SSL)',
-            config: {
-                host: 'smtp.gmail.com',
-                port: 465,
-                secure: true,
-                auth: { user, pass },
-                connectionTimeout: 6000,
-                greetingTimeout: 5000,
-                socketTimeout: 8000,
-                tls: { rejectUnauthorized: false }
+                connectionTimeout: 10000,
+                greetingTimeout: 8000,
+                socketTimeout: 15000
             }
         }
     ];
@@ -1536,6 +1530,7 @@ async function sendEmailBackup(recipientEmail = 'hongnhung2050py@gmail.com') {
                 port: 587,
                 secure: false,
                 requireTLS: true,
+                family: 4,
                 auth: { user, pass },
                 connectionTimeout: 20000,
                 greetingTimeout: 15000,
@@ -1547,23 +1542,11 @@ async function sendEmailBackup(recipientEmail = 'hongnhung2050py@gmail.com') {
             name: 'Gmail Service',
             config: {
                 service: 'gmail',
+                family: 4,
                 auth: { user, pass },
                 connectionTimeout: 20000,
                 greetingTimeout: 15000,
                 socketTimeout: 60000
-            }
-        },
-        {
-            name: 'Gmail Port 465 (SSL)',
-            config: {
-                host: 'smtp.gmail.com',
-                port: 465,
-                secure: true,
-                auth: { user, pass },
-                connectionTimeout: 15000,
-                greetingTimeout: 10000,
-                socketTimeout: 50000,
-                tls: { rejectUnauthorized: false }
             }
         }
     ];
