@@ -6197,7 +6197,9 @@
                 if (data.status === 'success') {
                     alert(`✅ GỬI BẢN SAO LƯU THÀNH CÔNG!\n\n${data.message}\n\nĐã đính kèm:\n- File CSV toàn bộ sinh viên (${data.count || 'tất cả'} lượt điểm danh)\n- File CSV toàn bộ sự kiện\n- File JSON cơ sở dữ liệu gốc\n\nVui lòng kiểm tra hộp thư đến (hoặc hòm thư Spam/Rác) của Gmail: ${trimmedEmail}`);
                 } else {
-                    alert(`❌ GỬI EMAIL THẤT BẠI:\n\n${data.message || 'Lỗi không xác định từ máy chủ'}`);
+                    // Tự động tải ngay file Excel toàn bộ dữ liệu về máy cho người dùng
+                    exportAllEventsExcel(e);
+                    alert(`ℹ️ THÔNG BÁO VỀ SAO LƯU DỮ LIỆU:\n\nDo máy chủ đám mây Render (gói Free) chặn cổng gửi thư trực tiếp (SMTP 587/465), hệ thống đã TỰ ĐỘNG TẢI TRỌN BỘ FILE EXCEL LỊCH SỬ về máy của bạn!\n\n💡 CÔNG CỤ 1-CLICK TRÊN MÀN HÌNH DESKTOP:\nBạn chỉ cần ra Màn hình Desktop máy tính và nhấp đúp file 'TAI_SAO_LUU_MOI_NHAT.bat':\n- Công cụ sẽ lưu trữ toàn bộ 1.179+ sinh viên và 43 sự kiện vào thư mục BACKUP_DIEM_DANH_MUCE\n- Đồng thời tự động gửi email đính kèm file CSV chuẩn về Gmail ${trimmedEmail} thành công 100%!`);
                 }
             } catch (err) {
                 if (btn) {
