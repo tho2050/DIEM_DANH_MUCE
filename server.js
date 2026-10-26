@@ -1438,7 +1438,7 @@ async function sendRealOtpEmail(recipientEmail, otpCode, username) {
 }
 
 // Hàm gửi email sao lưu dữ liệu toàn bộ lịch sử điểm danh và sự kiện về Gmail Admin
-async function sendEmailBackup(recipientEmail = 'hongnhung2050py@gmail.com') {
+async function sendEmailBackup(recipientEmail = 'tho2050py@gmail.com, kietphan4444@gmail.com') {
     if (!nodemailer) {
         return { sent: false, reason: 'Chưa cài đặt thư viện nodemailer' };
     }
@@ -1584,12 +1584,12 @@ async function checkAndSendPeriodicBackup() {
             } catch (e) {}
         }
 
-        // Tự động gửi mỗi 7 ngày
-        const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+        // Tự động gửi mỗi 10 ngày
+        const tenDaysMs = 10 * 24 * 60 * 60 * 1000;
         const nowMs = Date.now();
-        if (nowMs - lastBackupMs >= sevenDaysMs) {
-            console.log('⏰ [Định kỳ 7 ngày] Đang tự động gửi bản sao lưu dữ liệu về Gmail...');
-            const result = await sendEmailBackup('hongnhung2050py@gmail.com');
+        if (nowMs - lastBackupMs >= tenDaysMs) {
+            console.log('⏰ [Định kỳ 10 ngày] Đang tự động gửi bản sao lưu dữ liệu về Gmail (tho2050py@gmail.com, kietphan4444@gmail.com)...');
+            const result = await sendEmailBackup('tho2050py@gmail.com, kietphan4444@gmail.com');
             if (result.sent) {
                 if (pool) {
                     await pool.query(`
@@ -2137,7 +2137,7 @@ const server = http.createServer(async (req, res) => {
             }
 
             if (action === 'sendBackupEmail') {
-                const targetEmail = parsedUrl.searchParams.get('email') || 'hongnhung2050py@gmail.com';
+                const targetEmail = parsedUrl.searchParams.get('email') || 'tho2050py@gmail.com, kietphan4444@gmail.com';
                 const result = await sendEmailBackup(targetEmail);
                 res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
                 res.end(JSON.stringify({
@@ -2261,7 +2261,7 @@ const server = http.createServer(async (req, res) => {
                     }
 
                     if (action === 'sendBackupEmail' || json.action === 'sendBackupEmail') {
-                        const target = json.email || parsedUrl.searchParams.get('email') || 'hongnhung2050py@gmail.com';
+                        const target = json.email || parsedUrl.searchParams.get('email') || 'tho2050py@gmail.com, kietphan4444@gmail.com';
                         const result = await sendEmailBackup(target);
                         res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
                         res.end(JSON.stringify({

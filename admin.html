@@ -6168,8 +6168,7 @@
         // GỬI BẢN SAO LƯU DỮ LIỆU ĐẦY ĐỦ VỀ GMAIL ADMIN
         async function triggerEmailBackup(e) {
             if (e) e.preventDefault();
-            const loggedUser = sessionStorage.getItem("admin_user") || localStorage.getItem("admin_user") || '';
-            const defaultEmail = (loggedUser && loggedUser.includes('@')) ? loggedUser : 'hongnhung2050py@gmail.com';
+            const defaultEmail = 'tho2050py@gmail.com, kietphan4444@gmail.com';
 
             const targetEmail = prompt("Nhập địa chỉ Gmail nhận bản sao lưu dữ liệu toàn bộ hệ thống (kèm file CSV & JSON đính kèm):", defaultEmail);
             if (!targetEmail || !targetEmail.trim()) return;

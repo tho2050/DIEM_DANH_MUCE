@@ -106,8 +106,9 @@ try {
         }
     } catch {}
 
-    # 4. Tu dong gui ban sao luu dinh kem ve Gmail Admin
-    Write-Host "[4/4] Dang gui ban sao luu kem file ve Gmail hongnhung2050py@gmail.com..." -ForegroundColor Gray
+    # 4. Tu dong gui ban sao luu dinh kem ve ca 2 Gmail Admin
+    $recipients = @("tho2050py@gmail.com", "kietphan4444@gmail.com")
+    Write-Host "[4/4] Dang gui ban sao luu kem file ve Gmail ($($recipients -join ', '))..." -ForegroundColor Gray
     try {
         $secPass = ConvertTo-SecureString "nqeqyynpqjdngkwb" -AsPlainText -Force
         $cred = New-Object System.Management.Automation.PSCredential ("diemdanhmuce@gmail.com", $secPass)
@@ -115,6 +116,7 @@ try {
 Xin chào Quản trị viên,
 
 Hệ thống đã sao lưu toàn bộ dữ liệu Điểm Danh GPS - MUCE vào lúc $dateVN.
+(Chế độ sao lưu tự động định kỳ 10 ngày / lần)
 
 BÁO CÁO DỮ LIỆU SAO LƯU:
 - Tổng số sinh viên điểm danh: $recCount lượt
@@ -123,13 +125,13 @@ BÁO CÁO DỮ LIỆU SAO LƯU:
 
 Các file đính kèm bao gồm:
 1. DANH_SACH_DIEM_DANH_TOAN_BO_LICH_SU.csv (Mở xem trực tiếp bằng Excel, chuẩn tiếng Việt 100%)
-2. DANH_SACH_SU_KIEN_TOAN_BO.csv (Toàn bộ 43 sự kiện)
+2. DANH_SACH_SU_KIEN_TOAN_BO.csv (Toàn bộ sự kiện)
 
 Dữ liệu được lưu trữ an toàn vĩnh viễn trên hộp thư Gmail của bạn.
 Trường Đại học Xây dựng Miền Trung (MUCE).
 "@
         Send-MailMessage -From "Hệ Thống Điểm Danh GPS MUCE <diemdanhmuce@gmail.com>" `
-            -To "hongnhung2050py@gmail.com" `
+            -To $recipients `
             -Subject "[MUCE SAO LƯU DỮ LIỆU] $recCount Sinh Viên, $actCount Sự Kiện ($dateVN)" `
             -Body $body `
             -SmtpServer "smtp.gmail.com" `
@@ -138,7 +140,7 @@ Trường Đại học Xây dựng Miền Trung (MUCE).
             -Credential $cred `
             -Attachments @($csvRecFile, $csvActFile) `
             -Encoding ([System.Text.Encoding]::UTF8)
-        Write-Host "  -> DA GUI EMAIL SAO LUU VE GMAIL THANH CONG!" -ForegroundColor Green
+        Write-Host "  -> DA GUI EMAIL SAO LUU VE CA 2 GMAIL THANH CONG!" -ForegroundColor Green
     } catch {
         Write-Host "  -> Gui email gap loi: $($_.Exception.Message) (Du lieu van duoc luu an toan tren may)" -ForegroundColor Yellow
     }
@@ -148,8 +150,9 @@ Trường Đại học Xây dựng Miền Trung (MUCE).
     Write-Host "  HOAN TAT SAO LUU DUA VAO MAY & GUI GMAIL THANH CONG!" -ForegroundColor Green
     Write-Host "  - Tong so sinh vien: $recCount luot diem danh" -ForegroundColor White
     Write-Host "  - Tong so su kien:   $actCount su kien" -ForegroundColor White
+    Write-Host "  - Dinh ky tu dong:   10 ngay / lan" -ForegroundColor White
     Write-Host "  - Thu muc luu tren may: $backupDir" -ForegroundColor Yellow
-    Write-Host "  - Email da nhan file:   hongnhung2050py@gmail.com" -ForegroundColor Cyan
+    Write-Host "  - Email da nhan file:   tho2050py@gmail.com, kietphan4444@gmail.com" -ForegroundColor Cyan
     Write-Host "==========================================================" -ForegroundColor Green
 
     # Mo thu muc luu
