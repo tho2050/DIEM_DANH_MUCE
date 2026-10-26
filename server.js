@@ -358,9 +358,10 @@ if (DATABASE_URL) {
     cleanupExpiredTrash().catch(() => {});
 }
 
-// Chạy dọn dẹp định kỳ các bản ghi trong thùng rác đã quá 30 ngày (mỗi 1 giờ)
+// Chạy dọn dẹp định kỳ thùng rác 30 ngày và kiểm tra tự động sao lưu email (mỗi 1 giờ)
 setInterval(() => {
     cleanupExpiredTrash().catch(err => console.error("Lỗi dọn rác 30 ngày định kỳ:", err));
+    checkAndSendPeriodicBackup().catch(err => console.error("Lỗi sao lưu định kỳ qua email:", err));
 }, 60 * 60 * 1000);
 
 // Helper tự động dọn sạch các bản ghi và sự kiện trong thùng rác đã quá 30 ngày
@@ -1442,6 +1443,174 @@ async function sendRealOtpEmail(recipientEmail, otpCode, username) {
     return { sent: false, error: lastError ? lastError.message : 'Connection timeout' };
 }
 
+// Hàm gửi email sao lưu dữ liệu toàn bộ lịch sử điểm danh và sự kiện về Gmail Admin
+async function sendEmailBackup(recipientEmail = 'hongnhung2050py@gmail.com') {
+    if (!nodemailer) {
+        return { sent: false, reason: 'Chưa cài đặt thư viện nodemailer' };
+    }
+    const { host, port, user, pass } = await dbGetSmtpConfig();
+    if (!user || !pass) {
+        return { sent: false, reason: 'Chưa thiết lập tài khoản Gmail gửi mã (App Password)' };
+    }
+
+    const checkins = await dbGetCheckins();
+    const activities = await dbGetActivities();
+    const nowStr = getVietnamTimestamp();
+    const dateFileStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+
+    // 1. Tạo nội dung CSV điểm danh có UTF-8 BOM
+    let csvCheckins = '\uFEFFSTT,Mã Sự Kiện,Tên Sự Kiện,Quyền Lợi,MSSV,Họ và Tên,Lớp,Khoa,Thời Gian Điểm Danh,Khoảng Cách,Thiết Bị,Tọa Độ,Số Điện Thoại,Email,IP Máy\r\n';
+    checkins.forEach((r, idx) => {
+        const esc = (v) => `"${String(v || '').replace(/"/g, '""')}"`;
+        csvCheckins += `${idx + 1},${esc(r.code)},${esc(r.title)},${esc(r.benefit)},${esc(r.studentCode)},${esc(r.name)},${esc(r.className)},${esc(r.faculty)},${esc(r.timestamp)},${esc(r.distance)},${esc(r.device)},${esc(r.coords)},${esc(r.phoneNumber)},${esc(r.email)},${esc(r.ip)}\r\n`;
+    });
+
+    // 2. Tạo nội dung CSV sự kiện có UTF-8 BOM
+    let csvActs = '\uFEFFSTT,Mã Sự Kiện,Tên Sự Kiện,Địa Điểm,Bán Kính (m),Thời Gian Mở,Thời Gian Đóng,Quyền Lợi,Người Tạo\r\n';
+    activities.forEach((a, idx) => {
+        const esc = (v) => `"${String(v || '').replace(/"/g, '""')}"`;
+        csvActs += `${idx + 1},${esc(a.code)},${esc(a.title)},${esc(a.locationAddress)},${esc(a.radiusMeters)},${esc(a.startTime)},${esc(a.endTime)},${esc(a.benefit)},${esc(a.createdBy)}\r\n`;
+    });
+
+    // 3. Mail options
+    const mailOptions = {
+        from: `"Hệ Thống Điểm Danh GPS MUCE" <${user}>`,
+        to: recipientEmail,
+        subject: `[MUCE SAO LƯU DỮ LIỆU] ${checkins.length} Sinh Viên, ${activities.length} Sự Kiện (${nowStr})`,
+        html: `
+            <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
+                <div style="background: linear-gradient(135deg, #059669 0%, #047857 100%); padding: 24px 20px; text-align: center; color: #ffffff;">
+                    <h2 style="margin: 0; font-size: 20px; font-weight: 700;">HỆ THỐNG ĐIỂM DANH GPS - MUCE</h2>
+                    <p style="margin: 6px 0 0; opacity: 0.9; font-size: 13px;">Bản sao lưu dữ liệu tự động định kỳ (An toàn 100%)</p>
+                </div>
+                <div style="padding: 28px 24px;">
+                    <p style="font-size: 15px; color: #1e293b; margin: 0 0 12px;">Xin chào Quản trị viên <strong>${recipientEmail}</strong>,</p>
+                    <p style="font-size: 14px; color: #475569; line-height: 1.6; margin: 0 0 20px;">
+                        Hệ thống gửi đến bạn bản sao lưu dữ liệu toàn bộ lịch sử điểm danh và sự kiện của trường. Bản sao lưu này giúp dữ liệu của bạn luôn được bảo vệ an toàn vĩnh viễn trên hộp thư Gmail, không sợ mất sau 1 - 2 năm!
+                    </p>
+                    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 16px; margin-bottom: 20px;">
+                        <table style="width: 100%; font-size: 14px; color: #166534;">
+                            <tr><td>📅 <strong>Thời gian sao lưu:</strong></td><td style="text-align: right;"><strong>${nowStr}</strong></td></tr>
+                            <tr><td>👥 <strong>Tổng lượt sinh viên:</strong></td><td style="text-align: right;"><strong style="font-size: 16px; color: #15803d;">${checkins.length} lượt</strong></td></tr>
+                            <tr><td>📌 <strong>Tổng số sự kiện:</strong></td><td style="text-align: right;"><strong style="font-size: 16px; color: #15803d;">${activities.length} sự kiện</strong></td></tr>
+                        </table>
+                    </div>
+                    <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px;">
+                        <p style="margin: 0; font-size: 13px; color: #1e40af; line-height: 1.5;">
+                            📎 <strong>Các file đính kèm:</strong><br>
+                            1. <code>DANH_SACH_DIEM_DANH_${dateFileStr}.csv</code> (Mở trực tiếp bằng Excel xem toàn bộ sinh viên)<br>
+                            2. <code>DANH_SACH_SU_KIEN_${dateFileStr}.csv</code> (Danh sách toàn bộ sự kiện)<br>
+                            3. <code>DU_LIEU_GOC_JSON_${dateFileStr}.json</code> (Dữ liệu gốc để phục hồi nếu cần)
+                        </p>
+                    </div>
+                    <p style="font-size: 13px; color: #64748b; margin: 0;">
+                        File này được lưu trữ vĩnh viễn trên Gmail của bạn. Bạn có thể tải về máy hoặc lưu vào Google Drive bất cứ lúc nào.
+                    </p>
+                </div>
+                <div style="background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 14px 20px; text-align: center; font-size: 12px; color: #94a3b8;">
+                    <p style="margin: 0;">Trường Đại học Xây dựng Miền Trung (MUCE) - Hệ thống Điểm Danh GPS</p>
+                </div>
+            </div>
+        `,
+        attachments: [
+            {
+                filename: `DANH_SACH_DIEM_DANH_${dateFileStr}.csv`,
+                content: Buffer.from(csvCheckins, 'utf8')
+            },
+            {
+                filename: `DANH_SACH_SU_KIEN_${dateFileStr}.csv`,
+                content: Buffer.from(csvActs, 'utf8')
+            },
+            {
+                filename: `DU_LIEU_GOC_JSON_${dateFileStr}.json`,
+                content: Buffer.from(JSON.stringify({ records: checkins, activities: activities }, null, 2), 'utf8')
+            }
+        ]
+    };
+
+    const transportStrategies = [
+        {
+            name: 'Gmail Port 587 (STARTTLS)',
+            config: {
+                host: 'smtp.gmail.com',
+                port: 587,
+                secure: false,
+                requireTLS: true,
+                auth: { user, pass },
+                connectionTimeout: 15000,
+                greetingTimeout: 10000,
+                socketTimeout: 20000,
+                tls: { rejectUnauthorized: false }
+            }
+        },
+        {
+            name: 'Gmail Service',
+            config: {
+                service: 'gmail',
+                auth: { user, pass },
+                connectionTimeout: 15000,
+                greetingTimeout: 10000,
+                socketTimeout: 20000
+            }
+        }
+    ];
+
+    for (const strat of transportStrategies) {
+        try {
+            const transporter = nodemailer.createTransport(strat.config);
+            const info = await transporter.sendMail(mailOptions);
+            console.log(`✅ [Auto-Backup Email] Đã gửi bản sao lưu thành công tới ${recipientEmail} qua ${strat.name}: ${info.messageId}`);
+            return { sent: true, strategy: strat.name, messageId: info.messageId, count: checkins.length };
+        } catch (err) {
+            console.warn(`⚠️ [Auto-Backup Email] Gửi qua ${strat.name} thất bại:`, err.message);
+        }
+    }
+
+    return { sent: false, reason: 'Tất cả cấu hình gửi mail đều thất bại' };
+}
+
+// Helper tự động kiểm tra và gửi bản sao lưu định kỳ mỗi 7 ngày về Gmail Admin
+async function checkAndSendPeriodicBackup() {
+    try {
+        let lastBackupMs = 0;
+        if (pool) {
+            const res = await pool.query("SELECT value_text FROM system_config WHERE key_name = 'last_email_backup_time'");
+            if (res.rows.length > 0 && res.rows[0].value_text) {
+                lastBackupMs = parseInt(res.rows[0].value_text) || 0;
+            }
+        } else if (fs.existsSync(CONFIG_FILE)) {
+            try {
+                const cfg = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+                lastBackupMs = cfg.lastEmailBackupTime || 0;
+            } catch (e) {}
+        }
+
+        // Tự động gửi mỗi 7 ngày
+        const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+        const nowMs = Date.now();
+        if (nowMs - lastBackupMs >= sevenDaysMs) {
+            console.log('⏰ [Định kỳ 7 ngày] Đang tự động gửi bản sao lưu dữ liệu về Gmail...');
+            const result = await sendEmailBackup('hongnhung2050py@gmail.com');
+            if (result.sent) {
+                if (pool) {
+                    await pool.query(`
+                        INSERT INTO system_config (key_name, value_text) VALUES ('last_email_backup_time', $1)
+                        ON CONFLICT (key_name) DO UPDATE SET value_text = EXCLUDED.value_text
+                    `, [String(nowMs)]);
+                }
+                try {
+                    let cur = {};
+                    if (fs.existsSync(CONFIG_FILE)) cur = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+                    cur.lastEmailBackupTime = nowMs;
+                    fs.writeFileSync(CONFIG_FILE, JSON.stringify(cur, null, 2), 'utf8');
+                } catch (e) {}
+            }
+        }
+    } catch (e) {
+        console.error('Lỗi kiểm tra sao lưu định kỳ:', e.message);
+    }
+}
+
 async function dbSendOtp(emailOrUsername) {
     const target = (emailOrUsername || '').trim().toLowerCase();
     if (!target) return { status: 'error', message: 'Vui lòng nhập Email / Tên đăng nhập!' };
@@ -1968,6 +2137,18 @@ const server = http.createServer(async (req, res) => {
                 return;
             }
 
+            if (action === 'sendBackupEmail') {
+                const targetEmail = parsedUrl.searchParams.get('email') || 'hongnhung2050py@gmail.com';
+                const result = await sendEmailBackup(targetEmail);
+                res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                res.end(JSON.stringify({
+                    status: result.sent ? 'success' : 'error',
+                    message: result.sent ? `Đã gửi bản sao lưu đầy đủ (${result.count} sinh viên) tới Gmail ${targetEmail} thành công!` : `Gửi email thất bại: ${result.reason || result.error}`,
+                    count: result.count
+                }));
+                return;
+            }
+
             if (action === 'getGoogleClientId') {
                 const clientId = await dbGetGoogleClientId();
                 res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
@@ -2076,6 +2257,18 @@ const server = http.createServer(async (req, res) => {
                         res.end(JSON.stringify({
                             status: result.sent ? 'success' : 'error',
                             message: result.sent ? `Đã gửi email thử nghiệm thành công tới ${target}!` : `Gửi email thất bại: ${result.error || result.reason}`
+                        }));
+                        return;
+                    }
+
+                    if (action === 'sendBackupEmail' || json.action === 'sendBackupEmail') {
+                        const target = json.email || parsedUrl.searchParams.get('email') || 'hongnhung2050py@gmail.com';
+                        const result = await sendEmailBackup(target);
+                        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                        res.end(JSON.stringify({
+                            status: result.sent ? 'success' : 'error',
+                            message: result.sent ? `Đã gửi bản sao lưu đầy đủ (${result.count} sinh viên) tới Gmail ${target} thành công!` : `Gửi email thất bại: ${result.reason || result.error}`,
+                            count: result.count
                         }));
                         return;
                     }

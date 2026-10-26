@@ -1779,6 +1779,11 @@
                                     </li>
                                     <li><a class="dropdown-item py-2 text-secondary small" href="#"
                                             onclick="exportAllEventsExcel(event)"><i class="fa-solid fa-database me-2"></i>Xuất Toàn Bộ Lịch Sử (Tất Cả Mọi Sự Kiện)</a></li>
+                                    <li>
+                                        <hr class="dropdown-divider my-1">
+                                    </li>
+                                    <li><a class="dropdown-item py-2 fw-bold text-primary" href="#"
+                                            onclick="triggerEmailBackup(event)"><i class="fa-solid fa-cloud-arrow-up text-danger me-2"></i>Gửi Bản Sao Lưu Toàn Bộ Về Gmail Ngay</a></li>
                                  </ul>
                             </div>
                             <!-- Nút Thùng Rác Sinh Viên -->
@@ -6158,6 +6163,49 @@
 
             const fileName = `Danh_Sach_Diem_Danh_Tat_Ca_Su_Kien_${new Date().toISOString().slice(0, 10)}.xlsx`;
             XLSX.writeFile(wb, fileName);
+        }
+
+        // GỬI BẢN SAO LƯU DỮ LIỆU ĐẦY ĐỦ VỀ GMAIL ADMIN
+        async function triggerEmailBackup(e) {
+            if (e) e.preventDefault();
+            const loggedUser = sessionStorage.getItem("admin_user") || localStorage.getItem("admin_user") || '';
+            const defaultEmail = (loggedUser && loggedUser.includes('@')) ? loggedUser : 'hongnhung2050py@gmail.com';
+
+            const targetEmail = prompt("Nhập địa chỉ Gmail nhận bản sao lưu dữ liệu toàn bộ hệ thống (kèm file CSV & JSON đính kèm):", defaultEmail);
+            if (!targetEmail || !targetEmail.trim()) return;
+
+            const trimmedEmail = targetEmail.trim();
+            const btn = e && e.target ? e.target.closest('a') : null;
+            const originalHtml = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.style.pointerEvents = 'none';
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2 text-primary"></i>Đang đóng gói và gửi Gmail...';
+            }
+
+            try {
+                const endpoint = (typeof CONFIG !== 'undefined' && CONFIG.googleScriptUrl) ? CONFIG.googleScriptUrl : '/api';
+                const res = await fetch(`${endpoint}?action=sendBackupEmail&email=${encodeURIComponent(trimmedEmail)}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'sendBackupEmail', email: trimmedEmail })
+                });
+                const data = await res.json();
+                if (btn) {
+                    btn.style.pointerEvents = 'auto';
+                    btn.innerHTML = originalHtml;
+                }
+                if (data.status === 'success') {
+                    alert(`✅ GỬI BẢN SAO LƯU THÀNH CÔNG!\n\n${data.message}\n\nĐã đính kèm:\n- File CSV toàn bộ sinh viên (${data.count || 'tất cả'} lượt điểm danh)\n- File CSV toàn bộ sự kiện\n- File JSON cơ sở dữ liệu gốc\n\nVui lòng kiểm tra hộp thư đến (hoặc hòm thư Spam/Rác) của Gmail: ${trimmedEmail}`);
+                } else {
+                    alert(`❌ GỬI EMAIL THẤT BẠI:\n\n${data.message || 'Lỗi không xác định từ máy chủ'}`);
+                }
+            } catch (err) {
+                if (btn) {
+                    btn.style.pointerEvents = 'auto';
+                    btn.innerHTML = originalHtml;
+                }
+                alert(`❌ Lỗi kết nối tới máy chủ khi gửi sao lưu: ${err.message}`);
+            }
         }
 
         // XUẤT 4 FILE EXCEL RIÊNG BIỆT CHO TỪNG KHOA
