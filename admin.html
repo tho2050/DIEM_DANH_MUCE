@@ -6892,12 +6892,8 @@
             if (ben) {
                 checkinUrl += '&benefit=' + encodeURIComponent(ben);
             }
-            if (act && act.startTime) {
-                checkinUrl += '&start=' + encodeURIComponent(act.startTime);
-            }
-            if (act && act.endTime) {
-                checkinUrl += '&end=' + encodeURIComponent(act.endTime);
-            }
+            // Không chèn cố định &start= và &end= vào mã QR để khi Admin gia hạn/sửa ngày giờ sự kiện,
+            // tất cả các mã QR (kể cả đã in ra giấy) sẽ luôn tự động nhận giờ mới nhất từ hệ thống mà không bị hết giờ oan!
 
             // 1. Cập nhật và tạo QR cho trang In Bản Mềm (hidden on-screen)
             document.getElementById('printTitle').textContent = cleanTitle;

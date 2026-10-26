@@ -1363,20 +1363,23 @@
             actCode = decodeTitle(paths[paths.length - 1] || '');
         }
 
-        const list = getActivities(); // Lấy danh sách hoạt động động từ localStorage/config
-        let activity = list.find(a => typeof isSameActivity === 'function' ? isSameActivity(a.code, actCode) : decodeTitle(a.code || '').toLowerCase() === actCode.toLowerCase());
-
-        // Nếu máy này chưa có sự kiện trong LocalStorage (máy mới / thiết bị khác), tự động tải ngay từ máy chủ Server
-        if (!activity && actCode) {
+        // 1. LUÔN ƯU TIÊN TẢI DỮ LIỆU MỚI NHẤT TRỰC TIẾP TỪ MÁY CHỦ SERVER
+        // Đảm bảo khi Admin sửa giờ mở/khóa cổng trên trang Quản Trị, điện thoại quét QR lập tức nhận giờ mới nhất
+        let activity = null;
+        let serverLoaded = false;
+        if (actCode) {
             try {
                 const xhr = new XMLHttpRequest();
                 xhr.open('GET', (CONFIG.googleScriptUrl || '/api') + '?action=getActivities&_t=' + Date.now(), false);
                 xhr.send();
                 if (xhr.status === 200) {
                     const serverList = JSON.parse(xhr.responseText);
-                    if (Array.isArray(serverList)) {
+                    if (Array.isArray(serverList) && serverList.length > 0) {
                         localStorage.setItem("gps_attendance_activities", JSON.stringify(serverList));
                         activity = serverList.find(a => typeof isSameActivity === 'function' ? isSameActivity(a.code, actCode) : decodeTitle(a.code || '').toLowerCase() === actCode.toLowerCase());
+                        if (activity) {
+                            serverLoaded = true;
+                        }
                     }
                 }
             } catch (e) {
@@ -1384,7 +1387,13 @@
             }
         }
 
-        // Nếu không tìm thấy trong LocalStorage nhưng URL có truyền đủ tọa độ và thông tin
+        // 2. Nếu mất mạng hoặc server tạm thời không phản hồi, dùng dữ liệu lưu tạm trong LocalStorage
+        if (!activity) {
+            const list = getActivities();
+            activity = list.find(a => typeof isSameActivity === 'function' ? isSameActivity(a.code, actCode) : decodeTitle(a.code || '').toLowerCase() === actCode.toLowerCase());
+        }
+
+        // 3. Nếu không tìm thấy trong LocalStorage/Server nhưng URL có truyền đủ tọa độ và thông tin
         if (!activity && actCode && actTitle && actLat && actLng) {
             activity = {
                 code: decodeTitle(actCode),
@@ -1398,7 +1407,8 @@
                 startTime: decodeTitle(actStart),
                 endTime: decodeTitle(actEnd)
             };
-        } else if (activity) {
+        } else if (activity && !serverLoaded) {
+            // Chỉ cập nhật từ URL nếu dữ liệu chưa từng được tải từ máy chủ
             if (!activity.startTime && actStart) activity.startTime = decodeTitle(actStart);
             if (!activity.endTime && actEnd) activity.endTime = decodeTitle(actEnd);
         }
@@ -1473,10 +1483,13 @@
                     banner.className = 'alert alert-danger d-flex align-items-center mt-3 mb-0 shadow-sm border border-danger';
                     banner.innerHTML = `
                         <i class="fa-solid fa-clock-rotate-left text-danger fs-3 me-3 flex-shrink-0"></i>
-                        <div>
+                        <div class="flex-grow-1">
                             <strong class="d-block text-danger fs-6 mb-1"><i class="fa-solid fa-lock me-1"></i>CỔNG ĐIỂM DANH ĐÃ KHÓA (HẾT GIỜ)</strong>
                             <span class="small text-dark">${timeStatus.message}</span>
                         </div>
+                        <button type="button" class="btn btn-sm btn-outline-danger ms-2 fw-semibold d-inline-flex align-items-center flex-shrink-0" onclick="refreshActivityLive(true)" title="Kiểm tra lại xem Quản trị viên đã gia hạn thời gian chưa">
+                            <i class="fa-solid fa-rotate me-1"></i>Làm mới
+                        </button>
                     `;
                     banner.classList.remove('d-none');
                 }
@@ -1505,10 +1518,13 @@
                     banner.className = 'alert alert-warning d-flex align-items-center mt-3 mb-0 shadow-sm border border-warning';
                     banner.innerHTML = `
                         <i class="fa-solid fa-hourglass-half text-warning fs-3 me-3 flex-shrink-0"></i>
-                        <div>
+                        <div class="flex-grow-1">
                             <strong class="d-block text-dark fs-6 mb-1"><i class="fa-solid fa-clock me-1"></i>CHƯA ĐẾN THỜI GIAN ĐIỂM DANH</strong>
                             <span class="small text-dark">${timeStatus.message}</span>
                         </div>
+                        <button type="button" class="btn btn-sm btn-outline-warning text-dark ms-2 fw-semibold d-inline-flex align-items-center flex-shrink-0" onclick="refreshActivityLive(true)" title="Kiểm tra lại xem Quản trị viên đã mở cổng chưa">
+                            <i class="fa-solid fa-rotate me-1"></i>Làm mới
+                        </button>
                     `;
                     banner.classList.remove('d-none');
                 }
@@ -1534,11 +1550,61 @@
                     timeBadgeEl.innerHTML = '<i class="fa-solid fa-door-open me-1"></i>Đang mở điểm danh';
                 }
                 if (banner) banner.classList.add('d-none');
+                if (formStatusBadge && formStatusBadge.textContent.includes('HẾT GIỜ')) {
+                    formStatusBadge.className = 'badge bg-success text-white px-3 py-1 rounded-pill fw-bold';
+                    formStatusBadge.innerHTML = '<i class="fa-solid fa-door-open me-1"></i>ĐANG MỞ ĐIỂM DANH';
+                }
+                if (formGpsAlert && formGpsAlert.innerHTML.includes('khóa')) {
+                    formGpsAlert.className = 'alert alert-info py-2 px-3 small mb-3';
+                    formGpsAlert.innerHTML = `<div><i class="fa-solid fa-circle-check text-success me-2"></i>Cổng điểm danh đang mở. Vui lòng xác thực GPS và điền thông tin bên dưới.</div>`;
+                }
+                document.querySelectorAll('#studentForm .form-control').forEach(el => el.disabled = false);
+                if (submitBtn && submitBtn.textContent.includes('KHÓA')) {
+                    submitBtn.disabled = false;
+                    submitBtn.className = 'btn-submit-checkin';
+                    submitBtn.style.cursor = 'pointer';
+                    submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane me-2"></i>Gửi Thông Tin Điểm Danh';
+                }
                 return timeStatus;
             }
         }
+
+        // Hàm làm mới dữ liệu sự kiện trực tiếp từ máy chủ Server (cập nhật giờ mở/khóa cổng tức thì)
+        async function refreshActivityLive(showAlert = false) {
+            if (!actCode) return;
+            try {
+                const res = await fetch((CONFIG.googleScriptUrl || '/api') + '?action=getActivities&_t=' + Date.now());
+                const serverList = await res.json();
+                if (Array.isArray(serverList)) {
+                    localStorage.setItem("gps_attendance_activities", JSON.stringify(serverList));
+                    const latest = serverList.find(a => typeof isSameActivity === 'function' ? isSameActivity(a.code, actCode) : decodeTitle(a.code || '').toLowerCase() === actCode.toLowerCase());
+                    if (latest) {
+                        activity = latest;
+                        const timeTextEl = document.getElementById('actTimeText');
+                        const timeMetaEl = document.getElementById('actTimeMeta');
+                        if (activity.startTime || activity.endTime) {
+                            if (timeTextEl) timeTextEl.textContent = `${activity.startTime || '---'} ➔ ${activity.endTime || '---'}`;
+                            if (timeMetaEl) timeMetaEl.classList.remove('d-none');
+                        }
+                        const newSt = updateActivityTimeStatus();
+                        if (showAlert) {
+                            if (newSt.status === 'OPEN') {
+                                alert(`✅ CỔNG ĐIỂM DANH ĐANG MỞ!\n\nThời gian cập nhật mới nhất:\n${activity.startTime || ''} ➔ ${activity.endTime || ''}\n\nBạn có thể tiến hành xác thực GPS và điểm danh ngay.`);
+                            } else {
+                                alert(`Thời gian sự kiện:\n${activity.startTime || ''} ➔ ${activity.endTime || ''}\n\nTrạng thái: ${newSt.message}`);
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                if (showAlert) alert('Không thể kết nối máy chủ để làm mới. Vui lòng kiểm tra kết nối mạng!');
+            }
+        }
+
         updateActivityTimeStatus();
         setInterval(updateActivityTimeStatus, 2000);
+        setInterval(() => { refreshActivityLive(false); }, 10000);
+        window.addEventListener('focus', () => { refreshActivityLive(false); });
         if (document.getElementById('subBarRadius')) {
             document.getElementById('subBarRadius').textContent = activity.radiusMeters;
         }
