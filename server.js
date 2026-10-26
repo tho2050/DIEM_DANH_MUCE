@@ -1523,7 +1523,7 @@ async function sendEmailBackup(recipientEmail = 'hongnhung2050py@gmail.com') {
             },
             {
                 filename: `DU_LIEU_GOC_JSON_${dateFileStr}.json`,
-                content: Buffer.from(JSON.stringify({ records: checkins, activities: activities }, null, 2), 'utf8')
+                content: Buffer.from(JSON.stringify({ records: checkins, activities: activities }), 'utf8')
             }
         ]
     };
@@ -1537,9 +1537,9 @@ async function sendEmailBackup(recipientEmail = 'hongnhung2050py@gmail.com') {
                 secure: false,
                 requireTLS: true,
                 auth: { user, pass },
-                connectionTimeout: 15000,
-                greetingTimeout: 10000,
-                socketTimeout: 20000,
+                connectionTimeout: 20000,
+                greetingTimeout: 15000,
+                socketTimeout: 60000,
                 tls: { rejectUnauthorized: false }
             }
         },
@@ -1548,25 +1548,41 @@ async function sendEmailBackup(recipientEmail = 'hongnhung2050py@gmail.com') {
             config: {
                 service: 'gmail',
                 auth: { user, pass },
+                connectionTimeout: 20000,
+                greetingTimeout: 15000,
+                socketTimeout: 60000
+            }
+        },
+        {
+            name: 'Gmail Port 465 (SSL)',
+            config: {
+                host: 'smtp.gmail.com',
+                port: 465,
+                secure: true,
+                auth: { user, pass },
                 connectionTimeout: 15000,
                 greetingTimeout: 10000,
-                socketTimeout: 20000
+                socketTimeout: 50000,
+                tls: { rejectUnauthorized: false }
             }
         }
     ];
 
+    let lastError = null;
     for (const strat of transportStrategies) {
         try {
+            console.log(`📡 [Auto-Backup Email] Đang gửi tới ${recipientEmail} qua [${strat.name}]...`);
             const transporter = nodemailer.createTransport(strat.config);
             const info = await transporter.sendMail(mailOptions);
             console.log(`✅ [Auto-Backup Email] Đã gửi bản sao lưu thành công tới ${recipientEmail} qua ${strat.name}: ${info.messageId}`);
             return { sent: true, strategy: strat.name, messageId: info.messageId, count: checkins.length };
         } catch (err) {
             console.warn(`⚠️ [Auto-Backup Email] Gửi qua ${strat.name} thất bại:`, err.message);
+            lastError = err;
         }
     }
 
-    return { sent: false, reason: 'Tất cả cấu hình gửi mail đều thất bại' };
+    return { sent: false, reason: lastError ? lastError.message : 'Tất cả cấu hình gửi mail đều thất bại' };
 }
 
 // Helper tự động kiểm tra và gửi bản sao lưu định kỳ mỗi 7 ngày về Gmail Admin
