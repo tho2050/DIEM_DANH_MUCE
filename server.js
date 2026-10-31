@@ -2090,6 +2090,14 @@ const server = http.createServer(async (req, res) => {
 
             if (action === 'dbDiagnostics') {
                 let info = { hasPool: !!pool };
+                if (DATABASE_URL) {
+                    try {
+                        const u = new URL(DATABASE_URL);
+                        info.dbHost = u.hostname;
+                        info.dbUser = u.username;
+                        info.dbDatabase = u.pathname;
+                    } catch (e) {}
+                }
                 if (pool) {
                     try {
                         const checkinsCount = await pool.query('SELECT COUNT(*) FROM checkins');
