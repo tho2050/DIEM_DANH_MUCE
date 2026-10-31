@@ -172,12 +172,32 @@ if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
+const DEFAULT_DATA_DIR = path.join(__dirname, 'default_data');
 const ACTIVITIES_FILE = path.join(DATA_DIR, 'activities.json');
 const DELETED_ACTIVITIES_FILE = path.join(DATA_DIR, 'deleted_activities.json');
 const RECORDS_FILE = path.join(DATA_DIR, 'records.json');
 const DELETED_RECORDS_FILE = path.join(DATA_DIR, 'deleted_records.json');
 const ACCOUNTS_FILE = path.join(DATA_DIR, 'accounts.json');
 const CONFIG_FILE = path.join(DATA_DIR, 'admin_config.json');
+
+const DEFAULT_ACTIVITIES_FILE = path.join(DEFAULT_DATA_DIR, 'activities.json');
+const DEFAULT_RECORDS_FILE = path.join(DEFAULT_DATA_DIR, 'records.json');
+const DEFAULT_ACCOUNTS_FILE = path.join(DEFAULT_DATA_DIR, 'accounts.json');
+
+// Tự động nạp dữ liệu ban đầu từ default_data nếu file chưa tồn tại
+try {
+    if (!fs.existsSync(ACTIVITIES_FILE) && fs.existsSync(DEFAULT_ACTIVITIES_FILE)) {
+        fs.copyFileSync(DEFAULT_ACTIVITIES_FILE, ACTIVITIES_FILE);
+    }
+    if (!fs.existsSync(RECORDS_FILE) && fs.existsSync(DEFAULT_RECORDS_FILE)) {
+        fs.copyFileSync(DEFAULT_RECORDS_FILE, RECORDS_FILE);
+    }
+    if (!fs.existsSync(ACCOUNTS_FILE) && fs.existsSync(DEFAULT_ACCOUNTS_FILE)) {
+        fs.copyFileSync(DEFAULT_ACCOUNTS_FILE, ACCOUNTS_FILE);
+    }
+} catch (e) {
+    console.error('Lỗi khởi tạo file App_Data từ default_data:', e);
+}
 
 // Khởi tạo PostgreSQL Pool nếu có DATABASE_URL
 let pool = null;
@@ -453,35 +473,55 @@ function getLocalIp() {
 
 // Helpers lấy/lưu dữ liệu sự kiện
 async function dbGetActivities() {
+    let rows = [];
+    let sqlSuccess = false;
     if (pool) {
         try {
             const res = await pool.query('SELECT code, title, description, location_address as "locationAddress", latitude, longitude, radius_meters as "radiusMeters", start_time as "startTime", end_time as "endTime", COALESCE(NULLIF(created_by, \'\'), \'hongnhung\') as "createdBy", COALESCE(benefit, \'\') as "benefit" FROM activities WHERE is_deleted IS NOT TRUE ORDER BY created_at DESC');
-            return res.rows.map(a => ({ ...a, code: decodeTitle(a.code), title: decodeTitle(a.title) }));
-        } catch (e) { console.error('Lỗi đọc activities từ SQL:', e); }
+            rows = res.rows.map(a => ({ ...a, code: decodeTitle(a.code), title: decodeTitle(a.title) }));
+            sqlSuccess = true;
+        } catch (e) { console.error('Lỗi đọc activities từ SQL:', e.message); }
     }
-    if (fs.existsSync(ACTIVITIES_FILE)) {
-        try { 
-            const list = JSON.parse(fs.readFileSync(ACTIVITIES_FILE, 'utf8'));
-            if (Array.isArray(list)) return list.map(a => ({ ...a, code: decodeTitle(a.code), title: decodeTitle(a.title), createdBy: a.createdBy || 'hongnhung', benefit: a.benefit || '' }));
-        } catch (e) {}
+    if (!sqlSuccess || rows.length === 0) {
+        if (fs.existsSync(ACTIVITIES_FILE)) {
+            try { 
+                const list = JSON.parse(fs.readFileSync(ACTIVITIES_FILE, 'utf8'));
+                if (Array.isArray(list) && list.length > 0) {
+                    rows = list.map(a => ({ ...a, code: decodeTitle(a.code), title: decodeTitle(a.title), createdBy: a.createdBy || 'hongnhung', benefit: a.benefit || '' }));
+                }
+            } catch (e) {}
+        }
+        if (rows.length === 0 && fs.existsSync(DEFAULT_ACTIVITIES_FILE)) {
+            try {
+                const list = JSON.parse(fs.readFileSync(DEFAULT_ACTIVITIES_FILE, 'utf8'));
+                if (Array.isArray(list) && list.length > 0) {
+                    rows = list.map(a => ({ ...a, code: decodeTitle(a.code), title: decodeTitle(a.title), createdBy: a.createdBy || 'hongnhung', benefit: a.benefit || '' }));
+                }
+            } catch (e) {}
+        }
     }
-    return [];
+    return rows;
 }
 
 async function dbGetDeletedActivities() {
+    let rows = [];
+    let sqlSuccess = false;
     if (pool) {
         try {
             const res = await pool.query('SELECT code, title, description, location_address as "locationAddress", latitude, longitude, radius_meters as "radiusMeters", start_time as "startTime", end_time as "endTime", COALESCE(NULLIF(created_by, \'\'), \'hongnhung\') as "createdBy", deleted_at as "deletedAt", COALESCE(benefit, \'\') as "benefit" FROM activities WHERE is_deleted = TRUE ORDER BY deleted_at DESC');
-            return res.rows.map(a => ({ ...a, code: decodeTitle(a.code), title: decodeTitle(a.title) }));
-        } catch (e) { console.error('Lỗi đọc deleted activities từ SQL:', e); }
+            rows = res.rows.map(a => ({ ...a, code: decodeTitle(a.code), title: decodeTitle(a.title) }));
+            sqlSuccess = true;
+        } catch (e) { console.error('Lỗi đọc deleted activities từ SQL:', e.message); }
     }
-    if (fs.existsSync(DELETED_ACTIVITIES_FILE)) {
-        try { 
-            const list = JSON.parse(fs.readFileSync(DELETED_ACTIVITIES_FILE, 'utf8'));
-            if (Array.isArray(list)) return list.map(a => ({ ...a, code: decodeTitle(a.code), title: decodeTitle(a.title), createdBy: a.createdBy || 'hongnhung', benefit: a.benefit || '' }));
-        } catch (e) {}
+    if (!sqlSuccess || rows.length === 0) {
+        if (fs.existsSync(DELETED_ACTIVITIES_FILE)) {
+            try { 
+                const list = JSON.parse(fs.readFileSync(DELETED_ACTIVITIES_FILE, 'utf8'));
+                if (Array.isArray(list)) rows = list.map(a => ({ ...a, code: decodeTitle(a.code), title: decodeTitle(a.title), createdBy: a.createdBy || 'hongnhung', benefit: a.benefit || '' }));
+            } catch (e) {}
+        }
     }
-    return [];
+    return rows;
 }
 
 async function dbSaveActivity(act) {
@@ -514,8 +554,7 @@ async function dbSaveActivity(act) {
                 parseInt(act.radiusMeters) || 50, act.startTime || '', act.endTime || '',
                 act.createdBy || 'hongnhung', act.benefit || ''
             ]);
-            return true;
-        } catch (e) { console.error('Lỗi ghi activity đơn vào SQL:', e); }
+        } catch (e) { console.error('Lỗi ghi activity đơn vào SQL:', e.message); }
     }
     let list = await dbGetActivities();
     const idx = list.findIndex(a => a.code === act.code);
@@ -563,8 +602,7 @@ async function dbSaveActivities(activitiesList) {
                     act.createdBy || 'hongnhung', act.benefit || ''
                 ]);
             }
-            return true;
-        } catch (e) { console.error('Lỗi ghi activities vào SQL:', e); }
+        } catch (e) { console.error('Lỗi ghi activities vào SQL:', e.message); }
     }
     fs.writeFileSync(ACTIVITIES_FILE, JSON.stringify(activitiesList, null, 2), 'utf8');
     return true;
@@ -759,6 +797,7 @@ function sortAttendanceRecords(records, activities = []) {
 // Helpers lấy/lưu điểm danh
 async function dbGetCheckins() {
     let rows = [];
+    let sqlSuccess = false;
     if (pool) {
         try {
             const res = await pool.query('SELECT id, timestamp, code, title, student_code as "studentCode", name, class_name as "className", faculty, phone_number as "phoneNumber", email, coords, distance, device, ip, device_uuid as "deviceUuid", created_at as "createdAt" FROM checkins WHERE is_deleted IS NOT TRUE ORDER BY id DESC');
@@ -776,22 +815,30 @@ async function dbGetCheckins() {
                 }
                 return r;
             });
-        } catch (e) { console.error('Lỗi đọc checkins từ SQL:', e); }
-    } else if (fs.existsSync(RECORDS_FILE)) {
-        try { 
-            rows = JSON.parse(fs.readFileSync(RECORDS_FILE, 'utf8')); 
-            if (Array.isArray(rows)) {
-                rows = rows.filter(r => !r.isDeleted);
-                rows.forEach(r => { 
-                    if (r && r.code) r.code = decodeTitle(r.code);
-                    if (r && r.title) r.title = decodeTitle(r.title); 
-                    if (r && r.code && (r.code.includes('15/10') || r.code.includes('15-10')) && (r.code.toLowerCase().includes('chiều') || r.code.toLowerCase().includes('chieu') || (r.title && r.title.toLowerCase().includes('chiều'))) && !r.code.toLowerCase().includes('sáng')) {
-                        r.code = '15/10–PPHƯỜNG CHIỀU';
-                        r.title = 'Hỗ trợ hộ chuyển đổi số tại phường buổi chiều';
-                    }
-                });
-            }
-        } catch (e) {}
+            sqlSuccess = true;
+        } catch (e) { console.error('Lỗi đọc checkins từ SQL:', e.message); }
+    }
+    
+    // Nếu SQL không có hoặc SQL bị lỗi (ví dụ vượt hạn ngạch Render) hoặc rỗng, lấy từ RECORDS_FILE hoặc DEFAULT_RECORDS_FILE
+    if (!sqlSuccess || rows.length === 0) {
+        let fList = [];
+        if (fs.existsSync(RECORDS_FILE)) {
+            try { fList = JSON.parse(fs.readFileSync(RECORDS_FILE, 'utf8')); } catch (e) {}
+        }
+        if ((!Array.isArray(fList) || fList.length === 0) && fs.existsSync(DEFAULT_RECORDS_FILE)) {
+            try { fList = JSON.parse(fs.readFileSync(DEFAULT_RECORDS_FILE, 'utf8')); } catch (e) {}
+        }
+        if (Array.isArray(fList)) {
+            rows = fList.filter(r => !r.isDeleted);
+            rows.forEach(r => { 
+                if (r && r.code) r.code = decodeTitle(r.code);
+                if (r && r.title) r.title = decodeTitle(r.title); 
+                if (r && r.code && (r.code.includes('15/10') || r.code.includes('15-10')) && (r.code.toLowerCase().includes('chiều') || r.code.toLowerCase().includes('chieu') || (r.title && r.title.toLowerCase().includes('chiều'))) && !r.code.toLowerCase().includes('sáng')) {
+                    r.code = '15/10–PPHƯỜNG CHIỀU';
+                    r.title = 'Hỗ trợ hộ chuyển đổi số tại phường buổi chiều';
+                }
+            });
+        }
     }
     const activities = await dbGetActivities();
     const actMap = {};
@@ -815,6 +862,7 @@ async function dbGetCheckins() {
 
 async function dbGetDeletedCheckins() {
     let rows = [];
+    let sqlSuccess = false;
     if (pool) {
         try {
             const res = await pool.query(`
@@ -835,17 +883,21 @@ async function dbGetDeletedCheckins() {
                 }
                 return r;
             });
-        } catch (e) { console.error('Lỗi đọc deleted checkins từ SQL:', e); }
-    } else if (fs.existsSync(DELETED_RECORDS_FILE)) {
-        try {
-            rows = JSON.parse(fs.readFileSync(DELETED_RECORDS_FILE, 'utf8'));
-            if (Array.isArray(rows)) {
-                rows.forEach(r => {
-                    if (r && r.code) r.code = decodeTitle(r.code);
-                    if (r && r.title) r.title = decodeTitle(r.title);
-                });
-            }
-        } catch (e) {}
+            sqlSuccess = true;
+        } catch (e) { console.error('Lỗi đọc deleted checkins từ SQL:', e.message); }
+    }
+    if (!sqlSuccess || rows.length === 0) {
+        if (fs.existsSync(DELETED_RECORDS_FILE)) {
+            try {
+                rows = JSON.parse(fs.readFileSync(DELETED_RECORDS_FILE, 'utf8'));
+                if (Array.isArray(rows)) {
+                    rows.forEach(r => {
+                        if (r && r.code) r.code = decodeTitle(r.code);
+                        if (r && r.title) r.title = decodeTitle(r.title);
+                    });
+                }
+            } catch (e) {}
+        }
     }
     const activities = await dbGetActivities();
     const actMap = {};
@@ -1085,15 +1137,19 @@ async function dbSaveCheckin(record) {
                 record.phoneNumber || '', record.email || '', record.coords || '',
                 record.distance || '', record.device || '', record.ip || '', record.deviceUuid || ''
             ]);
-            return true;
-        } catch (e) { console.error('Lỗi ghi checkin vào SQL:', e); }
+        } catch (e) { console.error('Lỗi ghi checkin vào SQL:', e.message); }
     }
     let list = [];
     if (fs.existsSync(RECORDS_FILE)) {
         try { list = JSON.parse(fs.readFileSync(RECORDS_FILE, 'utf8')); } catch (e) {}
+    } else if (fs.existsSync(DEFAULT_RECORDS_FILE)) {
+        try { list = JSON.parse(fs.readFileSync(DEFAULT_RECORDS_FILE, 'utf8')); } catch (e) {}
     }
     if (!record.timestamp) {
         record.timestamp = getVietnamTimestamp();
+    }
+    if (!record.id) {
+        record.id = Date.now();
     }
     list.unshift(record);
     fs.writeFileSync(RECORDS_FILE, JSON.stringify(list, null, 2), 'utf8');
@@ -1125,23 +1181,31 @@ async function dbSaveBatchCheckins(records) {
                     r.ip || '127.0.0.1', r.deviceUuid || ''
                 ]);
             }
-            return { status: 'success', count: records.length, message: `Đã nhập thành công ${records.length} lượt điểm danh từ Excel!` };
         } catch (e) {
-            console.error('Lỗi batch checkin SQL:', e);
-            return { status: 'error', message: 'SQL Error: ' + e.message, detail: e.detail };
+            console.error('Lỗi batch checkin SQL:', e.message);
         }
     }
     
     let list = [];
     if (fs.existsSync(RECORDS_FILE)) {
         try { list = JSON.parse(fs.readFileSync(RECORDS_FILE, 'utf8')); } catch (e) {}
+    } else if (fs.existsSync(DEFAULT_RECORDS_FILE)) {
+        try { list = JSON.parse(fs.readFileSync(DEFAULT_RECORDS_FILE, 'utf8')); } catch (e) {}
     }
+    const existingKeySet = new Set(list.map(x => `${(x.studentCode || '').trim()}_${(x.code || '').trim()}`));
+    let addedCount = 0;
     records.slice().reverse().forEach(r => {
         if (!r.timestamp) r.timestamp = getVietnamTimestamp();
-        list.unshift(r);
+        const key = `${(r.studentCode || '').trim()}_${(r.code || '').trim()}`;
+        if (!existingKeySet.has(key)) {
+            if (!r.id) r.id = Date.now() + Math.floor(Math.random() * 1000);
+            list.unshift(r);
+            existingKeySet.add(key);
+            addedCount++;
+        }
     });
     fs.writeFileSync(RECORDS_FILE, JSON.stringify(list, null, 2), 'utf8');
-    return { status: 'success', count: records.length, message: `Đã nhập ${records.length} bản ghi!` };
+    return { status: 'success', count: addedCount, message: `Đã nhập thành công ${addedCount} bản ghi!` };
 }
 
 // Helpers Quản Lý Tài Khoản (Accounts)
@@ -2034,10 +2098,16 @@ const server = http.createServer(async (req, res) => {
                         info.checkins = parseInt(checkinsCount.rows[0].count);
                         info.activities = parseInt(activitiesCount.rows[0].count);
                         info.accounts = parseInt(accountsCount.rows[0].count);
+                        info.sqlStatus = 'connected';
                     } catch (e) {
+                        info.sqlStatus = 'error';
                         info.error = e.message;
                     }
                 }
+                const acts = await dbGetActivities();
+                const recs = await dbGetCheckins();
+                info.activeActivities = acts.length;
+                info.activeRecords = recs.length;
                 res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
                 res.end(JSON.stringify(info));
                 return;
