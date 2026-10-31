@@ -1126,7 +1126,10 @@ async function dbSaveBatchCheckins(records) {
                 ]);
             }
             return { status: 'success', count: records.length, message: `Đã nhập thành công ${records.length} lượt điểm danh từ Excel!` };
-        } catch (e) { console.error('Lỗi batch checkin SQL:', e); }
+        } catch (e) {
+            console.error('Lỗi batch checkin SQL:', e);
+            return { status: 'error', message: 'SQL Error: ' + e.message, detail: e.detail };
+        }
     }
     
     let list = [];
@@ -2018,6 +2021,25 @@ const server = http.createServer(async (req, res) => {
                 const list = await dbGetCheckins();
                 res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
                 res.end(JSON.stringify(list));
+                return;
+            }
+
+            if (action === 'dbDiagnostics') {
+                let info = { hasPool: !!pool };
+                if (pool) {
+                    try {
+                        const checkinsCount = await pool.query('SELECT COUNT(*) FROM checkins');
+                        const activitiesCount = await pool.query('SELECT COUNT(*) FROM activities');
+                        const accountsCount = await pool.query('SELECT COUNT(*) FROM accounts');
+                        info.checkins = parseInt(checkinsCount.rows[0].count);
+                        info.activities = parseInt(activitiesCount.rows[0].count);
+                        info.accounts = parseInt(accountsCount.rows[0].count);
+                    } catch (e) {
+                        info.error = e.message;
+                    }
+                }
+                res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                res.end(JSON.stringify(info));
                 return;
             }
 
