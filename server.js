@@ -344,9 +344,8 @@ if (DATABASE_URL) {
                                     c1.device_fingerprint <> '' 
                                     AND c1.device_fingerprint = c2.device_fingerprint
                                     AND c1.ip <> '' AND c1.ip = c2.ip
-                                    AND c1.coords <> '' AND c1.coords <> '0.000000, 0.000000' AND c1.coords <> '0, 0'
-                                    AND c1.coords = c2.coords
-                                    AND NOT (c1.phone_number <> c2.phone_number AND c1.device_uuid <> c2.device_uuid)
+                                    AND c1.coords <> '' AND c1.coords NOT ILIKE '0.000%'
+                                    AND SUBSTRING(c1.coords FROM 1 FOR 7) = SUBSTRING(c2.coords FROM 1 FOR 7)
                                 )
                             )
                       );
@@ -372,9 +371,8 @@ if (DATABASE_URL) {
                                     c1.device_fingerprint <> '' 
                                     AND c1.device_fingerprint = c2.device_fingerprint
                                     AND c1.ip <> '' AND c1.ip = c2.ip
-                                    AND c1.coords <> '' AND c1.coords <> '0.000000, 0.000000' AND c1.coords <> '0, 0'
-                                    AND c1.coords = c2.coords
-                                    AND NOT (c1.phone_number <> c2.phone_number AND c1.device_uuid <> c2.device_uuid)
+                                    AND c1.coords <> '' AND c1.coords NOT ILIKE '0.000%'
+                                    AND SUBSTRING(c1.coords FROM 1 FOR 7) = SUBSTRING(c2.coords FROM 1 FOR 7)
                                 )
                             )
                       );
@@ -2035,6 +2033,23 @@ async function dbSetGoogleClientId(newId) {
     }
 }
 
+// Tính khoảng cách giữa 2 tọa độ GPS (mét) phục vụ phát hiện xóa cache trên cùng 1 máy
+function calcGpsDistance(coords1, coords2) {
+    if (!coords1 || !coords2) return 999999;
+    const p1 = String(coords1).split(',').map(x => parseFloat(x.trim()));
+    const p2 = String(coords2).split(',').map(x => parseFloat(x.trim()));
+    if (p1.length !== 2 || p2.length !== 2 || isNaN(p1[0]) || isNaN(p1[1]) || isNaN(p2[0]) || isNaN(p2[1])) return 999999;
+    if (Math.abs(p1[0]) < 1.0 && Math.abs(p1[1]) < 1.0) return 999999;
+    if (Math.abs(p2[0]) < 1.0 && Math.abs(p2[1]) < 1.0) return 999999;
+
+    const R = 6371e3;
+    const toRad = v => v * Math.PI / 180;
+    const dLat = toRad(p2[0] - p1[0]);
+    const dLon = toRad(p2[1] - p1[1]);
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(p1[0])) * Math.cos(toRad(p2[0])) * Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 const server = http.createServer(async (req, res) => {
     const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
     let pathname = parsedUrl.pathname;
@@ -2658,41 +2673,42 @@ const server = http.createServer(async (req, res) => {
                         }
                     }
 
-                    // TRƯỜNG HỢP 3: Mở tab ẩn danh / Xóa cache trên cùng 1 máy
-                    // (Phân biệt 2 máy cùng dòng: 2 máy thật khác nhau có deviceUuid khác nhau VÀ SĐT khác nhau -> KHÔNG BỊ GẮN CỜ)
-                    // Chỉ gắn cờ khi: Cùng Dấu vân tay phần cứng VÀ Cùng IP mạng VÀ Cùng tọa độ GPS vệ tinh THẬT (khác 0.000000, 0.000000)
+                    // TRƯỜNG HỢP 3: Mở tab ẩn danh / Xóa cache trên cùng 1 máy (kể cả Cốc Cốc, Chrome)
+                    // Dù có xóa sạch bộ nhớ (UUID mới) và nhập SĐT khác của bạn bè:
+                    // Con chip phần cứng (devFp) + Mạng IP + Tọa độ GPS vệ tinh thực tế cách nhau dưới 15m
+                    // => Chắc chắn là cùng 1 chiếc điện thoại đang đứng nguyên 1 chỗ điểm danh hộ!
                     if (!fraudFlag && devFp && devFp.length >= 6) {
                         const prevFp = existingCheckins.find(r => {
                             if (!isSameActivity(r.code, json.code)) return false;
                             if (String(r.studentCode || '').trim().toLowerCase() === sCode.toLowerCase()) return false;
                             
+                            // 1. Dấu vân tay phần cứng giống hệt nhau
                             const matchFp = (r.deviceFingerprint && String(r.deviceFingerprint).trim() === devFp);
                             if (!matchFp) return false;
 
+                            // 2. Cùng mạng IP (Wi-Fi hoặc cùng trạm mạng)
                             const sameIp = (clientIp && clientIp !== '127.0.0.1' && String(r.ip || '').trim() === clientIp);
                             if (!sameIp) return false;
 
-                            // Nếu là 2 máy thật có Device UUID khác nhau VÀ Số điện thoại khác nhau:
-                            const diffUuid = (devUuid && r.deviceUuid && String(r.deviceUuid).trim() !== devUuid);
-                            const diffPhone = (phone && r.phoneNumber && String(r.phoneNumber).trim() !== phone);
-                            if (diffUuid && diffPhone) {
-                                return false; // Hai điện thoại riêng biệt của 2 sinh viên -> HỢP LỆ!
+                            // 3. Khoảng cách GPS vệ tinh thực tế cực gần (dưới 15 mét)
+                            const dist = calcGpsDistance(coords, r.coords);
+                            if (dist <= 15) {
+                                return true;
                             }
 
-                            // Kiểm tra tọa độ GPS vệ tinh thực tế (bỏ qua tọa độ rỗng hoặc 0.000000, 0.000000)
-                            const isRealGps = (c) => {
-                                const s = String(c || '').trim();
-                                return s && s !== '0.000000, 0.000000' && s !== '0, 0' && s !== '0,0';
-                            };
+                            // 4. Hoặc nếu cùng SĐT hoặc cùng UUID
+                            if (phone && r.phoneNumber && String(r.phoneNumber).trim() === phone) return true;
+                            if (devUuid && r.deviceUuid && String(r.deviceUuid).trim() === devUuid) return true;
 
-                            const sameRealCoords = isRealGps(coords) && isRealGps(r.coords) && (String(r.coords || '').trim() === coords);
-                            return sameRealCoords;
+                            return false;
                         });
 
                         if (prevFp) {
+                            const distVal = calcGpsDistance(coords, prevFp.coords);
+                            const distText = distVal < 1000 ? `cách nhau chỉ ${distVal.toFixed(1)}m` : 'trùng vị trí';
                             fraudFlag = 'SUSPICIOUS_SHARED_DEVICE';
-                            fraudNote = `Nghi vấn điểm danh hộ: Dấu vân tay phần cứng và vị trí mạng/GPS trùng khớp với SV "${prevFp.name || ''}" (MSSV: ${prevFp.studentCode || ''}) lúc ${prevFp.timestamp || ''}`;
-                            console.warn(`⚠️ [CẢNH BÁO ĐIỂM DANH HỘ - HARDWARE/IP/GPS] Thiết bị [${devFp}] vừa dùng cho MSSV ${sCode}, trước đó đã dùng cho MSSV ${prevFp.studentCode}`);
+                            fraudNote = `Nghi vấn điểm danh hộ (Xóa cache/Tab ẩn danh): Cùng phần cứng máy, IP và GPS ${distText} với SV "${prevFp.name || ''}" (MSSV: ${prevFp.studentCode || ''}) lúc ${prevFp.timestamp || ''}`;
+                            console.warn(`⚠️ [CẢNH BÁO ĐIỂM DANH HỘ - COCCOC/CACHE] Thiết bị [${devFp}] vừa dùng cho MSSV ${sCode}, trước đó đã dùng cho MSSV ${prevFp.studentCode}`);
                         }
                     }
 
