@@ -1002,36 +1002,59 @@ async function dbDeleteCheckinRecord(id, studentCode, code) {
 
     if (pool) {
         try {
-            if (numId && cleanSc) {
+            if (numId) {
+                // CHỈ XÓA ĐÚNG DUY NHẤT 1 BẢN GHI CÓ ID NÀY (Không xóa lan sang bản ghi trùng tên/trùng MSSV khác)!
                 await pool.query(`
                     UPDATE checkins 
                     SET is_deleted = TRUE, deleted_at = $1, deleted_at_time = CURRENT_TIMESTAMP
-                    WHERE id = $2 
-                       OR (LOWER(TRIM(student_code)) = LOWER($3) AND (UPPER(TRIM(code)) = UPPER($4) OR $4 = ''))
-                `, [delTime, numId, cleanSc, cleanCode]);
-            } else if (numId) {
-                await pool.query('UPDATE checkins SET is_deleted = TRUE, deleted_at = $1, deleted_at_time = CURRENT_TIMESTAMP WHERE id = $2', [delTime, numId]);
+                    WHERE id = $2
+                `, [delTime, numId]);
             } else if (cleanSc && cleanCode) {
-                await pool.query('UPDATE checkins SET is_deleted = TRUE, deleted_at = $1, deleted_at_time = CURRENT_TIMESTAMP WHERE LOWER(TRIM(student_code)) = LOWER($2) AND UPPER(TRIM(code)) = UPPER($3)', [delTime, cleanSc, cleanCode]);
+                // Fallback nếu không có ID: chỉ xóa đúng 1 bản ghi gần nhất (LIMIT 1)
+                await pool.query(`
+                    UPDATE checkins 
+                    SET is_deleted = TRUE, deleted_at = $1, deleted_at_time = CURRENT_TIMESTAMP
+                    WHERE id = (
+                        SELECT id FROM checkins 
+                        WHERE is_deleted IS NOT TRUE 
+                          AND LOWER(TRIM(student_code)) = LOWER($2) 
+                          AND UPPER(TRIM(code)) = UPPER($3)
+                        ORDER BY id DESC LIMIT 1
+                    )
+                `, [delTime, cleanSc, cleanCode]);
             } else if (cleanSc) {
-                await pool.query('UPDATE checkins SET is_deleted = TRUE, deleted_at = $1, deleted_at_time = CURRENT_TIMESTAMP WHERE LOWER(TRIM(student_code)) = LOWER($2)', [delTime, cleanSc]);
+                await pool.query(`
+                    UPDATE checkins 
+                    SET is_deleted = TRUE, deleted_at = $1, deleted_at_time = CURRENT_TIMESTAMP
+                    WHERE id = (
+                        SELECT id FROM checkins 
+                        WHERE is_deleted IS NOT TRUE 
+                          AND LOWER(TRIM(student_code)) = LOWER($2)
+                        ORDER BY id DESC LIMIT 1
+                    )
+                `, [delTime, cleanSc]);
             }
             return { status: 'success', message: 'Đã chuyển sinh viên vào thùng rác (sẽ tự hủy sau 30 ngày)!' };
         } catch (e) { console.error('Lỗi soft delete checkin SQL:', e); }
     }
 
-    // Fallback local
+    // Fallback local: Chỉ xóa đúng 1 bản ghi
     let list = [];
     if (fs.existsSync(RECORDS_FILE)) {
         try { list = JSON.parse(fs.readFileSync(RECORDS_FILE, 'utf8')); } catch (e) {}
     }
     const toDelete = [];
+    let deletedOne = false;
     list = list.filter(r => {
+        if (deletedOne) return true;
         const match = (numId && r.id == numId) ||
-            (cleanSc && cleanCode && String(r.studentCode || '').trim().toLowerCase() === cleanSc.toLowerCase() && String(r.code || '').trim().toUpperCase() === cleanCode.toUpperCase()) ||
-            (cleanSc && !cleanCode && String(r.studentCode || '').trim().toLowerCase() === cleanSc.toLowerCase());
-        if (match) toDelete.push({ ...r, deletedAt: delTime, deletedAtTime: new Date().toISOString() });
-        return !match;
+            (!numId && cleanSc && cleanCode && String(r.studentCode || '').trim().toLowerCase() === cleanSc.toLowerCase() && String(r.code || '').trim().toUpperCase() === cleanCode.toUpperCase());
+        if (match) {
+            toDelete.push({ ...r, deletedAt: delTime, deletedAtTime: new Date().toISOString() });
+            deletedOne = true;
+            return false;
+        }
+        return true;
     });
     fs.writeFileSync(RECORDS_FILE, JSON.stringify(list, null, 2), 'utf8');
 

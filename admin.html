@@ -5105,10 +5105,10 @@
                     <td class="small font-monospace">${item.ip || '--'}</td>
                     ${isSpecial ? `
                     <td class="text-center">
-                        <button class="btn btn-sm btn-outline-warning text-dark fw-bold me-1" onclick="openEditAttendanceModal(${editIdx})" title="Sửa thông tin sinh viên điểm danh">
+                        <button class="btn btn-sm btn-outline-warning text-dark fw-bold me-1" onclick="openEditAttendanceModal(${item.id ? item.id : editIdx})" title="Sửa thông tin sinh viên điểm danh">
                             <i class="fa-solid fa-pen-to-square me-1"></i> Sửa
                         </button>
-                        <button class="btn btn-sm btn-danger fw-bold" onclick="deleteAttendanceRecord(${editIdx})" title="Xóa lượt điểm danh">
+                        <button class="btn btn-sm btn-danger fw-bold" onclick="deleteAttendanceRecord(${item.id ? item.id : editIdx})" title="Xóa lượt điểm danh">
                             <i class="fa-solid fa-trash me-1"></i> Xóa
                         </button>
                     </td>
@@ -5157,12 +5157,18 @@
             manualCheckinModalInstance.show();
         }
 
-        function openEditAttendanceModal(idx) {
+        function openEditAttendanceModal(idOrIdx) {
             if (!isSpecialAdmin()) {
                 alert('Chức năng Chỉnh Sửa lượt điểm danh chỉ dành riêng cho tài khoản hongnhung2050py@gmail.com!');
                 return;
             }
-            const item = attendanceData[idx];
+            let item = (attendanceData || []).find(r => r.id && r.id == idOrIdx);
+            if (!item && currentRenderedAttendanceData) {
+                item = currentRenderedAttendanceData.find(r => r.id && r.id == idOrIdx);
+            }
+            if (!item && typeof idOrIdx === 'number') {
+                item = (currentRenderedAttendanceData && currentRenderedAttendanceData[idOrIdx]) || (attendanceData && attendanceData[idOrIdx]);
+            }
             if (!item) {
                 alert('Không tìm thấy dữ liệu lượt điểm danh!');
                 return;
@@ -5311,12 +5317,18 @@
             }
         }
 
-        async function deleteAttendanceRecord(idx) {
+        async function deleteAttendanceRecord(idOrIdx) {
             if (!isSpecialAdmin()) {
                 alert('Chức năng Xóa lượt điểm danh chỉ dành riêng cho tài khoản hongnhung2050py@gmail.com!');
                 return;
             }
-            const item = (attendanceData && attendanceData[idx]) ? attendanceData[idx] : (currentRenderedAttendanceData && currentRenderedAttendanceData[idx]);
+            let item = (attendanceData || []).find(r => r.id && r.id == idOrIdx);
+            if (!item && currentRenderedAttendanceData) {
+                item = currentRenderedAttendanceData.find(r => r.id && r.id == idOrIdx);
+            }
+            if (!item && typeof idOrIdx === 'number') {
+                item = (currentRenderedAttendanceData && currentRenderedAttendanceData[idOrIdx]) || (attendanceData && attendanceData[idOrIdx]);
+            }
             if (!item) {
                 alert('Không tìm thấy bản ghi cần xóa!');
                 return;
@@ -5334,10 +5346,7 @@
                 const rawLocal = localStorage.getItem("gps_attendance_local_records");
                 if (rawLocal) {
                     const localRecs = JSON.parse(rawLocal);
-                    const updatedLocal = localRecs.filter(r => 
-                        !(String(r.studentCode || '').trim().toLowerCase() === cleanSc.toLowerCase() && 
-                          (cleanCode === '' || String(r.code || '').trim().toUpperCase() === cleanCode.toUpperCase()))
-                    );
+                    const updatedLocal = localRecs.filter(r => (recordId ? r.id != recordId : r !== item));
                     localStorage.setItem("gps_attendance_local_records", JSON.stringify(updatedLocal));
                 }
                 const deletedItem = { ...item, deletedAt: getVietnamTimestamp(), deletedAtTime: new Date().toISOString() };
@@ -5347,25 +5356,28 @@
                 localStorage.setItem("gps_deleted_checkins", JSON.stringify(trashList));
             } catch (e) {}
 
-            // 2. Xóa khỏi mảng dữ liệu bộ nhớ đang hiển thị ngay trên giao diện
-            if (Array.isArray(attendanceData)) {
-                attendanceData = attendanceData.filter(r => 
-                    !(String(r.studentCode || '').trim().toLowerCase() === cleanSc.toLowerCase() &&
-                      (cleanCode === '' || String(r.code || '').trim().toUpperCase() === cleanCode.toUpperCase()))
-                );
+            // 2. Xóa DUY NHẤT 1 bản ghi này khỏi mảng dữ liệu bộ nhớ đang hiển thị ngay trên giao diện
+            if (recordId) {
+                if (Array.isArray(attendanceData)) {
+                    attendanceData = attendanceData.filter(r => r.id != recordId);
+                }
+                if (Array.isArray(currentRenderedAttendanceData)) {
+                    currentRenderedAttendanceData = currentRenderedAttendanceData.filter(r => r.id != recordId);
+                }
+            } else {
+                if (Array.isArray(attendanceData)) {
+                    const pos = attendanceData.indexOf(item);
+                    if (pos >= 0) attendanceData.splice(pos, 1);
+                }
+                if (Array.isArray(currentRenderedAttendanceData)) {
+                    const pos = currentRenderedAttendanceData.indexOf(item);
+                    if (pos >= 0) currentRenderedAttendanceData.splice(pos, 1);
+                }
             }
-            if (Array.isArray(currentRenderedAttendanceData)) {
-                currentRenderedAttendanceData = currentRenderedAttendanceData.filter(r => 
-                    !(String(r.studentCode || '').trim().toLowerCase() === cleanSc.toLowerCase() &&
-                      (cleanCode === '' || String(r.code || '').trim().toUpperCase() === cleanCode.toUpperCase()))
-                );
-                renderAttendanceTable(currentRenderedAttendanceData);
-            } else if (Array.isArray(attendanceData)) {
-                renderAttendanceTable(attendanceData);
-            }
+            renderAttendanceTable(currentRenderedAttendanceData || attendanceData);
             updateAttendanceCountBadges();
 
-            // 3. Gửi yêu cầu chuyển vào thùng rác lên máy chủ (Server Database)
+            // 3. Gửi yêu cầu chuyển vào thùng rác lên máy chủ (Server Database) THEO ĐÚNG ID NÀY
             try {
                 const res = await fetch('/api?action=deleteCheckin', {
                     method: 'POST',
