@@ -324,12 +324,13 @@ if (DATABASE_URL) {
                     ALTER TABLE checkins ADD COLUMN IF NOT EXISTS fraud_note TEXT;
                 `);
 
-                // 1. Xóa cờ gian lận cho người điểm danh ĐẦU TIÊN (chính chủ thiết bị/SĐT, không có ai trước đó)
+                // 1. Xóa cờ gian lận cho người điểm danh ĐẦU TIÊN hoặc máy/SĐT riêng biệt hợp lệ
                 await pool.query(`
                     UPDATE checkins c1
                     SET fraud_flag = NULL,
                         fraud_note = NULL
                     WHERE is_deleted IS NOT TRUE
+                      AND fraud_flag = 'SUSPICIOUS_SHARED_DEVICE'
                       AND NOT EXISTS (
                           SELECT 1 FROM checkins c2
                           WHERE c2.is_deleted IS NOT TRUE
@@ -339,7 +340,14 @@ if (DATABASE_URL) {
                             AND (
                                 (c1.phone_number <> '' AND c1.phone_number = c2.phone_number)
                                 OR (c1.device_uuid <> '' AND c1.device_uuid = c2.device_uuid)
-                                OR (c1.device_fingerprint <> '' AND c1.device_fingerprint = c2.device_fingerprint)
+                                OR (
+                                    c1.device_fingerprint <> '' 
+                                    AND c1.device_fingerprint = c2.device_fingerprint
+                                    AND c1.ip <> '' AND c1.ip = c2.ip
+                                    AND c1.coords <> '' AND c1.coords <> '0.000000, 0.000000' AND c1.coords <> '0, 0'
+                                    AND c1.coords = c2.coords
+                                    AND NOT (c1.phone_number <> c2.phone_number AND c1.device_uuid <> c2.device_uuid)
+                                )
                             )
                       );
                 `);
@@ -360,7 +368,14 @@ if (DATABASE_URL) {
                             AND (
                                 (c1.phone_number <> '' AND c1.phone_number = c2.phone_number)
                                 OR (c1.device_uuid <> '' AND c1.device_uuid = c2.device_uuid)
-                                OR (c1.device_fingerprint <> '' AND c1.device_fingerprint = c2.device_fingerprint)
+                                OR (
+                                    c1.device_fingerprint <> '' 
+                                    AND c1.device_fingerprint = c2.device_fingerprint
+                                    AND c1.ip <> '' AND c1.ip = c2.ip
+                                    AND c1.coords <> '' AND c1.coords <> '0.000000, 0.000000' AND c1.coords <> '0, 0'
+                                    AND c1.coords = c2.coords
+                                    AND NOT (c1.phone_number <> c2.phone_number AND c1.device_uuid <> c2.device_uuid)
+                                )
                             )
                       );
                 `);
@@ -2644,8 +2659,8 @@ const server = http.createServer(async (req, res) => {
                     }
 
                     // TRƯỜNG HỢP 3: Mở tab ẩn danh / Xóa cache trên cùng 1 máy
-                    // (Phân biệt 2 máy cùng dòng: 2 máy thật khác nhau có GPS khác nhau hoặc SĐT khác nhau -> KHÔNG BỊ GẮN CỜ)
-                    // Chỉ gắn cờ khi: Cùng Dấu vân tay phần cứng VÀ (Cùng IP mạng VÀ Cùng tọa độ GPS chính xác)
+                    // (Phân biệt 2 máy cùng dòng: 2 máy thật khác nhau có deviceUuid khác nhau VÀ SĐT khác nhau -> KHÔNG BỊ GẮN CỜ)
+                    // Chỉ gắn cờ khi: Cùng Dấu vân tay phần cứng VÀ Cùng IP mạng VÀ Cùng tọa độ GPS vệ tinh THẬT (khác 0.000000, 0.000000)
                     if (!fraudFlag && devFp && devFp.length >= 6) {
                         const prevFp = existingCheckins.find(r => {
                             if (!isSameActivity(r.code, json.code)) return false;
@@ -2655,8 +2670,23 @@ const server = http.createServer(async (req, res) => {
                             if (!matchFp) return false;
 
                             const sameIp = (clientIp && clientIp !== '127.0.0.1' && String(r.ip || '').trim() === clientIp);
-                            const sameCoords = (coords && String(r.coords || '').trim() === coords);
-                            return sameIp && sameCoords;
+                            if (!sameIp) return false;
+
+                            // Nếu là 2 máy thật có Device UUID khác nhau VÀ Số điện thoại khác nhau:
+                            const diffUuid = (devUuid && r.deviceUuid && String(r.deviceUuid).trim() !== devUuid);
+                            const diffPhone = (phone && r.phoneNumber && String(r.phoneNumber).trim() !== phone);
+                            if (diffUuid && diffPhone) {
+                                return false; // Hai điện thoại riêng biệt của 2 sinh viên -> HỢP LỆ!
+                            }
+
+                            // Kiểm tra tọa độ GPS vệ tinh thực tế (bỏ qua tọa độ rỗng hoặc 0.000000, 0.000000)
+                            const isRealGps = (c) => {
+                                const s = String(c || '').trim();
+                                return s && s !== '0.000000, 0.000000' && s !== '0, 0' && s !== '0,0';
+                            };
+
+                            const sameRealCoords = isRealGps(coords) && isRealGps(r.coords) && (String(r.coords || '').trim() === coords);
+                            return sameRealCoords;
                         });
 
                         if (prevFp) {
