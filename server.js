@@ -324,11 +324,31 @@ if (DATABASE_URL) {
                     ALTER TABLE checkins ADD COLUMN IF NOT EXISTS fraud_note TEXT;
                 `);
 
-                // Tự động quét lại và gắn cờ các bản ghi điểm danh hộ trong quá khứ bị sót (trùng SĐT hoặc thiết bị)
+                // 1. Xóa cờ gian lận cho người điểm danh ĐẦU TIÊN (chính chủ thiết bị/SĐT, không có ai trước đó)
+                await pool.query(`
+                    UPDATE checkins c1
+                    SET fraud_flag = NULL,
+                        fraud_note = NULL
+                    WHERE is_deleted IS NOT TRUE
+                      AND NOT EXISTS (
+                          SELECT 1 FROM checkins c2
+                          WHERE c2.is_deleted IS NOT TRUE
+                            AND c2.code = c1.code
+                            AND c2.student_code <> c1.student_code
+                            AND c2.id < c1.id
+                            AND (
+                                (c1.phone_number <> '' AND c1.phone_number = c2.phone_number)
+                                OR (c1.device_uuid <> '' AND c1.device_uuid = c2.device_uuid)
+                                OR (c1.device_fingerprint <> '' AND c1.device_fingerprint = c2.device_fingerprint)
+                            )
+                      );
+                `);
+
+                // 2. Chỉ gắn cờ cho những lượt đến SAU (c2.id < c1.id - tức là điểm danh hộ trên cùng máy/SĐT)
                 await pool.query(`
                     UPDATE checkins c1
                     SET fraud_flag = 'SUSPICIOUS_SHARED_DEVICE',
-                        fraud_note = 'Nghi vấn điểm danh hộ: Dùng chung số điện thoại hoặc thiết bị với sinh viên khác trong cùng sự kiện'
+                        fraud_note = 'Nghi vấn điểm danh hộ: Dùng chung số điện thoại hoặc thiết bị với sinh viên điểm danh trước đó trong cùng sự kiện'
                     WHERE is_deleted IS NOT TRUE
                       AND (fraud_flag IS NULL OR fraud_flag = '')
                       AND EXISTS (
@@ -336,6 +356,7 @@ if (DATABASE_URL) {
                           WHERE c2.is_deleted IS NOT TRUE
                             AND c2.code = c1.code
                             AND c2.student_code <> c1.student_code
+                            AND c2.id < c1.id
                             AND (
                                 (c1.phone_number <> '' AND c1.phone_number = c2.phone_number)
                                 OR (c1.device_uuid <> '' AND c1.device_uuid = c2.device_uuid)
