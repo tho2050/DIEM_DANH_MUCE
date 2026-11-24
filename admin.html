@@ -4562,7 +4562,7 @@
                     });
                     attendanceData = sortAttendanceData([...localRecords, ...mockData]);
                     populateActivityFilterDropdown();
-                    if (document.getElementById('attendanceSearch')?.value || document.getElementById('attendanceFacultyFilter')?.value || document.getElementById('attendanceActivityFilter')?.value) {
+                    if (document.getElementById('attendanceSearch')?.value || document.getElementById('attendanceFacultyFilter')?.value || document.getElementById('attendanceActivityFilter')?.value || isFilteringFraudOnly) {
                         filterAttendanceTable();
                     } else {
                         renderAttendanceTable(attendanceData);
@@ -4589,7 +4589,7 @@
                     });
                     attendanceData = sortAttendanceData(sheetData);
                     populateActivityFilterDropdown();
-                    if (document.getElementById('attendanceSearch')?.value || document.getElementById('attendanceFacultyFilter')?.value || document.getElementById('attendanceActivityFilter')?.value) {
+                    if (document.getElementById('attendanceSearch')?.value || document.getElementById('attendanceFacultyFilter')?.value || document.getElementById('attendanceActivityFilter')?.value || isFilteringFraudOnly) {
                         filterAttendanceTable();
                     } else {
                         renderAttendanceTable(attendanceData);
@@ -4606,7 +4606,11 @@
                 });
                 attendanceData = sortAttendanceData(localRecords);
                 populateActivityFilterDropdown();
-                renderAttendanceTable(attendanceData);
+                if (document.getElementById('attendanceSearch')?.value || document.getElementById('attendanceFacultyFilter')?.value || document.getElementById('attendanceActivityFilter')?.value || isFilteringFraudOnly) {
+                    filterAttendanceTable();
+                } else {
+                    renderAttendanceTable(attendanceData);
+                }
             } finally {
                 updateStudentTrashCountBadge();
             }
@@ -4968,6 +4972,16 @@
             if (fraudBadge) {
                 fraudBadge.textContent = fraudCount;
             }
+            const btnFraud = document.getElementById('btnFilterFraud');
+            if (btnFraud) {
+                if (isFilteringFraudOnly) {
+                    btnFraud.classList.remove('btn-outline-danger');
+                    btnFraud.classList.add('btn-danger', 'text-white');
+                } else {
+                    btnFraud.classList.remove('btn-danger', 'text-white');
+                    btnFraud.classList.add('btn-outline-danger');
+                }
+            }
 
             // Badge duy nhất thông minh cạnh tiêu đề:
             const countBadge = document.getElementById('attendanceTotalCountBadge');
@@ -5014,7 +5028,7 @@
                     });
                     attendanceData = sortAttendanceData(sheetData);
                     populateActivityFilterDropdown();
-                    if (document.getElementById('attendanceSearch')?.value || document.getElementById('attendanceFacultyFilter')?.value || document.getElementById('attendanceActivityFilter')?.value) {
+                    if (document.getElementById('attendanceSearch')?.value || document.getElementById('attendanceFacultyFilter')?.value || document.getElementById('attendanceActivityFilter')?.value || isFilteringFraudOnly) {
                         filterAttendanceTable();
                     } else {
                         renderAttendanceTable(attendanceData);
