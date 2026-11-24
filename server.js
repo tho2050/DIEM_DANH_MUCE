@@ -404,17 +404,6 @@ if (DATABASE_URL) {
                 console.error("Lỗi chuẩn hóa mã sự kiện chiều 15/10 trong SQL:", e);
             }
 
-            // Đảm bảo các tài khoản Google cá nhân (không phải Super Admin) phải ở trạng thái CHỜ DUYỆT (pending)
-            try {
-                await pool.query(`
-                    UPDATE accounts 
-                    SET status = 'pending' 
-                    WHERE LOWER(username) NOT IN ('hongnhung2050py@gmail.com', 'hongnhung@muce.edu.vn', 'dhxdmtmuce', 'admin')
-                      AND role != 'super'
-                      AND password LIKE 'google_sso_%';
-                `);
-            } catch (e) {}
-
             // Lưu cấu hình Gmail SMTP cố định
             try {
                 await pool.query(`

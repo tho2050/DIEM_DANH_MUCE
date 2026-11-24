@@ -4462,12 +4462,15 @@
                 const data = await res.json();
                 if (data.status === 'success') {
                     alert(`Đã phê duyệt tài khoản "${username}" thành công!`);
+                    const acc = (accountsData || []).find(a => String(a.username || '').toLowerCase() === String(username || '').toLowerCase());
+                    if (acc) acc.status = 'approved';
+                    renderAccountsTable(accountsData);
                     fetchAccountsList();
                 } else {
-                    alert('Lỗi phê duyệt: ' + data.message);
+                    alert('Lỗi phê duyệt: ' + (data.message || 'Thất bại'));
                 }
             } catch (err) {
-                alert('Lỗi kết nối máy chủ Google Sheets!');
+                alert('Lỗi kết nối máy chủ!');
                 console.error(err);
             }
         }
