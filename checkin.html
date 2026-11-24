@@ -1797,6 +1797,11 @@
         }
 
         function verifyGps() {
+            if (userLat === 0 && userLng === 0) {
+                alert('⚠️ BẮT BUỘC BẬT GPS:\nBạn chưa bật định vị GPS hoặc chưa cấp quyền vị trí cho trình duyệt!\nVui lòng bật Vị trí (GPS) trên điện thoại và cấp quyền truy cập vị trí, sau đó bấm lại nút xác thực.');
+                requestDeviceGps();
+                return;
+            }
             const dist = haversine(userLat, userLng, targetLat, targetLng);
             const isValid = dist <= radiusMeters;
             
@@ -2116,6 +2121,15 @@
                 const msg = "Thiết bị này đã thực hiện điểm danh cho sự kiện này rồi!";
                 showVoiceToast(msg, 'warning');
                 speakFemaleVoice(msg);
+                return;
+            }
+
+            // 0. Bắt buộc phải có GPS thực tế (không được để tọa độ 0, 0)
+            if (userLat === 0 && userLng === 0) {
+                const msg = "⚠️ BẮT BUỘC BẬT GPS: Bạn chưa bật định vị GPS thực tế! Vui lòng bật vị trí trên điện thoại để hoàn tất điểm danh.";
+                showVoiceToast(msg, 'danger');
+                speakFemaleVoice('Bạn chưa bật định vị GPS. Vui lòng bật vị trí trên điện thoại để hoàn tất điểm danh.');
+                requestDeviceGps();
                 return;
             }
 
