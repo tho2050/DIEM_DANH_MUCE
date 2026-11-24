@@ -323,8 +323,28 @@ if (DATABASE_URL) {
                     ALTER TABLE checkins ADD COLUMN IF NOT EXISTS fraud_flag TEXT;
                     ALTER TABLE checkins ADD COLUMN IF NOT EXISTS fraud_note TEXT;
                 `);
+
+                // Tự động quét lại và gắn cờ các bản ghi điểm danh hộ trong quá khứ bị sót (trùng SĐT hoặc thiết bị)
+                await pool.query(`
+                    UPDATE checkins c1
+                    SET fraud_flag = 'SUSPICIOUS_SHARED_DEVICE',
+                        fraud_note = 'Nghi vấn điểm danh hộ: Dùng chung số điện thoại hoặc thiết bị với sinh viên khác trong cùng sự kiện'
+                    WHERE is_deleted IS NOT TRUE
+                      AND (fraud_flag IS NULL OR fraud_flag = '')
+                      AND EXISTS (
+                          SELECT 1 FROM checkins c2
+                          WHERE c2.is_deleted IS NOT TRUE
+                            AND c2.code = c1.code
+                            AND c2.student_code <> c1.student_code
+                            AND (
+                                (c1.phone_number <> '' AND c1.phone_number = c2.phone_number)
+                                OR (c1.device_uuid <> '' AND c1.device_uuid = c2.device_uuid)
+                                OR (c1.device_fingerprint <> '' AND c1.device_fingerprint = c2.device_fingerprint)
+                            )
+                      );
+                `);
             } catch (e) {
-                console.error("Lỗi cập nhật cột is_deleted và deleted_at cho activities/checkins:", e);
+                console.error("Lỗi cập nhật cột hoặc gắn cờ gian lận lịch sử:", e);
             }
 
             // Tự động dọn dẹp các bản ghi trong thùng rác đã quá 30 ngày (SQL & JSON)
@@ -2552,11 +2572,14 @@ const server = http.createServer(async (req, res) => {
                         return;
                     }
 
-                    // 6. LỚP 2 (Phát hiện điểm danh hộ): Phân tích dấu vân tay phần cứng (Hardware Fingerprint) & Device UUID
+                    // 6. LỚP 2 (Phát hiện điểm danh hộ): Phân tích đa tầng (Hardware Fingerprint, SĐT, IP & GPS)
                     const devFp = String(json.deviceFingerprint || json.deviceUuid || '').trim();
+                    const phone = String(json.phoneNumber || '').trim();
+                    const clientIp = String(json.ip || '').trim();
                     let fraudFlag = null;
                     let fraudNote = null;
 
+                    // A. Kiểm tra theo Dấu vân tay phần cứng (Hardware Fingerprint) hoặc Device UUID
                     if (devFp && devFp.length >= 6) {
                         const prevShared = existingCheckins.find(r => 
                             isSameActivity(r.code, json.code) &&
@@ -2570,7 +2593,41 @@ const server = http.createServer(async (req, res) => {
                         if (prevShared) {
                             fraudFlag = 'SUSPICIOUS_SHARED_DEVICE';
                             fraudNote = `Nghi vấn điểm danh hộ: Thiết bị phần cứng này vừa điểm danh cho SV "${prevShared.name || ''}" (MSSV: ${prevShared.studentCode || ''}) lúc ${prevShared.timestamp || ''}`;
-                            console.warn(`⚠️ [CẢNH BÁO ĐIỂM DANH HỘ] Thiết bị [${devFp}] vừa điểm danh cho MSSV ${sCode}, trước đó đã điểm danh cho MSSV ${prevShared.studentCode}`);
+                            console.warn(`⚠️ [CẢNH BÁO ĐIỂM DANH HỘ - HARDWARE] Thiết bị [${devFp}] vừa điểm danh cho MSSV ${sCode}, trước đó đã điểm danh cho MSSV ${prevShared.studentCode}`);
+                        }
+                    }
+
+                    // B. Kiểm tra theo Số điện thoại (Nếu cùng 1 SĐT dùng cho 2 MSSV khác nhau trong sự kiện)
+                    if (!fraudFlag && phone && phone.length >= 9) {
+                        const prevPhone = existingCheckins.find(r => 
+                            isSameActivity(r.code, json.code) &&
+                            String(r.studentCode || '').trim().toLowerCase() !== sCode.toLowerCase() &&
+                            String(r.phoneNumber || '').trim() === phone
+                        );
+
+                        if (prevPhone) {
+                            fraudFlag = 'SUSPICIOUS_SHARED_DEVICE';
+                            fraudNote = `Nghi vấn điểm danh hộ: Số điện thoại (${phone}) vừa được dùng để điểm danh cho SV "${prevPhone.name || ''}" (MSSV: ${prevPhone.studentCode || ''}) lúc ${prevPhone.timestamp || ''}`;
+                            console.warn(`⚠️ [CẢNH BÁO ĐIỂM DANH HỘ - PHONE] Số điện thoại [${phone}] vừa dùng cho MSSV ${sCode}, trước đó đã dùng cho MSSV ${prevPhone.studentCode}`);
+                        }
+                    }
+
+                    // C. Kiểm tra theo Mạng IP + Tọa độ GPS trùng nhau
+                    if (!fraudFlag && clientIp && clientIp !== '127.0.0.1') {
+                        const coords = String(json.coords || '').trim();
+                        if (coords && coords !== '0.000000, 0.000000') {
+                            const prevIpGps = existingCheckins.find(r => 
+                                isSameActivity(r.code, json.code) &&
+                                String(r.studentCode || '').trim().toLowerCase() !== sCode.toLowerCase() &&
+                                String(r.ip || '').trim() === clientIp &&
+                                String(r.coords || '').trim() === coords
+                            );
+
+                            if (prevIpGps) {
+                                fraudFlag = 'SUSPICIOUS_SHARED_DEVICE';
+                                fraudNote = `Nghi vấn điểm danh hộ: Trùng IP mạng (${clientIp}) và vị trí GPS với SV "${prevIpGps.name || ''}" (MSSV: ${prevIpGps.studentCode || ''}) lúc ${prevIpGps.timestamp || ''}`;
+                                console.warn(`⚠️ [CẢNH BÁO ĐIỂM DANH HỘ - IP/GPS] IP [${clientIp}] và GPS [${coords}] vừa dùng cho MSSV ${sCode}, trước đó đã dùng cho MSSV ${prevIpGps.studentCode}`);
+                            }
                         }
                     }
 

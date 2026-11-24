@@ -1324,29 +1324,25 @@
         }
 
         // 1. Trích xuất dấu vân tay phần cứng (Hardware Fingerprint) không phụ thuộc bộ nhớ Cache/Tab ẩn danh
+        // Sử dụng đặc trưng chip đồ họa GPU, Sub-pixel Font Metrics, cấu hình phần cứng bất biến (miễn nhiễm với cơ chế thêm nhiễu Canvas của Cốc Cốc/Brave)
         function getHardwareFingerprint() {
             try {
                 const parts = [];
-                // a. Canvas sub-pixel rendering fingerprint
-                try {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = 240;
-                    canvas.height = 60;
-                    const ctx = canvas.getContext('2d');
-                    if (ctx) {
-                        ctx.textBaseline = 'top';
-                        ctx.font = "14px 'Arial', sans-serif";
-                        ctx.fillStyle = '#f60';
-                        ctx.fillRect(125, 1, 62, 20);
-                        ctx.fillStyle = '#069';
-                        ctx.fillText('MUCE GPS Checkin 2026 🔒', 2, 15);
-                        ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
-                        ctx.fillText('MUCE GPS Checkin 2026 🔒', 4, 17);
-                        parts.push(canvas.toDataURL());
-                    }
-                } catch (e) {}
 
-                // b. WebGL GPU renderer & vendor
+                // a. Đo độ rộng chữ vi mô (Sub-pixel Text Metrics) - không dùng toDataURL nên không bị Cốc Cốc / Brave thêm nhiễu pixel!
+                try {
+                    const c = document.createElement('canvas');
+                    const ctx = c.getContext('2d');
+                    if (ctx) {
+                        ctx.font = "16.5px 'Arial', sans-serif";
+                        const m1 = ctx.measureText("MUCE-Attendance-2026-Verification-🔒").width;
+                        ctx.font = "14.3px 'Times New Roman', serif";
+                        const m2 = ctx.measureText("Anti-Fraud-Hardware-Fingerprint-123456").width;
+                        parts.push('tm_' + m1.toFixed(3) + '_' + m2.toFixed(3));
+                    }
+                } catch(e) {}
+
+                // b. WebGL GPU renderer & vendor & hardware limits (bất biến phần cứng trên chip điện thoại)
                 try {
                     const glCanvas = document.createElement('canvas');
                     const gl = glCanvas.getContext('webgl') || glCanvas.getContext('experimental-webgl');
@@ -1357,26 +1353,43 @@
                             parts.push(gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || '');
                         }
                         parts.push(gl.getParameter(gl.MAX_TEXTURE_SIZE) || '');
+                        parts.push(gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) || '');
+                        parts.push(gl.getParameter(gl.MAX_VERTEX_ATTRIBS) || '');
+                        parts.push(gl.getParameter(gl.MAX_VARYING_VECTORS) || '');
                     }
                 } catch (e) {}
 
-                // c. Thông số màn hình & phần cứng thiết bị
+                // c. Thông số màn hình & phần cứng thiết bị (không bao giờ thay đổi khi xóa cache/ẩn danh)
                 parts.push(window.screen.width + 'x' + window.screen.height);
+                parts.push((window.screen.availWidth || 0) + 'x' + (window.screen.availHeight || 0));
                 parts.push(window.screen.colorDepth || '');
                 parts.push(window.devicePixelRatio || 1);
                 parts.push(navigator.hardwareConcurrency || 2);
                 parts.push(navigator.maxTouchPoints || 0);
                 parts.push(new Date().getTimezoneOffset());
-                parts.push(navigator.language || '');
+                try {
+                    parts.push(Intl.DateTimeFormat().resolvedOptions().timeZone || '');
+                } catch(e) {}
+                parts.push(navigator.platform || '');
+
+                // d. Trích xuất mã dòng máy điện thoại từ UserAgent (ví dụ: SM-A125F, CPH2239, iPhone)
+                const ua = navigator.userAgent || '';
+                const modelMatch = ua.match(/\(([^)]+)\)/);
+                if (modelMatch && modelMatch[1]) {
+                    const tokens = modelMatch[1].split(';').map(t => t.trim());
+                    parts.push(tokens.slice(0, 3).join(';'));
+                } else {
+                    parts.push(ua.substring(0, 80));
+                }
 
                 const str = parts.join('###');
-                let hash = 0;
+                let hash = 5381;
                 for (let i = 0; i < str.length; i++) {
-                    const char = str.charCodeAt(i);
-                    hash = ((hash << 5) - hash) + char;
+                    hash = ((hash << 5) + hash) + str.charCodeAt(i);
                     hash |= 0;
                 }
-                return 'hwfp_' + Math.abs(hash).toString(36) + '_' + (window.screen.width * window.screen.height);
+                const screenTag = (window.screen.width || 0) + 'x' + (window.screen.height || 0);
+                return 'hwfp_' + Math.abs(hash).toString(36) + '_' + screenTag;
             } catch (err) {
                 return 'hwfp_fallback_' + (window.screen.width || 0) + 'x' + (window.screen.height || 0);
             }
