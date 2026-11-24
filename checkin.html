@@ -1397,10 +1397,10 @@
 
         const clientHardwareFingerprint = getHardwareFingerprint();
 
-        // 2. Sinh UUID duy nhất cho thiết bị nếu chưa có để nhận diện chống gian lận
+        // 2. Sinh UUID ngẫu nhiên duy nhất cho từng máy (mỗi máy có một mã ngẫu nhiên riêng biệt)
         let deviceUuid = localStorage.getItem("device_uuid");
-        if (!deviceUuid) {
-            deviceUuid = clientHardwareFingerprint || ('dev_' + Math.random().toString(36).substring(2, 15) + '_' + Date.now());
+        if (!deviceUuid || deviceUuid.startsWith('hwfp_')) {
+            deviceUuid = 'dev_' + Math.random().toString(36).substring(2, 15) + '_' + Date.now();
             localStorage.setItem("device_uuid", deviceUuid);
         }
 

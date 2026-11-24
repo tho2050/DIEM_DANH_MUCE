@@ -2593,32 +2593,30 @@ const server = http.createServer(async (req, res) => {
                         return;
                     }
 
-                    // 6. LỚP 2 (Phát hiện điểm danh hộ): Phân tích đa tầng (Hardware Fingerprint, SĐT, IP & GPS)
-                    const devFp = String(json.deviceFingerprint || json.deviceUuid || '').trim();
+                    // 6. LỚP 2 (Phát hiện điểm danh hộ): Phân tích đa tầng thông minh (Không báo lỗi oan cho 2 máy cùng dòng)
+                    const devFp = String(json.deviceFingerprint || '').trim();
+                    const devUuid = String(json.deviceUuid || '').trim();
                     const phone = String(json.phoneNumber || '').trim();
                     const clientIp = String(json.ip || '').trim();
+                    const coords = String(json.coords || '').trim();
                     let fraudFlag = null;
                     let fraudNote = null;
 
-                    // A. Kiểm tra theo Dấu vân tay phần cứng (Hardware Fingerprint) hoặc Device UUID
-                    if (devFp && devFp.length >= 6) {
+                    // TRƯỜNG HỢP 1: Trùng trực tiếp Device UUID (Cùng 1 máy, cùng trình duyệt thông thường)
+                    if (devUuid && devUuid.startsWith('dev_')) {
                         const prevShared = existingCheckins.find(r => 
                             isSameActivity(r.code, json.code) &&
                             String(r.studentCode || '').trim().toLowerCase() !== sCode.toLowerCase() &&
-                            (
-                                (r.deviceFingerprint && String(r.deviceFingerprint).trim() === devFp) ||
-                                (r.deviceUuid && String(r.deviceUuid).trim() === devFp)
-                            )
+                            String(r.deviceUuid || '').trim() === devUuid
                         );
-
                         if (prevShared) {
                             fraudFlag = 'SUSPICIOUS_SHARED_DEVICE';
-                            fraudNote = `Nghi vấn điểm danh hộ: Thiết bị phần cứng này vừa điểm danh cho SV "${prevShared.name || ''}" (MSSV: ${prevShared.studentCode || ''}) lúc ${prevShared.timestamp || ''}`;
-                            console.warn(`⚠️ [CẢNH BÁO ĐIỂM DANH HỘ - HARDWARE] Thiết bị [${devFp}] vừa điểm danh cho MSSV ${sCode}, trước đó đã điểm danh cho MSSV ${prevShared.studentCode}`);
+                            fraudNote = `Nghi vấn điểm danh hộ: Cùng trình duyệt vừa điểm danh cho SV "${prevShared.name || ''}" (MSSV: ${prevShared.studentCode || ''}) lúc ${prevShared.timestamp || ''}`;
+                            console.warn(`⚠️ [CẢNH BÁO ĐIỂM DANH HỘ - UUID] devUuid [${devUuid}] vừa dùng cho MSSV ${sCode}, trước đó đã dùng cho MSSV ${prevShared.studentCode}`);
                         }
                     }
 
-                    // B. Kiểm tra theo Số điện thoại (Nếu cùng 1 SĐT dùng cho 2 MSSV khác nhau trong sự kiện)
+                    // TRƯỜNG HỢP 2: Trùng Số điện thoại (Hai MSSV dùng chung 1 số điện thoại cá nhân trong sự kiện)
                     if (!fraudFlag && phone && phone.length >= 9) {
                         const prevPhone = existingCheckins.find(r => 
                             isSameActivity(r.code, json.code) &&
@@ -2633,22 +2631,26 @@ const server = http.createServer(async (req, res) => {
                         }
                     }
 
-                    // C. Kiểm tra theo Mạng IP + Tọa độ GPS trùng nhau
-                    if (!fraudFlag && clientIp && clientIp !== '127.0.0.1') {
-                        const coords = String(json.coords || '').trim();
-                        if (coords && coords !== '0.000000, 0.000000') {
-                            const prevIpGps = existingCheckins.find(r => 
-                                isSameActivity(r.code, json.code) &&
-                                String(r.studentCode || '').trim().toLowerCase() !== sCode.toLowerCase() &&
-                                String(r.ip || '').trim() === clientIp &&
-                                String(r.coords || '').trim() === coords
-                            );
+                    // TRƯỜNG HỢP 3: Mở tab ẩn danh / Xóa cache trên cùng 1 máy
+                    // (Phân biệt 2 máy cùng dòng: 2 máy thật khác nhau có GPS khác nhau hoặc SĐT khác nhau -> KHÔNG BỊ GẮN CỜ)
+                    // Chỉ gắn cờ khi: Cùng Dấu vân tay phần cứng VÀ (Cùng IP mạng VÀ Cùng tọa độ GPS chính xác)
+                    if (!fraudFlag && devFp && devFp.length >= 6) {
+                        const prevFp = existingCheckins.find(r => {
+                            if (!isSameActivity(r.code, json.code)) return false;
+                            if (String(r.studentCode || '').trim().toLowerCase() === sCode.toLowerCase()) return false;
+                            
+                            const matchFp = (r.deviceFingerprint && String(r.deviceFingerprint).trim() === devFp);
+                            if (!matchFp) return false;
 
-                            if (prevIpGps) {
-                                fraudFlag = 'SUSPICIOUS_SHARED_DEVICE';
-                                fraudNote = `Nghi vấn điểm danh hộ: Trùng IP mạng (${clientIp}) và vị trí GPS với SV "${prevIpGps.name || ''}" (MSSV: ${prevIpGps.studentCode || ''}) lúc ${prevIpGps.timestamp || ''}`;
-                                console.warn(`⚠️ [CẢNH BÁO ĐIỂM DANH HỘ - IP/GPS] IP [${clientIp}] và GPS [${coords}] vừa dùng cho MSSV ${sCode}, trước đó đã dùng cho MSSV ${prevIpGps.studentCode}`);
-                            }
+                            const sameIp = (clientIp && clientIp !== '127.0.0.1' && String(r.ip || '').trim() === clientIp);
+                            const sameCoords = (coords && String(r.coords || '').trim() === coords);
+                            return sameIp && sameCoords;
+                        });
+
+                        if (prevFp) {
+                            fraudFlag = 'SUSPICIOUS_SHARED_DEVICE';
+                            fraudNote = `Nghi vấn điểm danh hộ: Dấu vân tay phần cứng và vị trí mạng/GPS trùng khớp với SV "${prevFp.name || ''}" (MSSV: ${prevFp.studentCode || ''}) lúc ${prevFp.timestamp || ''}`;
+                            console.warn(`⚠️ [CẢNH BÁO ĐIỂM DANH HỘ - HARDWARE/IP/GPS] Thiết bị [${devFp}] vừa dùng cho MSSV ${sCode}, trước đó đã dùng cho MSSV ${prevFp.studentCode}`);
                         }
                     }
 
