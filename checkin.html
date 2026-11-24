@@ -1741,6 +1741,35 @@
 
 
 
+        function tryFallbackGps() {
+            navigator.geolocation.getCurrentPosition(
+                pos => {
+                    userLat = pos.coords.latitude;
+                    userLng = pos.coords.longitude;
+                    updateGpsDisplay();
+                    if (userMarker) userMarker.setLatLng([userLat, userLng]);
+                    else {
+                        userMarker = L.marker([userLat, userLng], {
+                            icon: L.icon({
+                                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+                                iconSize: [25, 41], iconAnchor: [12, 41]
+                            })
+                        }).addTo(map);
+                    }
+                    const bounds = L.latLngBounds([[targetLat, targetLng], [userLat, userLng]]);
+                    map.fitBounds(bounds.pad(0.3));
+                },
+                err2 => {
+                    if (err2.code === 1) {
+                        alert('⚠️ QUYỀN TRUY CẬP VỊ TRÍ ĐANG BỊ CHẶN TRÊN TRÌNH DUYỆT!\n\nBạn đã bật GPS trên máy, nhưng TRÌNH DUYỆT đang chặn quyền truy cập vị trí của web này.\n\n👉 Cách xử lý ngay:\n1. Bấm vào biểu tượng thanh điều khiển (hoặc ổ khóa) ở góc trái thanh địa chỉ web.\n2. Chọn "Quyền trang web" (hoặc "Cài đặt trang web") -> Bật "Vị trí" thành "CHO PHÉP" (Allow).\n3. Tải lại trang (F5) và thử lại!');
+                    } else {
+                        alert('⚠️ Không thể xác định tọa độ: Sóng vệ tinh GPS có thể bị che khuất trong phòng kín. Vui lòng di chuyển ra gần cửa sổ hoặc không gian thoáng để máy bắt GPS tốt hơn.');
+                    }
+                },
+                { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
+            );
+        }
+
         function requestDeviceGps() {
             if (!navigator.geolocation) {
                 alert('Trình duyệt không hỗ trợ GPS.');
@@ -1765,9 +1794,14 @@
                     map.fitBounds(bounds.pad(0.3));
                 },
                 err => {
-                    alert('Lỗi định vị. Vui lòng bật dịch vụ định vị GPS (Location Services) trên điện thoại và cấp quyền truy cập vị trí cho trình duyệt.');
+                    if (err.code === 1) {
+                        alert('⚠️ QUYỀN TRUY CẬP VỊ TRÍ ĐANG BỊ CHẶN TRÊN TRÌNH DUYỆT!\n\nBạn đã bật GPS trên máy, nhưng TRÌNH DUYỆT đang chặn quyền truy cập vị trí của trang web này.\n\n👉 Cách mở quyền ngay (Chỉ mất 5 giây):\n1. Nhìn lên thanh địa chỉ trang web, bấm vào biểu tượng cài đặt (hoặc hình ổ khóa/thanh gạt) bên trái link web.\n2. Bấm vào "Quyền của trang web" (Permissions) -> Bật "Vị trí" thành "CHO PHÉP" (Allow).\n3. Tải lại trang web (F5) để nhận vị trí!');
+                    } else {
+                        // Nếu vệ tinh bị yếu hoặc timeout trong nhà, tự động thử lại qua mạng Wi-Fi
+                        tryFallbackGps();
+                    }
                 },
-                { enableHighAccuracy: true }
+                { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
             );
         }
 
