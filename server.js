@@ -257,7 +257,10 @@ if (DATABASE_URL) {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             is_deleted BOOLEAN DEFAULT FALSE,
             deleted_at TEXT,
-            deleted_at_time TIMESTAMP
+            deleted_at_time TIMESTAMP,
+            device_fingerprint TEXT,
+            fraud_flag TEXT,
+            fraud_note TEXT
         );
 
         CREATE TABLE IF NOT EXISTS accounts (
@@ -316,6 +319,9 @@ if (DATABASE_URL) {
                     ALTER TABLE checkins ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE;
                     ALTER TABLE checkins ADD COLUMN IF NOT EXISTS deleted_at TEXT;
                     ALTER TABLE checkins ADD COLUMN IF NOT EXISTS deleted_at_time TIMESTAMP;
+                    ALTER TABLE checkins ADD COLUMN IF NOT EXISTS device_fingerprint TEXT;
+                    ALTER TABLE checkins ADD COLUMN IF NOT EXISTS fraud_flag TEXT;
+                    ALTER TABLE checkins ADD COLUMN IF NOT EXISTS fraud_note TEXT;
                 `);
             } catch (e) {
                 console.error("Lỗi cập nhật cột is_deleted và deleted_at cho activities/checkins:", e);
@@ -800,7 +806,7 @@ async function dbGetCheckins() {
     let sqlSuccess = false;
     if (pool) {
         try {
-            const res = await pool.query('SELECT id, timestamp, code, title, student_code as "studentCode", name, class_name as "className", faculty, phone_number as "phoneNumber", email, coords, distance, device, ip, device_uuid as "deviceUuid", created_at as "createdAt" FROM checkins WHERE is_deleted IS NOT TRUE ORDER BY id DESC');
+            const res = await pool.query('SELECT id, timestamp, code, title, student_code as "studentCode", name, class_name as "className", faculty, phone_number as "phoneNumber", email, coords, distance, device, ip, device_uuid as "deviceUuid", device_fingerprint as "deviceFingerprint", fraud_flag as "fraudFlag", fraud_note as "fraudNote", created_at as "createdAt" FROM checkins WHERE is_deleted IS NOT TRUE ORDER BY id DESC');
             rows = res.rows.map(r => {
                 if (r.code) r.code = decodeTitle(r.code);
                 if (r.title) r.title = decodeTitle(r.title);
@@ -869,6 +875,7 @@ async function dbGetDeletedCheckins() {
                 SELECT id, timestamp, code, title, student_code as "studentCode", name, 
                        class_name as "className", faculty, phone_number as "phoneNumber", 
                        email, coords, distance, device, ip, device_uuid as "deviceUuid", 
+                       device_fingerprint as "deviceFingerprint", fraud_flag as "fraudFlag", fraud_note as "fraudNote",
                        created_at as "createdAt", deleted_at as "deletedAt", 
                        deleted_at_time as "deletedAtTime"
                 FROM checkins 
@@ -1128,14 +1135,15 @@ async function dbSaveCheckin(record) {
     if (pool) {
         try {
             await pool.query(`
-                INSERT INTO checkins (timestamp, code, title, student_code, name, class_name, faculty, phone_number, email, coords, distance, device, ip, device_uuid)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);
+                INSERT INTO checkins (timestamp, code, title, student_code, name, class_name, faculty, phone_number, email, coords, distance, device, ip, device_uuid, device_fingerprint, fraud_flag, fraud_note)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17);
             `, [
                 record.timestamp || getVietnamTimestamp(),
                 decodeTitle(record.code || ''), decodeTitle(record.title || ''), record.studentCode || '',
                 record.name || '', record.className || '', record.faculty || '',
                 record.phoneNumber || '', record.email || '', record.coords || '',
-                record.distance || '', record.device || '', record.ip || '', record.deviceUuid || ''
+                record.distance || '', record.device || '', record.ip || '', record.deviceUuid || '',
+                record.deviceFingerprint || '', record.fraudFlag || '', record.fraudNote || ''
             ]);
         } catch (e) { console.error('Lỗi ghi checkin vào SQL:', e.message); }
     }
@@ -2527,6 +2535,47 @@ const server = http.createServer(async (req, res) => {
                             return;
                         }
                     }
+
+                    // 5. LỚP 1 (Chặn cứng): Kiểm tra sinh viên (MSSV) này đã điểm danh sự kiện này chưa
+                    const existingCheckins = await dbGetCheckins();
+                    const duplicate = existingCheckins.find(r => 
+                        String(r.studentCode || '').trim().toLowerCase() === sCode.toLowerCase() &&
+                        isSameActivity(r.code, json.code)
+                    );
+                    if (duplicate) {
+                        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                        res.end(JSON.stringify({
+                            status: 'error',
+                            code: 'ALREADY_CHECKED_IN',
+                            message: `⚠️ BẠN ĐÃ ĐIỂM DANH SỰ KIỆN NÀY RỒI!\n\nSinh viên: ${duplicate.name || sName} (MSSV: ${sCode})\nThời gian ghi nhận: ${duplicate.timestamp || 'Trước đó'}\n\nHệ thống đã lưu thông tin điểm danh của bạn. Không thể điểm danh lại!`
+                        }));
+                        return;
+                    }
+
+                    // 6. LỚP 2 (Phát hiện điểm danh hộ): Phân tích dấu vân tay phần cứng (Hardware Fingerprint) & Device UUID
+                    const devFp = String(json.deviceFingerprint || json.deviceUuid || '').trim();
+                    let fraudFlag = null;
+                    let fraudNote = null;
+
+                    if (devFp && devFp.length >= 6) {
+                        const prevShared = existingCheckins.find(r => 
+                            isSameActivity(r.code, json.code) &&
+                            String(r.studentCode || '').trim().toLowerCase() !== sCode.toLowerCase() &&
+                            (
+                                (r.deviceFingerprint && String(r.deviceFingerprint).trim() === devFp) ||
+                                (r.deviceUuid && String(r.deviceUuid).trim() === devFp)
+                            )
+                        );
+
+                        if (prevShared) {
+                            fraudFlag = 'SUSPICIOUS_SHARED_DEVICE';
+                            fraudNote = `Nghi vấn điểm danh hộ: Thiết bị phần cứng này vừa điểm danh cho SV "${prevShared.name || ''}" (MSSV: ${prevShared.studentCode || ''}) lúc ${prevShared.timestamp || ''}`;
+                            console.warn(`⚠️ [CẢNH BÁO ĐIỂM DANH HỘ] Thiết bị [${devFp}] vừa điểm danh cho MSSV ${sCode}, trước đó đã điểm danh cho MSSV ${prevShared.studentCode}`);
+                        }
+                    }
+
+                    json.fraudFlag = fraudFlag;
+                    json.fraudNote = fraudNote;
 
                     if (!json.timestamp) {
                         json.timestamp = getVietnamTimestamp();

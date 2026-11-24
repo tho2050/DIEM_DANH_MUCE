@@ -1801,9 +1801,9 @@
                         </div>
                     </div>
 
-                    <!-- Hàng bộ lọc: Trên máy tính 1 hàng (5-3-4), trên điện thoại (12 cho tìm kiếm, 6-6 cho 2 chọn khoa & sự kiện) -->
+                    <!-- Hàng bộ lọc: Trên máy tính 1 hàng (4-3-3-2), trên điện thoại (12 cho tìm kiếm, 6-6 cho 2 chọn khoa & sự kiện, 12 cho nút nghi vấn) -->
                     <div class="row g-2 mb-3">
-                        <div class="col-12 col-md-5">
+                        <div class="col-12 col-md-4">
                             <input type="text" id="attendanceSearch" class="form-control form-control-sm"
                                 placeholder="🔍 Tìm tên, MSSV, lớp, khoa, SĐT..." oninput="filterAttendanceTable()" />
                         </div>
@@ -1817,11 +1817,17 @@
                                 <option value="Khoa Kiến trúc">Khoa Kiến trúc</option>
                             </select>
                         </div>
-                        <div class="col-6 col-md-4">
+                        <div class="col-6 col-md-3">
                             <select id="attendanceActivityFilter" class="form-select form-select-sm"
                                 onchange="filterAttendanceTable()">
                                 <option value="">-- Tất cả sự kiện --</option>
                             </select>
+                        </div>
+                        <div class="col-12 col-md-2">
+                            <button type="button" id="btnFilterFraud" class="btn btn-sm btn-outline-danger w-100 fw-bold d-flex align-items-center justify-content-center gap-1 shadow-sm" onclick="toggleFraudFilter()" title="Lọc danh sách các lượt điểm danh bị nghi vấn dùng chung thiết bị">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                                <span>Nghi vấn (<span id="fraudCountBadge">0</span>)</span>
+                            </button>
                         </div>
                     </div>
 
@@ -4768,6 +4774,22 @@
 
         let currentRenderedAttendanceData = [];
         let currentSelectedStudentIdx = null;
+        let isFilteringFraudOnly = false;
+
+        function toggleFraudFilter() {
+            isFilteringFraudOnly = !isFilteringFraudOnly;
+            const btn = document.getElementById('btnFilterFraud');
+            if (btn) {
+                if (isFilteringFraudOnly) {
+                    btn.classList.remove('btn-outline-danger');
+                    btn.classList.add('btn-danger', 'text-white');
+                } else {
+                    btn.classList.remove('btn-danger', 'text-white');
+                    btn.classList.add('btn-outline-danger');
+                }
+            }
+            filterAttendanceTable();
+        }
 
         // BỘ LỌC DỮ LIỆU ĐIỂM DANH (TÌM KIẾM THEO TÊN, MSSV, LỚP, KHOA, SỰ KIỆN)
         function filterAttendanceTable() {
@@ -4803,8 +4825,9 @@
 
                 const matchesFaculty = !facultyFilter || facultyStr.includes(facultyFilter);
                 const matchesActivity = !actFilter || (typeof isSameActivity === 'function' ? isSameActivity(item.code, actFilter) : actCodeStr === decodeTitle(actFilter).toLowerCase());
+                const matchesFraud = !isFilteringFraudOnly || !!(item.fraudFlag || (item.fraudNote && item.fraudNote.length > 0));
 
-                return matchesSearch && matchesFaculty && matchesActivity;
+                return matchesSearch && matchesFaculty && matchesActivity && matchesFraud;
             });
 
             renderAttendanceTable(filtered);
@@ -4937,7 +4960,14 @@
             const facultyFilter = document.getElementById('attendanceFacultyFilter')?.value || '';
             const searchVal = document.getElementById('attendanceSearch')?.value || '';
 
-            const isFiltering = !!(actFilter || facultyFilter || searchVal);
+            const isFiltering = !!(actFilter || facultyFilter || searchVal || isFilteringFraudOnly);
+
+            // Cập nhật số lượng lượt nghi vấn điểm danh hộ
+            const fraudCount = (attendanceData || []).filter(item => item && (item.fraudFlag || (item.fraudNote && item.fraudNote.length > 0))).length;
+            const fraudBadge = document.getElementById('fraudCountBadge');
+            if (fraudBadge) {
+                fraudBadge.textContent = fraudCount;
+            }
 
             // Badge duy nhất thông minh cạnh tiêu đề:
             const countBadge = document.getElementById('attendanceTotalCountBadge');
@@ -5050,14 +5080,20 @@
                 const benefitVal = item.benefit || (matchedAct ? matchedAct.benefit : '') || '';
                 const titleVal = decodeTitle(item.title || (matchedAct ? matchedAct.title : '--'));
 
+                const isFraud = !!(item.fraudFlag || (item.fraudNote && item.fraudNote.length > 0));
+                const fraudTooltip = item.fraudNote ? item.fraudNote.replace(/"/g, '&quot;') : 'Nghi vấn dùng chung thiết bị điểm danh hộ';
+
                 return `
-                <tr class="text-nowrap attendance-row-item ${isSelected ? 'row-selected' : ''}" onclick="selectStudentRow(this, ${idx})" title="Click để hiện viền xanh kiểm tra sinh viên này">
+                <tr class="text-nowrap attendance-row-item ${isSelected ? 'row-selected' : ''} ${isFraud ? 'table-danger-subtle border-start border-danger border-4' : ''}" onclick="selectStudentRow(this, ${idx})" title="${isFraud ? '⚠️ CẢNH BÁO GIAN LẬN: ' + fraudTooltip : 'Click để hiện viền xanh kiểm tra sinh viên này'}">
                     <td class="text-center">${idx + 1}</td>
                     <td class="small text-muted font-monospace">${displayTime}</td>
                     <td><span class="badge bg-secondary">${codeVal || '--'}</span></td>
                     <td>${titleVal}</td>
                     <td>${benefitVal ? `<span class="badge bg-danger text-white rounded-pill shadow-sm"><i class="fa-solid fa-gift me-1"></i>${benefitVal}</span>` : '<span class="text-muted">--</span>'}</td>
-                    <td class="font-monospace fw-bold text-primary" style="min-width: 130px;">${item.studentCode || '--'}</td>
+                    <td class="font-monospace fw-bold text-primary" style="min-width: 130px;">
+                        ${item.studentCode || '--'}
+                        ${isFraud ? `<div class="mt-1"><span class="badge bg-danger text-white rounded-pill px-2 py-1 shadow-sm" style="font-size:0.72rem; cursor:help;" title="${fraudTooltip}"><i class="fa-solid fa-triangle-exclamation me-1"></i>Nghi vấn điểm danh hộ</span></div>` : ''}
+                    </td>
                     <td class="fw-bold text-dark">${item.name}</td>
                     <td>${item.className || '--'}</td>
                     <td>${item.faculty || '--'}</td>
@@ -5938,12 +5974,13 @@
             });
 
             const data = [
-                ["STT", "Thời Gian", "Mã Sự Kiện", "Tên Sự Kiện", "Quyền Lợi", "MSSV", "Họ và Tên", "Lớp", "Khoa", "Số Điện Thoại", "Email", "Khoảng Cách", "Thiết Bị", "Tọa Độ GPS", "IP Máy"]
+                ["STT", "Thời Gian", "Mã Sự Kiện", "Tên Sự Kiện", "Quyền Lợi", "MSSV", "Họ và Tên", "Lớp", "Khoa", "Số Điện Thoại", "Email", "Khoảng Cách", "Thiết Bị", "Tọa Độ GPS", "IP Máy", "Cảnh Báo Gian Lận"]
             ];
             (list || []).forEach((item, idx) => {
                 const act = actMap[String(item.code || '').trim().toUpperCase()];
                 const benefitVal = item.benefit || (act ? act.benefit : '') || '';
                 const titleVal = decodeTitle(item.title || (act ? act.title : '') || '');
+                const fraudStatus = item.fraudNote || (item.fraudFlag ? 'Nghi vấn điểm danh hộ (Dùng chung thiết bị)' : 'Hợp lệ');
                 data.push([
                     idx + 1,
                     item.timestamp || '',
@@ -5959,7 +5996,8 @@
                     item.distance || '',
                     item.device || '',
                     item.coords || '',
-                    item.ip || ''
+                    item.ip || '',
+                    fraudStatus
                 ]);
             });
             return data;
@@ -5971,7 +6009,7 @@
             const ws = XLSX.utils.aoa_to_sheet(matrix);
 
             if (matrix && matrix.length > 0) {
-                const minWidths = [8, 22, 16, 26, 20, 18, 25, 16, 28, 16, 32, 22, 22, 25, 18];
+                const minWidths = [8, 22, 16, 26, 20, 18, 25, 16, 28, 16, 32, 22, 22, 25, 18, 32];
                 const colWidths = matrix[0].map((header, colIdx) => {
                     let maxLen = header ? String(header).length : 10;
                     for (let rowIdx = 1; rowIdx < matrix.length; rowIdx++) {
@@ -6277,7 +6315,8 @@
 
                 const matchesFaculty = !facultyFilter || facultyStr.toLowerCase().includes(facultyFilter);
                 const matchesActivity = !actFilter || actCodeStr.toLowerCase() === decodeTitle(actFilter).toLowerCase();
-                return matchesSearch && matchesFaculty && matchesActivity;
+                const matchesFraud = !isFilteringFraudOnly || !!(item.fraudFlag || (item.fraudNote && item.fraudNote.length > 0));
+                return matchesSearch && matchesFaculty && matchesActivity && matchesFraud;
             });
 
             if (filtered.length === 0) {

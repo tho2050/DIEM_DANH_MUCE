@@ -1323,14 +1323,75 @@
             return res.replace(/%20/g, ' ').replace(/%2F/gi, '/').trim();
         }
 
-        // 1. Sinh UUID duy nhất cho thiết bị nếu chưa có để nhận diện chống gian lận
+        // 1. Trích xuất dấu vân tay phần cứng (Hardware Fingerprint) không phụ thuộc bộ nhớ Cache/Tab ẩn danh
+        function getHardwareFingerprint() {
+            try {
+                const parts = [];
+                // a. Canvas sub-pixel rendering fingerprint
+                try {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 240;
+                    canvas.height = 60;
+                    const ctx = canvas.getContext('2d');
+                    if (ctx) {
+                        ctx.textBaseline = 'top';
+                        ctx.font = "14px 'Arial', sans-serif";
+                        ctx.fillStyle = '#f60';
+                        ctx.fillRect(125, 1, 62, 20);
+                        ctx.fillStyle = '#069';
+                        ctx.fillText('MUCE GPS Checkin 2026 🔒', 2, 15);
+                        ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
+                        ctx.fillText('MUCE GPS Checkin 2026 🔒', 4, 17);
+                        parts.push(canvas.toDataURL());
+                    }
+                } catch (e) {}
+
+                // b. WebGL GPU renderer & vendor
+                try {
+                    const glCanvas = document.createElement('canvas');
+                    const gl = glCanvas.getContext('webgl') || glCanvas.getContext('experimental-webgl');
+                    if (gl) {
+                        const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                        if (debugInfo) {
+                            parts.push(gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) || '');
+                            parts.push(gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || '');
+                        }
+                        parts.push(gl.getParameter(gl.MAX_TEXTURE_SIZE) || '');
+                    }
+                } catch (e) {}
+
+                // c. Thông số màn hình & phần cứng thiết bị
+                parts.push(window.screen.width + 'x' + window.screen.height);
+                parts.push(window.screen.colorDepth || '');
+                parts.push(window.devicePixelRatio || 1);
+                parts.push(navigator.hardwareConcurrency || 2);
+                parts.push(navigator.maxTouchPoints || 0);
+                parts.push(new Date().getTimezoneOffset());
+                parts.push(navigator.language || '');
+
+                const str = parts.join('###');
+                let hash = 0;
+                for (let i = 0; i < str.length; i++) {
+                    const char = str.charCodeAt(i);
+                    hash = ((hash << 5) - hash) + char;
+                    hash |= 0;
+                }
+                return 'hwfp_' + Math.abs(hash).toString(36) + '_' + (window.screen.width * window.screen.height);
+            } catch (err) {
+                return 'hwfp_fallback_' + (window.screen.width || 0) + 'x' + (window.screen.height || 0);
+            }
+        }
+
+        const clientHardwareFingerprint = getHardwareFingerprint();
+
+        // 2. Sinh UUID duy nhất cho thiết bị nếu chưa có để nhận diện chống gian lận
         let deviceUuid = localStorage.getItem("device_uuid");
         if (!deviceUuid) {
-            deviceUuid = 'dev_' + Math.random().toString(36).substring(2, 15) + '_' + Date.now();
+            deviceUuid = clientHardwareFingerprint || ('dev_' + Math.random().toString(36).substring(2, 15) + '_' + Date.now());
             localStorage.setItem("device_uuid", deviceUuid);
         }
 
-        // 2. Lấy IP máy khách phục vụ ghi chép chống điểm danh hộ
+        // 3. Lấy IP máy khách phục vụ ghi chép chống điểm danh hộ
         let clientIp = '';
         fetch('https://api.ipify.org?format=json')
             .then(res => res.json())
@@ -2127,7 +2188,8 @@
                 distance: dist.toFixed(1) + "m",
                 device: navigator.userAgent.includes("Mobi") ? "Điện thoại di động" : "Máy tính Admin",
                 ip: clientIp,                // IP máy của sinh viên
-                deviceUuid: deviceUuid       // Chuỗi định danh chống điểm danh hộ
+                deviceUuid: deviceUuid,       // Chuỗi định danh chống điểm danh hộ
+                deviceFingerprint: clientHardwareFingerprint // Dấu vân tay phần cứng (Canvas + WebGL + hardware)
             };
 
             try {
@@ -2139,6 +2201,23 @@
 
                 if (result.status === 'success') {
                     saveLocalAndShowSuccess(studentCode, fullName, dist);
+                } else if (result.code === 'ALREADY_CHECKED_IN') {
+                    btn.disabled = true;
+                    btn.className = 'btn btn-secondary w-100 py-3 fw-bold rounded-pill shadow-sm';
+                    btn.innerHTML = '<i class="fa-solid fa-ban me-2"></i>MSSV ĐÃ ĐIỂM DANH TRƯỚC ĐÓ';
+                    
+                    const resultBox = document.getElementById('resultBox');
+                    resultBox.style.display = 'block';
+                    resultBox.className = 'result-box warning';
+                    resultBox.innerHTML = `<h5>⚠️ BẠN ĐÃ ĐƯỢC GHI NHẬN RỒI!</h5>
+                        <p class="mb-2 text-danger fw-bold fs-6">${result.message || 'Mã số sinh viên này đã được ghi nhận điểm danh trong sự kiện này!'}</p>
+                        <p class="text-muted small mb-0">Hệ thống máy chủ đã lưu kết quả điểm danh của bạn. Bạn không cần điểm danh lại.</p>`;
+                    
+                    try { localStorage.setItem("checked_in_" + activity.code, "true"); } catch(e){}
+                    
+                    const voiceMsg = 'Mã số sinh viên này đã được ghi nhận điểm danh trước đó. Bạn không thể điểm danh lại!';
+                    speakFemaleVoice(voiceMsg);
+                    showVoiceToast('⚠️ ' + voiceMsg, 'warning');
                 } else {
                     btn.disabled = false;
                     btn.innerHTML = '<i class="fa-solid fa-check-double me-2"></i>XÁC NHẬN ĐIỂM DANH THAM GIA';
